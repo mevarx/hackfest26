@@ -219,6 +219,33 @@ class AgentEvent(APIModel):
     timestamp: str = Field(min_length=1)
 
 
+class DisplacementRadarResponse(APIModel):
+    role: str
+    city: str
+    exposure: str = Field(min_length=1)
+    demand: str = Field(min_length=1)
+    source: Literal["simulated"] = "simulated"
+    disclaimer: str
+
+
+class EmployerFilterRewriteRequest(APIModel):
+    job_post_id: str = Field(min_length=1)
+
+
+class EmployerFilterRewriteResponse(APIModel):
+    job_post_id: str
+    role: str
+    city: str
+    filter_text_before: str
+    filter_text_after: str
+    restrictive_phrase: str
+    removed_criteria: list[str]
+    hidden_talent_count: int = Field(ge=0)
+    rewrite_reason: str
+    source: Literal["simulated"] = "simulated"
+    disclaimer: str
+
+
 class SessionState(APIModel):
     session_id: str
     input_type: InputType

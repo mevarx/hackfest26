@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import audit, health, learning_pathway, matching, sessions, skills
+from app.api import audit, health, learning_pathway, market, matching, sessions, skills
 from app.config import Settings, get_settings
 from app.storage.session_store import SessionStore, SqliteSessionStore
 
@@ -44,6 +44,7 @@ def create_app(
     application.include_router(skills.router)
     application.include_router(learning_pathway.router)
     application.include_router(matching.router)
+    application.include_router(market.router)
     return application
 
 
