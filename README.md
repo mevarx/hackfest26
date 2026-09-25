@@ -13,11 +13,13 @@ The repository currently contains the first end-to-end foundation for the ReRout
 - FastAPI application with session creation, session state retrieval, and health endpoints
 - SQLite session storage with atomic, versioned updates
 - Deterministic local Ghost Twin bias auditing
+- Skills discovery through an SAP Generative AI Hub client with a labeled simulated fallback
+- Work-sample scoring that verifies skills and issues passport credentials
 - React and Vite demo stage with an accessible, simulated agent event stream
 - Explicit `live`, `simulated`, and `local` data-source labels
 - Mock-mode defaults for SAP HANA and Generative AI integrations
 
-The SAP integrations, LangGraph orchestration flow, real WebSocket transport, and remaining demo views are planned work. Simulated data is never presented as a live SAP result.
+HANA Cloud, LangGraph orchestration, real WebSocket transport, and the remaining demo views are planned work. Simulated data is never presented as a live SAP result.
 
 ## Technology
 
@@ -86,6 +88,11 @@ The backend reads environment variables from a local `backend/.env` file. Do not
 | `GHOST_TWIN_THRESHOLD` | `5` | Maximum permitted absolute ranking-score movement before a decision is flagged |
 | `DATABASE_PATH` | `data/reroute.db` | SQLite session database location |
 | `CORS_ORIGINS` | Local frontend origins | Allowed browser origins for the API |
+| `GENAI_HUB_ENDPOINT` | blank | SAP Generative AI Hub orchestration endpoint |
+| `GENAI_HUB_CLIENT_ID` | blank | OAuth client ID from the SAP trial onboarding email |
+| `GENAI_HUB_CLIENT_SECRET` | blank | OAuth client secret; stored as a secret and never logged |
+| `GENAI_HUB_MODEL` | blank | Model identifier exposed by the trial deployment |
+| `GENAI_HUB_TIMEOUT_SECONDS` | `8.0` | Per-request timeout before falling back to the simulated response |
 
 ## Verification
 
@@ -114,11 +121,13 @@ npm run build
 - `GET /health`
 - `POST /session/start`
 - `GET /session/{session_id}`
+- `GET /session/{session_id}/stream`
 - `POST /audit/ghost-twin`
+- `POST /skills/extract`
+- `POST /skills/work-sample`
 
 ## Roadmap
 
-- Skills discovery through SAP Generative AI Hub
 - HANA Cloud skills graph and vector matching
 - LangGraph orchestration with WebSocket events
 - Worker passport, route map, live Ghost Twin controls, and HR console

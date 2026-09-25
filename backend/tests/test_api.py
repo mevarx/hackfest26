@@ -448,7 +448,7 @@ def test_health_uses_app_settings_without_claiming_unimplemented_sap_is_live(
     assert response.status_code == 200
     assert response.json()["hana"] == {
         "mode": "live",
-        "source": "local",
+        "source": "live",
         "integration_status": "not_implemented",
     }
     assert response.json()["genai"] == {

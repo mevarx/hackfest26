@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.models import SessionSource
@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     use_mock_hana: bool = True
     use_mock_genai: bool = True
     ghost_twin_threshold: int = Field(default=5, ge=0)
+    genai_hub_endpoint: str = ""
+    genai_hub_client_id: str = ""
+    genai_hub_client_secret: SecretStr = SecretStr("")
+    genai_hub_model: str = ""
+    genai_hub_timeout_seconds: float = Field(default=8.0, gt=0)
 
 
 @lru_cache

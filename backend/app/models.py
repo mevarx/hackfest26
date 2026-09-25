@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
@@ -41,6 +41,34 @@ class SkillClaim(APIModel):
     name: str
     confidence: float = Field(ge=0, le=1)
     verified: bool = False
+
+
+class ExtractedSkill(APIModel):
+    name: str = Field(min_length=1)
+    confidence: float = Field(ge=0, le=1)
+
+
+class SkillExtractionRequest(APIModel):
+    transcript: str = Field(min_length=1)
+    session_id: str | None = None
+
+
+class SkillExtractionResponse(APIModel):
+    skills: list[ExtractedSkill]
+    needs_proof: list[str]
+    source: Literal["live", "simulated"]
+
+
+class WorkSampleRequest(APIModel):
+    skill_id: str = Field(min_length=1)
+    submission: str = Field(min_length=1)
+    session_id: str | None = None
+
+
+class WorkSampleResponse(APIModel):
+    score: int = Field(ge=0, le=100)
+    credential_issued: bool
+    source: Literal["live", "simulated"]
 
 
 class SkillPassport(APIModel):
@@ -119,6 +147,10 @@ class SessionState(APIModel):
     version: int = Field(default=0, ge=0)
     created_at: datetime
     updated_at: datetime
+    skills_source: Literal["live", "simulated"] | None = None
+
+    def merged(self, **updates: object) -> "SessionState":
+        return self.model_copy(update={"updated_at": datetime.now(UTC), **updates})
 
 
 class GhostTwinAuditRequest(APIModel):
@@ -128,10 +160,13 @@ class GhostTwinAuditRequest(APIModel):
     simulate_legacy_ats: bool = Field(default=False, strict=True)
 
 
+IntegrationStatus = Literal["not_implemented", "configured"]
+
+
 class IntegrationModeStatus(APIModel):
     mode: Literal["mock", "live"]
     source: DataSource
-    integration_status: Literal["not_implemented"] = "not_implemented"
+    integration_status: IntegrationStatus = "not_implemented"
 
 
 class HealthResponse(APIModel):
