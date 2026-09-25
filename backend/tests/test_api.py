@@ -224,7 +224,8 @@ def test_openapi_contains_first_slice_routes(tmp_path: Path) -> None:
     assert "/session/{session_id}" in paths
     assert "/audit/ghost-twin" in paths
     assert "/health" in paths
-    assert "/route" not in paths
+    assert "/skills/extract" in paths
+    assert "/skills/work-sample" in paths
 
 
 def test_ghost_twin_audit_endpoint(tmp_path: Path) -> None:

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.dependencies import SettingsDependency
-from app.config import Settings
+from app.config import Settings, hana_is_configured
 from app.models import HealthResponse, IntegrationModeStatus, IntegrationStatus
 
 router = APIRouter(tags=["health"])
@@ -11,9 +11,15 @@ router = APIRouter(tags=["health"])
 def health(settings: SettingsDependency) -> HealthResponse:
     return HealthResponse(
         status="ok",
-        hana=_integration_status(settings.use_mock_hana, "not_implemented"),
+        hana=_integration_status(settings.use_mock_hana, _hana_integration_status(settings)),
         genai=_integration_status(settings.use_mock_genai, _genai_integration_status(settings)),
     )
+
+
+def _hana_integration_status(settings: Settings) -> IntegrationStatus:
+    if settings.use_mock_hana:
+        return "not_implemented"
+    return "configured" if hana_is_configured(settings) else "not_implemented"
 
 
 def _genai_integration_status(settings: Settings) -> IntegrationStatus:

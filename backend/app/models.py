@@ -132,6 +132,69 @@ class SessionStartResponse(APIModel):
     status: Literal["started"] = "started"
 
 
+class RouteRequest(APIModel):
+    from_skill: str = Field(min_length=1)
+    target_role: str = Field(min_length=1)
+    hours_per_week: int = Field(default=10, ge=1, le=40)
+
+
+class RouteResponse(Route):
+    from_skill: str
+    target_role: str
+    hours_per_week: int
+    weeks: float = Field(gt=0)
+
+
+class MatchConstraints(APIModel):
+    commute_km: int = Field(default=25, ge=0, le=500)
+    hours: int = Field(default=40, ge=1, le=80)
+    language: str = Field(default="English", min_length=1)
+    accept_pay_cut: bool = False
+
+
+class MatchRequest(APIModel):
+    passport_id: str = Field(min_length=1)
+    session_id: str | None = None
+    constraints: MatchConstraints = Field(default_factory=MatchConstraints)
+    target_role: str | None = None
+
+
+class RoleProfile(APIModel):
+    role_id: str
+    title: str
+    city: str
+    language: str
+    commute_km: int = Field(ge=0)
+    weekly_hours: int = Field(ge=1, le=80)
+    annual_pay: int = Field(gt=0)
+    required_skills: list[str] = Field(default_factory=list)
+
+
+class RankedMatch(APIModel):
+    role: str
+    role_id: str
+    title: str
+    score: float = Field(ge=0, le=1)
+    similarity: float = Field(ge=0, le=1)
+    pay_delta_pct: float
+    annual_pay: int = Field(gt=0)
+    commute_km: int = Field(ge=0)
+    blocked_by_guardrail: bool
+    guardrail_reason: str | None = None
+    source: DataSource
+
+
+class MatchResponse(APIModel):
+    passport_id: str
+    matches: list[RankedMatch]
+    source: DataSource
+    guardrail_threshold_pct: float = 15.0
+
+
+class WageScarThreshold(APIModel):
+    max_pay_cut_pct: float = Field(default=15.0, ge=0, le=100)
+
+
 class SessionState(APIModel):
     session_id: str
     input_type: InputType

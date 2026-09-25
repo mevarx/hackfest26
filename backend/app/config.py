@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     genai_hub_client_secret: SecretStr = SecretStr("")
     genai_hub_model: str = ""
     genai_hub_timeout_seconds: float = Field(default=8.0, gt=0)
+    hana_host: str = ""
+    hana_port: int = Field(default=443, ge=1, le=65535)
+    hana_user: str = ""
+    hana_password: SecretStr = SecretStr("")
+    hana_keep_alive_seconds: float = Field(default=600.0, gt=0)
+    hana_query_timeout_seconds: float = Field(default=8.0, gt=0)
 
 
 @lru_cache
@@ -37,3 +43,14 @@ def session_source(settings: Settings) -> SessionSource:
     if settings.use_mock_hana or settings.use_mock_genai:
         return "simulated"
     return "local"
+
+
+def hana_is_configured(settings: Settings) -> bool:
+    return all(
+        value.strip()
+        for value in (
+            settings.hana_host,
+            settings.hana_user,
+            settings.hana_password.get_secret_value(),
+        )
+    )

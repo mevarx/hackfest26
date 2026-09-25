@@ -15,11 +15,13 @@ The repository currently contains the first end-to-end foundation for the ReRout
 - Deterministic local Ghost Twin bias auditing
 - Skills discovery through an SAP Generative AI Hub client with a labeled simulated fallback
 - Work-sample scoring that verifies skills and issues passport credentials
+- Learning pathway routing over an HANA Cloud skills graph with a local shortest-path fallback
+- Embedding-based role matching with the Wage-Scar Guardrail
 - React and Vite demo stage with an accessible, simulated agent event stream
 - Explicit `live`, `simulated`, and `local` data-source labels
 - Mock-mode defaults for SAP HANA and Generative AI integrations
 
-HANA Cloud, LangGraph orchestration, real WebSocket transport, and the remaining demo views are planned work. Simulated data is never presented as a live SAP result.
+LangGraph orchestration, real WebSocket transport, and the remaining demo views are planned work. Simulated data is never presented as a live SAP result.
 
 ## Technology
 
@@ -88,6 +90,12 @@ The backend reads environment variables from a local `backend/.env` file. Do not
 | `GHOST_TWIN_THRESHOLD` | `5` | Maximum permitted absolute ranking-score movement before a decision is flagged |
 | `DATABASE_PATH` | `data/reroute.db` | SQLite session database location |
 | `CORS_ORIGINS` | Local frontend origins | Allowed browser origins for the API |
+| `HANA_HOST` | blank | SAP HANA Cloud host name |
+| `HANA_PORT` | `443` | SAP HANA Cloud port |
+| `HANA_USER` | blank | SAP HANA Cloud user |
+| `HANA_PASSWORD` | blank | SAP HANA Cloud password; stored as a secret and never logged |
+| `HANA_KEEP_ALIVE_SECONDS` | `600.0` | Interval for the HANA keep-alive query |
+| `HANA_QUERY_TIMEOUT_SECONDS` | `8.0` | Per-query timeout before falling back to the local computation |
 | `GENAI_HUB_ENDPOINT` | blank | SAP Generative AI Hub orchestration endpoint |
 | `GENAI_HUB_CLIENT_ID` | blank | OAuth client ID from the SAP trial onboarding email |
 | `GENAI_HUB_CLIENT_SECRET` | blank | OAuth client secret; stored as a secret and never logged |
@@ -125,10 +133,15 @@ npm run build
 - `POST /audit/ghost-twin`
 - `POST /skills/extract`
 - `POST /skills/work-sample`
+- `GET /route`
+- `POST /match`
+
+Run `python backend/scripts/seed_role_embeddings.py` to generate the local role
+embedding fixture, and apply `backend/scripts/init_hana_schema.sql` once against a
+HANA Cloud trial instance before enabling live mode.
 
 ## Roadmap
 
-- HANA Cloud skills graph and vector matching
 - LangGraph orchestration with WebSocket events
 - Worker passport, route map, live Ghost Twin controls, and HR console
 - Cached SAP fallbacks, keep-alive handling, and deployment configuration
