@@ -17,11 +17,15 @@ The repository currently contains the first end-to-end foundation for the ReRout
 - Work-sample scoring that verifies skills and issues passport credentials
 - Learning pathway routing over an HANA Cloud skills graph with a local shortest-path fallback
 - Embedding-based role matching with the Wage-Scar Guardrail
+- LangGraph orchestration emitting a labeled event per agent step
+- Real WebSocket transport with history replay on reconnect
 - React and Vite demo stage with an accessible, simulated agent event stream
 - Explicit `live`, `simulated`, and `local` data-source labels
 - Mock-mode defaults for SAP HANA and Generative AI integrations
 
-LangGraph orchestration, real WebSocket transport, and the remaining demo views are planned work. Simulated data is never presented as a live SAP result.
+The frontend is still wired to its simulated stream; the remaining demo views and
+the WebSocket client migration are planned work. Simulated data is never presented
+as a live SAP result.
 
 ## Technology
 
@@ -135,6 +139,13 @@ npm run build
 - `POST /skills/work-sample`
 - `GET /route`
 - `POST /match`
+- `WS /session/{session_id}/stream` (Server-Sent Events fallback retained, deprecated)
+
+The orchestration pipeline is LangGraph-backed with a sequential fallback, running
+`skills_discovery → market_intelligence → learning_pathway → inclusive_matching →
+employer_readiness → bias_audit → two_key_wait`. `POST /session/start` returns
+immediately and the run streams events over the WebSocket; a reconnect resumes from
+`Last-Event-ID` instead of restarting.
 
 Run `python backend/scripts/seed_role_embeddings.py` to generate the local role
 embedding fixture, and apply `backend/scripts/init_hana_schema.sql` once against a
@@ -142,7 +153,7 @@ HANA Cloud trial instance before enabling live mode.
 
 ## Roadmap
 
-- LangGraph orchestration with WebSocket events
+- WebSocket client migration in the frontend AgentLog
 - Worker passport, route map, live Ghost Twin controls, and HR console
 - Cached SAP fallbacks, keep-alive handling, and deployment configuration
 

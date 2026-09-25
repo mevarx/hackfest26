@@ -195,6 +195,30 @@ class WageScarThreshold(APIModel):
     max_pay_cut_pct: float = Field(default=15.0, ge=0, le=100)
 
 
+AgentName = Literal[
+    "ORCHESTRATOR",
+    "SKILLS DISCOVERY",
+    "MARKET INTELLIGENCE",
+    "LEARNING PATHWAY",
+    "INCLUSIVE MATCHING",
+    "EMPLOYER READINESS",
+    "BIAS AUDIT",
+]
+AgentStatus = Literal["running", "done", "waiting_consent"]
+
+
+class AgentEvent(APIModel):
+    session_id: str = Field(min_length=1)
+    sequence: int = Field(ge=1)
+    agent: AgentName
+    status: AgentStatus
+    message: str = Field(min_length=1)
+    data: dict[str, JsonValue] = Field(default_factory=dict)
+    source: Literal["live", "simulated", "local"]
+    event_id: str = Field(min_length=1)
+    timestamp: str = Field(min_length=1)
+
+
 class SessionState(APIModel):
     session_id: str
     input_type: InputType
@@ -211,6 +235,7 @@ class SessionState(APIModel):
     created_at: datetime
     updated_at: datetime
     skills_source: Literal["live", "simulated"] | None = None
+    events: list[AgentEvent] = Field(default_factory=list)
 
     def merged(self, **updates: object) -> "SessionState":
         return self.model_copy(update={"updated_at": datetime.now(UTC), **updates})
