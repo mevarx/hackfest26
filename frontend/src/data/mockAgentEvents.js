@@ -1,0 +1,86 @@
+export const MOCK_AGENT_EVENTS = [
+  {
+    agent: 'ORCHESTRATOR',
+    status: 'running',
+    message: 'Session opened for Kavya · demo transcript received',
+    timestamp: '00:00',
+  },
+  {
+    agent: 'ORCHESTRATOR',
+    status: 'done',
+    message: 'Demo persona locked · orchestration plan created',
+    timestamp: '00:01',
+  },
+  {
+    agent: 'SKILLS DISCOVERY',
+    status: 'running',
+    message: 'Reading transcript for durable skill signals',
+    timestamp: '00:05',
+  },
+  {
+    agent: 'SKILLS DISCOVERY',
+    status: 'done',
+    message: '8 skill claims extracted · 3 evidence gaps queued',
+    timestamp: '00:09',
+  },
+  {
+    agent: 'LEARNING PATHWAY',
+    status: 'running',
+    message: 'Mapping transferable skills to target roles',
+    timestamp: '00:10',
+  },
+  {
+    agent: 'LEARNING PATHWAY',
+    status: 'waiting_consent',
+    message: 'Confirm weekly learning capacity before route is finalized',
+    timestamp: '00:12',
+  },
+  {
+    agent: 'MARKET INTELLIGENCE',
+    status: 'running',
+    message: 'Checking local demand and paid bridge options',
+    timestamp: '00:16',
+  },
+  {
+    agent: 'MARKET INTELLIGENCE',
+    status: 'done',
+    message: 'Paid bridge identified · Chennai · 4 openings',
+    timestamp: '00:18',
+  },
+  {
+    agent: 'INCLUSIVE MATCHING',
+    status: 'running',
+    message: 'Comparing role fit against fair-work constraints',
+    timestamp: '00:19',
+  },
+  {
+    agent: 'INCLUSIVE MATCHING',
+    status: 'done',
+    message: '3 ranked matches ready · no guardrail blocked',
+    timestamp: '00:23',
+  },
+  {
+    agent: 'EMPLOYER READINESS',
+    status: 'running',
+    message: 'Rewriting restrictive shortlist signals',
+    timestamp: '00:25',
+  },
+  {
+    agent: 'EMPLOYER READINESS',
+    status: 'done',
+    message: '12 previously hidden candidates surfaced',
+    timestamp: '00:27',
+  },
+  {
+    agent: 'BIAS AUDIT',
+    status: 'running',
+    message: 'Re-running matches across Ghost Twin variants',
+    timestamp: '00:28',
+  },
+  {
+    agent: 'BIAS AUDIT',
+    status: 'done',
+    message: 'PASS · maximum score delta 2 points',
+    timestamp: '00:30',
+  },
+]
