@@ -28,10 +28,12 @@ def test_audit_is_deterministic() -> None:
     assert first == second
 
 
-def test_role_id_changes_the_role_match_score() -> None:
+def test_role_id_changes_the_role_match_score_in_legacy_mode() -> None:
     profile = valid_profile()
 
-    assert score_candidate(profile, "role-42") != score_candidate(profile, "role-43")
+    assert score_candidate(profile, "role-42", simulate_legacy_ats=True) != score_candidate(
+        profile, "role-43", simulate_legacy_ats=True
+    )
 
 
 def test_audit_contains_every_twin() -> None:
@@ -75,21 +77,92 @@ def test_gender_is_a_protected_zero_effect_attribute() -> None:
 
 def test_deltas_and_max_delta_use_strict_absolute_values() -> None:
     profile = valid_profile()
-    actual_score = score_candidate(profile, "role-42")
-    outcome = run_ghost_twin_audit(profile, "role-42")
+    actual_score = score_candidate(profile, "role-42", simulate_legacy_ats=True)
+    outcome = run_ghost_twin_audit(profile, "role-42", simulate_legacy_ats=True)
 
     assert all(twin.delta == twin.score - actual_score for twin in outcome.twins)
     assert outcome.max_delta == max(abs(twin.delta) for twin in outcome.twins)
     assert outcome.max_delta >= 0
 
 
+def test_fair_merit_mode_keeps_all_twin_scores_identical() -> None:
+    outcome = run_ghost_twin_audit(valid_profile(), "role-42", skill_score=92)
+
+    assert outcome.actual_score == 92
+    assert all(twin.score == outcome.actual_score for twin in outcome.twins)
+    assert outcome.max_delta == 0
+    assert outcome.result == "PASS"
+
+
+def test_legacy_mode_demonstrates_demographic_movement() -> None:
+    outcome = run_ghost_twin_audit(valid_profile(), "role-42", simulate_legacy_ats=True)
+
+    assert outcome.max_delta > 0
+    assert any(
+        twin.attribute in {"age", "city", "college_tier", "career_gap"} and twin.delta != 0
+        for twin in outcome.twins
+    )
+
+
+def test_quality_analyst_demo_profile_is_fair_by_default_and_biased_in_legacy_mode() -> None:
+    profile = {
+        "career_gap": "18 months",
+        "gender": "female",
+        "age": 29,
+        "college_tier": "tier_3",
+        "city": "Chennai",
+    }
+
+    fair = run_ghost_twin_audit(profile, "quality-analyst", skill_score=86)
+    legacy = run_ghost_twin_audit(
+        profile,
+        "quality-analyst",
+        skill_score=86,
+        simulate_legacy_ats=True,
+    )
+
+    assert fair.actual_score == 86
+    assert all(twin.score == fair.actual_score for twin in fair.twins)
+    assert fair.max_delta == 0
+    assert fair.result == "PASS"
+    assert legacy.max_delta > 5
+    assert legacy.result == "FLAGGED"
+    assert legacy.threshold == 5
+
+
+def test_skill_score_controls_the_fair_base_score() -> None:
+    profile = valid_profile()
+
+    low_skill = run_ghost_twin_audit(profile, "role-42", skill_score=60)
+    high_skill = run_ghost_twin_audit(profile, "role-42", skill_score=95)
+
+    assert low_skill.actual_score == 60
+    assert high_skill.actual_score == 95
+    assert high_skill.actual_score - low_skill.actual_score == 35
+
+
 def test_threshold_boundary_is_pass_at_limit_and_flagged_above_limit() -> None:
     profile = valid_profile()
-    unconstrained = run_ghost_twin_audit(profile, "role-42", threshold=100)
+    unconstrained = run_ghost_twin_audit(
+        profile,
+        "role-42",
+        threshold=100,
+        simulate_legacy_ats=True,
+    )
     assert unconstrained.max_delta > 0
 
-    at_limit = run_ghost_twin_audit(profile, "role-42", threshold=unconstrained.max_delta)
-    above_limit = run_ghost_twin_audit(profile, "role-42", threshold=unconstrained.max_delta - 1)
+    at_limit = run_ghost_twin_audit(
+        profile,
+        "role-42",
+        threshold=unconstrained.max_delta,
+        simulate_legacy_ats=True,
+    )
+    above_limit = run_ghost_twin_audit(
+        profile,
+        "role-42",
+        threshold=unconstrained.max_delta - 1,
+        simulate_legacy_ats=True,
+    )
 
     assert at_limit.result == "PASS"
     assert above_limit.result == "FLAGGED"

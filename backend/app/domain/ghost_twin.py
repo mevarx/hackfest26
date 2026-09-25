@@ -53,23 +53,43 @@ class GhostTwinOutcome:
     threshold: int
 
 
+_QUALITY_ANALYST_CRITERIA = RoleMatchCriteria(
+    preferred_age=47,
+    preferred_city="Bengaluru",
+    preferred_college_tier="tier_2",
+    career_gap_allowance_months=9,
+)
+
+
 def run_ghost_twin_audit(
     candidate_profile: Mapping[str, Any],
     role_id: str,
     threshold: int = 5,
+    skill_score: int = 85,
+    simulate_legacy_ats: bool = False,
 ) -> GhostTwinOutcome:
     if threshold < 0:
         raise ValueError("threshold must be non-negative")
     profile = validate_candidate_profile(candidate_profile)
     criteria = _role_match_criteria(role_id)
-    actual_score = _score_valid_profile(profile, criteria)
+    actual_score = _score_valid_profile(
+        profile,
+        criteria,
+        skill_score=skill_score,
+        simulate_legacy_ats=simulate_legacy_ats,
+    )
     twins: list[CounterfactualScore] = []
     for attribute in GHOST_TWIN_ATTRIBUTES:
         original_value = profile[attribute]
         counterfactual_value = _counterfactual_value(attribute, original_value)
         variant = dict(profile)
         variant[attribute] = counterfactual_value
-        variant_score = _score_valid_profile(variant, criteria)
+        variant_score = _score_valid_profile(
+            variant,
+            criteria,
+            skill_score=skill_score,
+            simulate_legacy_ats=simulate_legacy_ats,
+        )
         twins.append(
             CounterfactualScore(
                 attribute=attribute,
@@ -90,9 +110,19 @@ def run_ghost_twin_audit(
     )
 
 
-def score_candidate(candidate_profile: Mapping[str, Any], role_id: str) -> int:
+def score_candidate(
+    candidate_profile: Mapping[str, Any],
+    role_id: str,
+    skill_score: int = 85,
+    simulate_legacy_ats: bool = False,
+) -> int:
     profile = validate_candidate_profile(candidate_profile)
-    return _score_valid_profile(profile, _role_match_criteria(role_id))
+    return _score_valid_profile(
+        profile,
+        _role_match_criteria(role_id),
+        skill_score=skill_score,
+        simulate_legacy_ats=simulate_legacy_ats,
+    )
 
 
 def validate_candidate_profile(candidate_profile: Mapping[str, Any]) -> dict[str, Any]:
@@ -126,7 +156,10 @@ def validate_candidate_profile(candidate_profile: Mapping[str, Any]) -> dict[str
 def _role_match_criteria(role_id: str) -> RoleMatchCriteria:
     if not isinstance(role_id, str) or not role_id.strip():
         raise ValueError("role_id must be a non-empty string")
-    role_digest = sha256(role_id.strip().encode("utf-8")).digest()
+    normalized_role_id = role_id.strip()
+    if normalized_role_id == "quality-analyst":
+        return _QUALITY_ANALYST_CRITERIA
+    role_digest = sha256(normalized_role_id.encode("utf-8")).digest()
     return RoleMatchCriteria(
         preferred_age=24 + role_digest[0] % 37,
         preferred_city=_ROLE_CITIES[role_digest[1] % len(_ROLE_CITIES)],
@@ -135,8 +168,21 @@ def _role_match_criteria(role_id: str) -> RoleMatchCriteria:
     )
 
 
-def _score_valid_profile(candidate_profile: Mapping[str, Any], criteria: RoleMatchCriteria) -> int:
-    score = 50
+def _score_valid_profile(
+    candidate_profile: Mapping[str, Any],
+    criteria: RoleMatchCriteria,
+    skill_score: int = 85,
+    simulate_legacy_ats: bool = False,
+) -> int:
+    if (
+        isinstance(skill_score, bool)
+        or not isinstance(skill_score, int)
+        or not 0 <= skill_score <= 100
+    ):
+        raise ValueError("skill_score must be an integer from 0 through 100")
+    if not isinstance(simulate_legacy_ats, bool):
+        raise ValueError("simulate_legacy_ats must be a boolean")
+    score = skill_score
     age_value = candidate_profile["age"]
     city_value = candidate_profile["city"]
     college_tier_value = candidate_profile["college_tier"]
@@ -144,16 +190,17 @@ def _score_valid_profile(candidate_profile: Mapping[str, Any], criteria: RoleMat
         raise ValueError("age must be an integer")
     if not isinstance(city_value, str) or not isinstance(college_tier_value, str):
         raise ValueError("city and college_tier must be strings")
-    score += max(0, 10 - abs(age_value - criteria.preferred_age) // 5)
-    if city_value.casefold() == criteria.preferred_city.casefold():
-        score += 4
-    if college_tier_value == criteria.preferred_college_tier:
-        score += 3
     gap_months = _career_gap_months(candidate_profile["career_gap"])
-    if gap_months <= criteria.career_gap_allowance_months:
-        score += 4
-    else:
-        score -= min(12, int((gap_months - criteria.career_gap_allowance_months) // 4))
+    if simulate_legacy_ats:
+        score += max(0, 10 - abs(age_value - criteria.preferred_age) // 5)
+        if city_value.casefold() == criteria.preferred_city.casefold():
+            score += 4
+        if college_tier_value == criteria.preferred_college_tier:
+            score += 3
+        if gap_months <= criteria.career_gap_allowance_months:
+            score += 4
+        else:
+            score -= min(12, int((gap_months - criteria.career_gap_allowance_months) // 4))
     return max(0, min(100, score))
 
 

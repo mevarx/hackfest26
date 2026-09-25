@@ -34,6 +34,7 @@ class GhostTwinCandidateProfile(APIModel):
     age: int = Field(ge=18, le=100, strict=True)
     college_tier: CollegeTier
     city: str = Field(min_length=1)
+    skill_score: int = Field(default=85, ge=0, le=100, strict=True)
 
 
 class SkillClaim(APIModel):
@@ -86,7 +87,7 @@ class GhostTwinResult(APIModel):
     max_delta: int = Field(ge=0)
     result: AuditVerdict
     threshold: int = Field(default=5, ge=0)
-    source: Literal["live"] = "live"
+    source: Literal["local", "live"] = "local"
     engine: Literal["pure_python"] = "pure_python"
     status: Literal["completed"] = "completed"
 
@@ -124,6 +125,7 @@ class GhostTwinAuditRequest(APIModel):
     candidate_profile: GhostTwinCandidateProfile
     role_id: str = Field(min_length=1)
     threshold: int | None = Field(default=None, ge=0)
+    simulate_legacy_ats: bool = Field(default=False, strict=True)
 
 
 class IntegrationModeStatus(APIModel):

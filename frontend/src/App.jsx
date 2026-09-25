@@ -1,4 +1,5 @@
 import AgentLog from './components/AgentLog.jsx'
+import GhostTwinPanel from './components/GhostTwinPanel.jsx'
 import { useAgentStream } from './hooks/useAgentStream.js'
 
 const DEMO_STAGES = [
@@ -89,6 +90,7 @@ export default function App() {
 
           <div className="lg:sticky lg:top-8">
             <AgentLog events={events} source={source} />
+            <GhostTwinPanel />
             <div className="mt-4 flex items-start gap-3 px-1 text-xs leading-5 text-navy/50">
               <span
                 className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal"
