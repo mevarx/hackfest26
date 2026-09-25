@@ -78,7 +78,7 @@ class GhostTwinVariant(APIModel):
     counterfactual_value: JsonValue
     score: int = Field(ge=0, le=100)
     delta: int
-    source: Literal["live"] = "live"
+    source: Literal["local", "live"] = "local"
 
 
 class GhostTwinResult(APIModel):

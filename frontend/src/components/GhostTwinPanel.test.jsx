@@ -7,8 +7,7 @@ import {
   within,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getApiUrl } from '../api.js'
-import GhostTwinPanel, { AUDIT_TIMEOUT_MS } from './GhostTwinPanel.jsx'
+import GhostTwinPanel, { AUDIT_TIMEOUT_MS, AUDIT_URL } from './GhostTwinPanel.jsx'
 
 const KAVYA_PROFILE = {
   career_gap: '18 months',
@@ -100,7 +99,7 @@ describe('GhostTwinPanel', () => {
     render(<GhostTwinPanel />)
 
     expect(
-      screen.getByRole('checkbox', { name: 'Simulate Legacy Biased ATS' }),
+      screen.getByRole('checkbox', { name: 'Simulate Legacy ATS' }),
     ).not.toBeChecked()
     expect(screen.getByText('Synthetic fair merit')).toBeInTheDocument()
   })
@@ -116,7 +115,7 @@ describe('GhostTwinPanel', () => {
     const [url, options] = fetchMock.mock.calls[0]
     const payload = JSON.parse(options.body)
 
-    expect(url).toBe(getApiUrl('/audit/ghost-twin'))
+    expect(url).toBe(AUDIT_URL)
     expect(options).toEqual(
       expect.objectContaining({
         method: 'POST',
@@ -146,7 +145,7 @@ describe('GhostTwinPanel', () => {
     expect(runButton).toBeDisabled()
     expect(runButton).toHaveTextContent('Running audit…')
     expect(
-      screen.getByRole('checkbox', { name: 'Simulate Legacy Biased ATS' }),
+      screen.getByRole('checkbox', { name: 'Simulate Legacy ATS' }),
     ).toBeDisabled()
     expect(screen.getByText('Loading audit…')).toBeInTheDocument()
 
@@ -219,7 +218,7 @@ describe('GhostTwinPanel', () => {
     render(<GhostTwinPanel />)
 
     const toggle = screen.getByRole('checkbox', {
-      name: 'Simulate Legacy Biased ATS',
+      name: 'Simulate Legacy ATS',
     })
     fireEvent.click(toggle)
 

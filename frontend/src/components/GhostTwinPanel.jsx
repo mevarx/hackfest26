@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { getApiUrl } from '../api.js'
 
 export const AUDIT_TIMEOUT_MS = 10_000
+export const AUDIT_URL = 'http://127.0.0.1:8000/audit/ghost-twin'
 
 const ROLE_ID = 'quality-analyst'
 const CANDIDATE_PROFILE = {
@@ -288,7 +288,7 @@ export default function GhostTwinPanel() {
 
     try {
       const response = await Promise.race([
-        fetch(getApiUrl('/audit/ghost-twin'), {
+        fetch(AUDIT_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -392,31 +392,44 @@ export default function GhostTwinPanel() {
         </div>
 
         <div className="mt-4 flex flex-col gap-4 rounded-xl border border-amber/30 bg-amber/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div className="flex items-start gap-3">
+          <label
+            htmlFor="simulate-legacy-ats"
+            className="flex cursor-pointer items-start gap-3 rounded-lg focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-teal has-disabled:cursor-not-allowed"
+          >
             <input
               id="simulate-legacy-ats"
               type="checkbox"
               checked={simulateLegacyAts}
               onChange={handleToggleChange}
               disabled={isLoading}
+              aria-label="Simulate Legacy ATS"
               aria-describedby="simulate-legacy-ats-description"
-              className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-teal disabled:cursor-not-allowed disabled:opacity-60"
+              className="peer sr-only"
             />
-            <div>
-              <label
-                htmlFor="simulate-legacy-ats"
-                className="cursor-pointer text-sm font-bold uppercase tracking-[0.12em] text-off-white"
-              >
-                Simulate Legacy Biased ATS
-              </label>
-              <p
+            <span
+              aria-hidden="true"
+              className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition-colors ${
+                simulateLegacyAts ? 'bg-teal' : 'bg-white/20'
+              } ${isLoading ? 'opacity-60' : ''}`}
+            >
+              <span
+                className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-off-white transition-transform ${
+                  simulateLegacyAts ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </span>
+            <span>
+              <span className="block text-sm font-bold uppercase tracking-[0.12em] text-off-white">
+                Simulate Legacy ATS
+              </span>
+              <span
                 id="simulate-legacy-ats-description"
-                className="mt-1 max-w-md text-sm leading-5 text-off-white/60"
+                className="mt-1 block max-w-md text-sm leading-5 text-off-white/60"
               >
                 Add a comparison run for a legacy, biased screening model.
-              </p>
-            </div>
-          </div>
+              </span>
+            </span>
+          </label>
           <button
             type="button"
             onClick={runAudit}

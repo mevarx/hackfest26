@@ -252,7 +252,7 @@ def test_ghost_twin_audit_endpoint(tmp_path: Path) -> None:
     assert payload["result"] in {"PASS", "FLAGGED"}
     assert payload["source"] == "local"
     assert payload["engine"] == "pure_python"
-    assert all(twin["source"] == "live" for twin in payload["twins"])
+    assert all(twin["source"] == "local" for twin in payload["twins"])
 
 
 def test_quality_analyst_demo_profile_fair_and_legacy_modes(tmp_path: Path) -> None:

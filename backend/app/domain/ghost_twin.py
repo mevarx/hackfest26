@@ -70,13 +70,15 @@ def run_ghost_twin_audit(
 ) -> GhostTwinOutcome:
     if threshold < 0:
         raise ValueError("threshold must be non-negative")
-    profile = validate_candidate_profile(candidate_profile)
+    profile, resolved_skill_score, resolved_legacy_mode = _validated_audit_inputs(
+        candidate_profile, skill_score, simulate_legacy_ats
+    )
     criteria = _role_match_criteria(role_id)
     actual_score = _score_valid_profile(
         profile,
         criteria,
-        skill_score=skill_score,
-        simulate_legacy_ats=simulate_legacy_ats,
+        skill_score=resolved_skill_score,
+        simulate_legacy_ats=resolved_legacy_mode,
     )
     twins: list[CounterfactualScore] = []
     for attribute in GHOST_TWIN_ATTRIBUTES:
@@ -87,8 +89,8 @@ def run_ghost_twin_audit(
         variant_score = _score_valid_profile(
             variant,
             criteria,
-            skill_score=skill_score,
-            simulate_legacy_ats=simulate_legacy_ats,
+            skill_score=resolved_skill_score,
+            simulate_legacy_ats=resolved_legacy_mode,
         )
         twins.append(
             CounterfactualScore(
@@ -116,12 +118,14 @@ def score_candidate(
     skill_score: int = 85,
     simulate_legacy_ats: bool = False,
 ) -> int:
-    profile = validate_candidate_profile(candidate_profile)
+    profile, resolved_skill_score, resolved_legacy_mode = _validated_audit_inputs(
+        candidate_profile, skill_score, simulate_legacy_ats
+    )
     return _score_valid_profile(
         profile,
         _role_match_criteria(role_id),
-        skill_score=skill_score,
-        simulate_legacy_ats=simulate_legacy_ats,
+        skill_score=resolved_skill_score,
+        simulate_legacy_ats=resolved_legacy_mode,
     )
 
 
@@ -130,15 +134,18 @@ def validate_candidate_profile(candidate_profile: Mapping[str, Any]) -> dict[str
         raise ValueError("candidate_profile must be an object")
     if any(not isinstance(attribute, str) for attribute in candidate_profile):
         raise ValueError("candidate attribute names must be strings")
+    profile_inputs = dict(candidate_profile)
+    profile_inputs.pop("skill_score", None)
+    profile_inputs.pop("simulate_legacy_ats", None)
     required_attributes = set(GHOST_TWIN_ATTRIBUTES)
-    missing_attributes = required_attributes.difference(candidate_profile)
-    unsupported_attributes = set(candidate_profile).difference(required_attributes)
+    missing_attributes = required_attributes.difference(profile_inputs)
+    unsupported_attributes = set(profile_inputs).difference(required_attributes)
     if missing_attributes:
         raise ValueError(f"missing candidate attributes: {sorted(missing_attributes)}")
     if unsupported_attributes:
         raise ValueError(f"unsupported candidate attributes: {sorted(unsupported_attributes)}")
 
-    profile = dict(candidate_profile)
+    profile = dict(profile_inputs)
     if not isinstance(profile["gender"], str) or profile["gender"] not in _GENDER_TWINS:
         raise ValueError("gender must be one of female, male, non_binary, other, not_disclosed")
     age = profile["age"]
@@ -151,6 +158,22 @@ def validate_candidate_profile(candidate_profile: Mapping[str, Any]) -> dict[str
     _career_gap_months(profile["career_gap"])
     profile["city"] = profile["city"].strip()
     return profile
+
+
+def _validated_audit_inputs(
+    candidate_profile: Mapping[str, Any],
+    skill_score: int,
+    simulate_legacy_ats: bool,
+) -> tuple[dict[str, Any], int, bool]:
+    if not isinstance(candidate_profile, Mapping):
+        raise ValueError("candidate_profile must be an object")
+    if any(not isinstance(attribute, str) for attribute in candidate_profile):
+        raise ValueError("candidate attribute names must be strings")
+    profile_inputs = dict(candidate_profile)
+    extracted_skill_score = profile_inputs.pop("skill_score", skill_score)
+    extracted_legacy_mode = profile_inputs.pop("simulate_legacy_ats", simulate_legacy_ats)
+    profile = validate_candidate_profile(profile_inputs)
+    return profile, extracted_skill_score, extracted_legacy_mode
 
 
 def _role_match_criteria(role_id: str) -> RoleMatchCriteria:

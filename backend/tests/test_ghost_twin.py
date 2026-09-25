@@ -28,6 +28,33 @@ def test_audit_is_deterministic() -> None:
     assert first == second
 
 
+def test_audit_parameters_can_be_supplied_in_the_candidate_profile() -> None:
+    profile = {
+        "career_gap": "18 months",
+        "gender": "female",
+        "age": 29,
+        "college_tier": "tier_3",
+        "city": "Chennai",
+        "skill_score": 86,
+        "simulate_legacy_ats": True,
+    }
+
+    outcome = run_ghost_twin_audit(profile, "quality-analyst")
+
+    assert outcome.actual_score == 91
+    assert outcome.max_delta == 6
+    assert outcome.result == "FLAGGED"
+
+
+def test_invalid_profile_level_audit_parameters_fail_clearly() -> None:
+    profile = valid_profile()
+
+    with pytest.raises(ValueError, match="skill_score"):
+        run_ghost_twin_audit({**profile, "skill_score": "86"}, "role-42")
+    with pytest.raises(ValueError, match="simulate_legacy_ats"):
+        run_ghost_twin_audit({**profile, "simulate_legacy_ats": "yes"}, "role-42")
+
+
 def test_role_id_changes_the_role_match_score_in_legacy_mode() -> None:
     profile = valid_profile()
 
