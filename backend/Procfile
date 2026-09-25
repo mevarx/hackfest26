@@ -1,0 +1,18 @@
+# ReRoute backend process definitions for Render and Railway.
+#
+# The installed distribution is `reroute-backend` (see backend/pyproject.toml)
+# and it ships the `app` package, so the ASGI application is importable as
+# `app.main:app` from the repository `backend/` directory. `--host 0.0.0.0` and
+# `--port $PORT` are required because the platform injects the bind port as an
+# environment variable.
+#
+# One worker on purpose: the orchestration run is an in-process asyncio task and
+# the WebSocket connection registry is in-process state, so a second worker would
+# not see the first worker's sockets or orchestration. Scale with more instances
+# and a shared store instead, not with `--workers`.
+#
+# No `release:` command is defined. There is no migration tool in this repository
+# and no migration step to run: the SQLite session store creates its own schema
+# with `CREATE TABLE IF NOT EXISTS` during application startup, so `web:` is the
+# only process the service needs.
+web: uvicorn app.main:app --host 0.0.0.0 --port $PORT

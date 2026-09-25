@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -6,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import audit, health, learning_pathway, market, matching, sessions, skills
 from app.config import Settings, get_settings
+from app.services import hana_client
 from app.storage.session_store import SessionStore, SqliteSessionStore
 
 
@@ -19,9 +21,11 @@ def create_app(
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await resolved_store.initialize()
+        keep_alive_task = _start_hana_keep_alive(resolved_settings)
         try:
             yield
         finally:
+            await _stop_hana_keep_alive(keep_alive_task)
             await resolved_store.close()
 
     application = FastAPI(
@@ -49,3 +53,22 @@ def create_app(
 
 
 app = create_app()
+
+
+def _start_hana_keep_alive(settings: Settings) -> asyncio.Task[None] | None:
+    if settings.use_mock_hana or not hana_client.is_available(settings):
+        return None
+    return asyncio.create_task(
+        hana_client.keep_alive_loop(settings),
+        name="hana-keep-alive",
+    )
+
+
+async def _stop_hana_keep_alive(task: asyncio.Task[None] | None) -> None:
+    if task is None:
+        return
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        return

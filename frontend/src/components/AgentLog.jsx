@@ -34,15 +34,58 @@ const STATUS_DETAILS = {
 const SOURCE_DETAILS = {
   simulated: {
     label: 'Simulated',
+    token: 'simulated',
+    code: 'SIM',
+    symbol: '◐',
     adapterLabel: 'Local event adapter',
     className: 'border-amber/45 bg-amber/10 text-amber',
     dotClassName: 'bg-amber',
   },
   live: {
     label: 'Live',
+    token: 'live',
+    code: 'LIVE',
+    symbol: '◉',
     adapterLabel: 'Live event adapter',
     className: 'border-teal/45 bg-teal/10 text-teal',
     dotClassName: 'bg-teal',
+  },
+  local: {
+    label: 'Local',
+    token: 'local',
+    code: 'LOCAL',
+    symbol: '○',
+    adapterLabel: 'In-browser event adapter',
+    className: 'border-dashed border-red/55 bg-red/10 text-red-300',
+    dotClassName: 'bg-red',
+  },
+}
+
+const CONNECTION_DETAILS = {
+  idle: {
+    label: 'Stream idle',
+    className: 'border-white/20 bg-white/5 text-off-white/55',
+    dotClassName: 'bg-white/30',
+  },
+  connecting: {
+    label: 'Connecting',
+    className: 'border-amber/40 bg-amber/10 text-amber',
+    dotClassName: 'bg-amber',
+  },
+  open: {
+    label: 'Stream live',
+    className: 'border-teal/45 bg-teal/10 text-teal',
+    dotClassName: 'bg-teal',
+  },
+  closed: {
+    label: 'Stream closed',
+    className: 'border-amber/40 bg-amber/10 text-amber',
+    dotClassName: 'bg-amber',
+  },
+  error: {
+    label: 'Stream error',
+    className: 'border-red/50 bg-red/10 text-red-300',
+    dotClassName: 'bg-red',
   },
 }
 
@@ -71,30 +114,79 @@ function getSourceDetails(source) {
     return SOURCE_DETAILS.live
   }
 
+  if (source === 'local') {
+    return SOURCE_DETAILS.local
+  }
+
   return SOURCE_DETAILS.simulated
 }
 
-export default function AgentLog({
-  events = EMPTY_EVENTS,
-  source = 'simulated',
-}) {
+function getConnectionDetails(status) {
+  if (
+    status === 'connecting' ||
+    status === 'open' ||
+    status === 'closed' ||
+    status === 'error'
+  ) {
+    return CONNECTION_DETAILS[status]
+  }
+
+  return null
+}
+
+function readEventSource(event) {
+  if (
+    event !== null &&
+    typeof event === 'object' &&
+    typeof event.source === 'string' &&
+    event.source
+  ) {
+    return event.source
+  }
+
+  return ''
+}
+
+export default function AgentLog(props) {
+  const {
+    events = EMPTY_EVENTS,
+    source = 'simulated',
+    status = null,
+    lastEventId = 0,
+    reconnectAttempts = 0,
+    onReconnect = null,
+  } = props
   const displayEvents = useMemo(
     () =>
-      events.map((event) =>
-        normalizeAgentEvent(event, { streamId: 'agent-log' }),
-      ),
+      events.map((event) => {
+        const normalizedEvent = normalizeAgentEvent(event, {
+          streamId: 'agent-log',
+        })
+
+        return {
+          ...normalizedEvent,
+          source: readEventSource(event),
+        }
+      }),
     [events],
   )
   const sourceDetails = getSourceDetails(source)
+  const connectionDetails = getConnectionDetails(status)
   const validEventCount = displayEvents.filter(
     (event) => event.validation === 'valid',
   ).length
   const invalidEventCount = displayEvents.length - validEventCount
+  const showReconnect = typeof onReconnect === 'function'
+  const hasResumeCursor =
+    typeof lastEventId === 'number' &&
+    Number.isFinite(lastEventId) &&
+    lastEventId > 0
 
   return (
     <section
       className="overflow-hidden rounded-2xl border border-white/10 bg-navy shadow-2xl shadow-navy/20"
       aria-labelledby="agent-log-title"
+      aria-busy={status === 'connecting'}
     >
       <div className="flex flex-col gap-4 border-b border-white/10 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
@@ -108,15 +200,39 @@ export default function AgentLog({
             Orchestration stream
           </h2>
         </div>
-        <span
-          className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] ${sourceDetails.className}`}
-        >
+        <div className="flex flex-wrap items-center gap-2">
+          {connectionDetails ? (
+            <span
+              role="status"
+              className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] ${connectionDetails.className}`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${connectionDetails.dotClassName}`}
+                aria-hidden="true"
+              />
+              {connectionDetails.label}
+            </span>
+          ) : null}
           <span
-            className={`h-1.5 w-1.5 rounded-full ${sourceDetails.dotClassName}`}
-            aria-hidden="true"
-          />
-          {sourceDetails.label}
-        </span>
+            className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] ${sourceDetails.className}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${sourceDetails.dotClassName}`}
+              aria-hidden="true"
+            />
+            {sourceDetails.label}
+          </span>
+          {showReconnect ? (
+            <button
+              type="button"
+              onClick={onReconnect}
+              className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-off-white/80 transition-colors hover:border-amber/50 hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+            >
+              <span aria-hidden="true">↻</span>
+              Reconnect
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div
@@ -134,7 +250,8 @@ export default function AgentLog({
         ) : (
           <ol className="space-y-1">
             {displayEvents.map((event) => {
-              const status = getStatusDetails(event.status)
+              const eventStatus = getStatusDetails(event.status)
+              const eventSource = getSourceDetails(event.source || source)
 
               return (
                 <li
@@ -151,12 +268,23 @@ export default function AgentLog({
                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-off-white/90">
                       {event.agent}
                     </p>
-                    <span
-                      className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] ${status.className}`}
-                    >
-                      <span aria-hidden="true">{status.symbol}</span>
-                      <span>{status.label}</span>
-                    </span>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] ${eventStatus.className}`}
+                      >
+                        <span aria-hidden="true">{eventStatus.symbol}</span>
+                        <span>{eventStatus.label}</span>
+                      </span>
+                      <span
+                        role="img"
+                        aria-label={`Event source ${eventSource.token}`}
+                        title={`Event source ${eventSource.label}`}
+                        className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-1 text-[0.6rem] font-bold uppercase tracking-[0.12em] ${eventSource.className}`}
+                      >
+                        <span aria-hidden="true">{eventSource.symbol}</span>
+                        <span>{eventSource.code}</span>
+                      </span>
+                    </div>
                   </div>
                   <p className="col-start-2 mt-2 leading-6 text-off-white/75 sm:col-start-3 sm:mt-0 sm:pt-1">
                     {event.message}
@@ -168,12 +296,21 @@ export default function AgentLog({
         )}
       </div>
 
-      <div className="flex items-center justify-between border-t border-white/10 px-5 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-off-white/45 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-white/10 px-5 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-off-white/45 sm:px-6">
         <span>{sourceDetails.adapterLabel}</span>
         <span>
           {validEventCount} valid events
           {invalidEventCount > 0 ? ` · ${invalidEventCount} invalid` : ''}
         </span>
+        {hasResumeCursor || reconnectAttempts > 0 ? (
+          <span className="w-full sm:w-auto">
+            {hasResumeCursor ? `last_event_id=${lastEventId}` : ''}
+            {hasResumeCursor && reconnectAttempts > 0 ? ' · ' : ''}
+            {reconnectAttempts > 0
+              ? `${reconnectAttempts} reconnect attempt${reconnectAttempts === 1 ? '' : 's'}`
+              : ''}
+          </span>
+        ) : null}
       </div>
     </section>
   )

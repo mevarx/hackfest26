@@ -1,0 +1,72 @@
+# Minimal Render blueprint for the ReRoute backend.
+#
+# Honest scope: this file is the backend half of the deployment story today. All
+# SAP integrations ship mock-first, so a default deploy runs entirely on local
+# fixtures. The env vars below are listed by NAME only; no value, hostname, or
+# credential belongs in this file, and none is inlined here.
+#
+# The build command installs only the declared dependencies. `hdbcli` is not one
+# of them, so USE_MOCK_HANA=false additionally needs `pip install hana-hdbcli`
+# appended to buildCommand.
+#
+# Reference: backend/Procfile holds the same start command, and
+# backend/.env.example documents every variable with its default.
+
+services:
+  - type: web
+    name: reroute-backend
+    runtime: python
+    plan: starter
+    rootDir: backend
+    # Installs the `reroute-backend` distribution from backend/pyproject.toml,
+    # which packages the `app` module the start command imports.
+    buildCommand: pip install --upgrade pip && pip install .
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    # Single instance on purpose: the orchestration task and the WebSocket
+    # connection registry are in-process state. Scale with instances, not with
+    # uvicorn workers.
+    numInstances: 1
+    # Env vars are referenced by name only. Set the real values in the Render
+    # dashboard (or with `render env`), never here.
+    #   DATABASE_PATH                - see backend/.env.example, see the disk note
+    #   CORS_ORIGINS                 - JSON array; must contain the deployed
+    #                                  frontend origin
+    #   USE_MOCK_HANA                - true keeps the HANA path simulated
+    #   USE_MOCK_GENAI               - true keeps the GenAI Hub path simulated
+    #   GHOST_TWIN_THRESHOLD         - audit flag threshold in points
+    #   GENAI_HUB_ENDPOINT           - blank unless live GenAI Hub is intended
+    #   GENAI_HUB_CLIENT_ID          - blank unless live GenAI Hub is intended
+    #   GENAI_HUB_CLIENT_SECRET      - blank unless live GenAI Hub is intended
+    #   GENAI_HUB_MODEL              - blank unless live GenAI Hub is intended
+    #   GENAI_HUB_TIMEOUT_SECONDS    - live call timeout before fallback
+    #   HANA_HOST                    - blank unless live HANA Cloud is intended
+    #   HANA_PORT                    - 443 for HANA Cloud over TLS
+    #   HANA_USER                    - blank unless live HANA Cloud is intended
+    #   HANA_PASSWORD                - blank unless live HANA Cloud is intended
+    #   HANA_KEEP_ALIVE_SECONDS      - not yet started by the app lifespan
+    #   HANA_QUERY_TIMEOUT_SECONDS   - bounds a hung instance before fallback
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: USE_MOCK_HANA
+        value: "true"
+      - key: USE_MOCK_GENAI
+        value: "true"
+      - key: GHOST_TWIN_THRESHOLD
+        value: "5"
+    # The persistent disk is commented out on purpose. `plan: starter` is a
+    # paid plan and a disk costs more, so it stays opt-in rather than making
+    # every fork of this blueprint billable. Uncomment only if you need sessions
+    # to survive a restart, and set DATABASE_PATH to match mountPath.
+    #
+    # Without a disk: DATABASE_PATH defaults to data/reroute.db on an ephemeral
+    # filesystem, so every deploy/restart loses stored sessions, their agent
+    # event history, and the WebSocket replay that depends on it. The API still
+    # starts and still serves a full demo run — a fresh session is created each
+    # time — but nothing persists between restarts.
+    #
+    # disk:
+    #   name: reroute-sessions
+    #   mountPath: /opt/render/project/src/backend/data
+    #   sizeGB: 1

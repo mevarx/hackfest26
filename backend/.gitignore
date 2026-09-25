@@ -5,3 +5,6 @@ __pycache__/
 .ruff_cache/
 .venv/
 data/
+.env
+.env.*
+!.env.example

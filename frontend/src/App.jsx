@@ -1,6 +1,13 @@
+import { useCallback, useState } from 'react'
 import AgentLog from './components/AgentLog.jsx'
 import GhostTwinPanel from './components/GhostTwinPanel.jsx'
+import { useDemoMode } from './context/DemoModeContext.jsx'
+import { getRoute, startSession } from './api.js'
+import { useSessionStream } from './hooks/useSessionStream.js'
 import { useAgentStream } from './hooks/useAgentStream.js'
+import HRConsole from './pages/HRConsole.jsx'
+import RouteMap from './pages/RouteMap.jsx'
+import WorkerApp from './pages/WorkerApp.jsx'
 
 const DEMO_STAGES = [
   ['01', 'Understand', 'Recover durable skills'],
@@ -9,8 +16,52 @@ const DEMO_STAGES = [
   ['04', 'Audit', 'Challenge every score'],
 ]
 
+const LIVE_TRANSPORT = 'live'
+const FALLBACK_TRANSPORT = 'simulated'
+const FALLBACK_EVENTS = []
+
 export default function App() {
-  const { events, source } = useAgentStream()
+  const { demoMode, toggleDemoMode, backendBaseUrl } = useDemoMode()
+  const [sessionId, setSessionId] = useState(null)
+  const [startError, setStartError] = useState('')
+  const [isStarting, setIsStarting] = useState(false)
+  const fallback = useAgentStream()
+  const stream = useSessionStream({
+    sessionId,
+    enabled: Boolean(sessionId) && !demoMode,
+    baseUrl: backendBaseUrl,
+  })
+  const usingLiveTransport = !demoMode && Boolean(sessionId)
+  const events = usingLiveTransport ? stream.events : fallback.events
+  const streamSource = usingLiveTransport ? stream.source : fallback.source
+  const displaySource =
+    streamSource === LIVE_TRANSPORT ? LIVE_TRANSPORT : FALLBACK_TRANSPORT
+
+  const noop = useCallback(() => {}, [])
+
+  const handleRouteFetch = useCallback(
+    (query) => getRoute(query, { baseUrl: backendBaseUrl }),
+    [backendBaseUrl],
+  )
+
+  const handleSessionStart = useCallback(async (payload) => {
+    setIsStarting(true)
+    setStartError('')
+
+    try {
+      const started = await startSession(payload, { baseUrl: backendBaseUrl })
+
+      setSessionId(started.session_id)
+    } catch (requestError) {
+      setStartError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Could not start the session.',
+      )
+    } finally {
+      setIsStarting(false)
+    }
+  }, [backendBaseUrl])
 
   return (
     <div className="min-h-dvh bg-off-white text-navy">
@@ -28,9 +79,19 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-3 text-[0.65rem] font-bold uppercase tracking-[0.16em]">
-            <span className="hidden text-off-white/50 sm:inline">Ncrypt · Hackfest demo</span>
+            <span className="hidden text-off-white/50 sm:inline">
+              Ncrypt · Hackfest demo
+            </span>
+            <button
+              type="button"
+              onClick={toggleDemoMode}
+              aria-pressed={demoMode}
+              className="rounded-full border border-amber/50 bg-amber/10 px-3 py-1.5 text-amber transition hover:bg-amber/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+            >
+              Demo mode {demoMode ? 'on' : 'off'}
+            </button>
             <span className="rounded-full border border-white/15 px-3 py-1.5 text-off-white/80">
-              Slice 01
+              Slice 04
             </span>
           </div>
         </div>
@@ -86,19 +147,60 @@ export default function App() {
                 </li>
               ))}
             </ol>
+
+            <div className="mt-8 space-y-6">
+              <WorkerApp
+                sessionId={sessionId}
+                onSessionStart={handleSessionStart}
+                events={usingLiveTransport ? stream.events : FALLBACK_EVENTS}
+                isStreaming={
+                  isStarting ||
+                  (usingLiveTransport && stream.status === 'connecting')
+                }
+              />
+              {startError ? (
+                <p
+                  role="alert"
+                  className="rounded-xl border border-red/40 bg-red/10 px-4 py-3 text-sm text-red"
+                >
+                  {startError}
+                </p>
+              ) : null}
+              <RouteMap
+                route={null}
+                source={null}
+                error={null}
+                onFetch={handleRouteFetch}
+                onFromSkillChange={noop}
+                onTargetRoleChange={noop}
+                onHoursPerWeekChange={noop}
+              />
+            </div>
           </section>
 
           <div className="lg:sticky lg:top-8">
-            <AgentLog events={events} source={source} />
+            <AgentLog
+              events={events}
+              source={displaySource}
+              status={usingLiveTransport ? stream.status : null}
+              lastEventId={usingLiveTransport ? stream.lastEventId : 0}
+              reconnectAttempts={
+                usingLiveTransport ? stream.reconnectAttempts : 0
+              }
+              onReconnect={usingLiveTransport ? stream.reconnectNow : undefined}
+            />
             <GhostTwinPanel />
+            <div className="mt-6">
+              <HRConsole />
+            </div>
             <div className="mt-4 flex items-start gap-3 px-1 text-xs leading-5 text-navy/50">
               <span
                 className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal"
                 aria-hidden="true"
               />
               <p>
-                Deterministic local events demonstrate the future WebSocket
-                contract without making backend claims.
+                Every panel labels its own data source. Simulated results are
+                never presented as SAP results.
               </p>
             </div>
           </div>

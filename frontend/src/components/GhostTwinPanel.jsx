@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { DEFAULT_BACKEND_BASE_URL, runGhostTwin } from '../api.js'
 
 export const AUDIT_TIMEOUT_MS = 10_000
 export const AUDIT_URL = 'http://127.0.0.1:8000/audit/ghost-twin'
@@ -20,6 +21,46 @@ const ATTRIBUTE_LABELS = {
   college_tier: 'College tier',
   city: 'City',
 }
+
+const GENDER_OPTIONS = [
+  { value: 'female', label: 'female' },
+  { value: 'male', label: 'male' },
+  { value: 'non_binary', label: 'non-binary' },
+  { value: 'other', label: 'other' },
+  { value: 'not_disclosed', label: 'not disclosed' },
+]
+
+const COLLEGE_TIER_OPTIONS = [
+  { value: 'tier_1', label: 'Tier 1' },
+  { value: 'tier_2', label: 'Tier 2' },
+  { value: 'tier_3', label: 'Tier 3' },
+]
+
+const CITY_OPTIONS = ['Chennai', 'Bengaluru', 'Hyderabad', 'Pune']
+
+const EDITABLE_FIELDS = [
+  'career_gap',
+  'gender',
+  'age',
+  'college_tier',
+  'city',
+  'skill_score',
+]
+
+const INITIAL_FORM = {
+  career_gap: CANDIDATE_PROFILE.career_gap,
+  gender: CANDIDATE_PROFILE.gender,
+  age: String(CANDIDATE_PROFILE.age),
+  college_tier: CANDIDATE_PROFILE.college_tier,
+  city: CANDIDATE_PROFILE.city,
+  skill_score: String(CANDIDATE_PROFILE.skill_score),
+}
+
+const FIELD_LABEL_CLASS =
+  'block text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/50'
+
+const FIELD_CONTROL_CLASS =
+  'mt-2 w-full rounded-lg border border-white/15 bg-navy px-3 py-2 text-sm text-off-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber'
 
 const EMPTY_AUDIT = {
   actual_score: null,
@@ -94,83 +135,6 @@ function getScoringMode(simulateLegacyAts) {
     : 'Synthetic fair merit'
 }
 
-function formatDetail(detail, fallback) {
-  if (typeof detail === 'string' && detail.trim()) {
-    return detail.trim()
-  }
-
-  if (Array.isArray(detail)) {
-    const messages = detail
-      .map((item) => {
-        if (typeof item === 'string') {
-          return item.trim()
-        }
-
-        if (!item || typeof item !== 'object') {
-          return ''
-        }
-
-        const message =
-          typeof item.msg === 'string'
-            ? item.msg
-            : typeof item.message === 'string'
-              ? item.message
-              : ''
-
-        if (!message) {
-          return ''
-        }
-
-        const location = Array.isArray(item.loc)
-          ? item.loc
-              .filter((part) => part !== undefined && part !== null)
-              .join(' → ')
-          : ''
-
-        return location ? `${location}: ${message}` : message
-      })
-      .filter(Boolean)
-
-    if (messages.length > 0) {
-      return messages.join('; ')
-    }
-  }
-
-  if (detail && typeof detail === 'object') {
-    if (typeof detail.message === 'string' && detail.message.trim()) {
-      return detail.message.trim()
-    }
-
-    if (typeof detail.msg === 'string' && detail.msg.trim()) {
-      return detail.msg.trim()
-    }
-  }
-
-  return fallback
-}
-
-async function getResponseErrorMessage(response) {
-  const status = response.status ? ` (${response.status})` : ''
-  const fallback = `Audit request failed${status}.`
-  let body
-
-  try {
-    body = await response.json()
-  } catch {
-    return fallback
-  }
-
-  const detail =
-    body !== null &&
-    typeof body === 'object' &&
-    !Array.isArray(body) &&
-    'detail' in body
-      ? body.detail
-      : body
-
-  return formatDetail(detail, fallback)
-}
-
 function isValidAuditResult(result) {
   return (
     result !== null &&
@@ -191,15 +155,7 @@ function isValidAuditResult(result) {
   )
 }
 
-async function parseAuditResult(response) {
-  let result
-
-  try {
-    result = await response.json()
-  } catch {
-    throw new Error('The audit service returned malformed JSON. Try again.')
-  }
-
+function readAuditResult(result) {
   if (!isValidAuditResult(result)) {
     throw new Error('The audit service returned an invalid audit result. Try again.')
   }
@@ -215,6 +171,10 @@ function getRequestErrorMessage(requestError, timedOut) {
   if (requestError instanceof Error) {
     if (requestError.name === 'AbortError') {
       return 'Audit request was cancelled. Try again.'
+    }
+
+    if (requestError instanceof SyntaxError) {
+      return 'The audit service returned malformed JSON. Try again.'
     }
 
     if (requestError.message) {
@@ -241,8 +201,30 @@ function waitForAbort(signal) {
   })
 }
 
+function toProfileNumber(raw) {
+  const parsed = Number.parseInt(raw, 10)
+
+  return Number.isNaN(parsed) ? raw : parsed
+}
+
+function toCandidateProfile(form) {
+  return {
+    career_gap: form.career_gap,
+    gender: form.gender,
+    age: toProfileNumber(form.age),
+    college_tier: form.college_tier,
+    city: form.city,
+    skill_score: toProfileNumber(form.skill_score),
+  }
+}
+
+function getEditedFields(form) {
+  return EDITABLE_FIELDS.filter((field) => form[field] !== INITIAL_FORM[field])
+}
+
 export default function GhostTwinPanel() {
   const [simulateLegacyAts, setSimulateLegacyAts] = useState(false)
+  const [form, setForm] = useState({ ...INITIAL_FORM })
   const [audit, setAudit] = useState(EMPTY_AUDIT)
   const [hasAudit, setHasAudit] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -264,6 +246,10 @@ export default function GhostTwinPanel() {
     setAudit(EMPTY_AUDIT)
     setHasAudit(false)
     setError('')
+  }
+
+  function updateField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }))
   }
 
   async function runAudit() {
@@ -288,26 +274,18 @@ export default function GhostTwinPanel() {
 
     try {
       const response = await Promise.race([
-        fetch(AUDIT_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        runGhostTwin(
+          {
             role_id: ROLE_ID,
-            candidate_profile: CANDIDATE_PROFILE,
+            candidate_profile: toCandidateProfile(form),
             simulate_legacy_ats: simulateLegacyAts,
-          }),
-          signal: controller.signal,
-        }),
+          },
+          { baseUrl: DEFAULT_BACKEND_BASE_URL },
+        ),
         waitForAbort(controller.signal),
       ])
 
-      if (response.ok === false || response.status >= 400) {
-        throw new Error(await getResponseErrorMessage(response))
-      }
-
-      const nextAudit = await parseAuditResult(response)
+      const nextAudit = await readAuditResult(response)
 
       if (!mountedRef.current || activeRequestRef.current !== controller) {
         return
@@ -336,6 +314,8 @@ export default function GhostTwinPanel() {
   const source = hasAudit ? audit.source : null
   const sourceLabel = formatSourceLabel(source)
   const scoringMode = getScoringMode(simulateLegacyAts)
+  const editedFields = getEditedFields(form)
+  const hasPendingEdits = editedFields.length > 0
   const sourceBadgeClass = hasAudit
     ? 'border-teal/40 bg-teal/10 text-teal'
     : 'border-amber/40 bg-amber/10 text-amber'
@@ -380,7 +360,7 @@ export default function GhostTwinPanel() {
               Candidate
             </p>
             <p className="mt-1 font-serif text-lg text-off-white">
-              Kavya · 29 · Chennai
+              Kavya · {form.age} · {form.city}
             </p>
           </div>
           <div className="sm:text-right">
@@ -441,6 +421,165 @@ export default function GhostTwinPanel() {
           </button>
         </div>
 
+        <fieldset
+          className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:p-5"
+          disabled={isLoading}
+        >
+          <legend className="px-2 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-off-white/50">
+            Edit the candidate profile
+          </legend>
+          <p
+            id="ghost-twin-editor-description"
+            className="text-xs leading-5 text-off-white/50"
+          >
+            Change any attribute and re-run. The pure-Python engine recomputes
+            every twin, so a fair-merit run stays flat and a legacy run moves.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label htmlFor="ghost-twin-career-gap" className={FIELD_LABEL_CLASS}>
+                Career gap
+              </label>
+              <input
+                id="ghost-twin-career-gap"
+                name="career_gap"
+                type="text"
+                value={form.career_gap}
+                onChange={(event) =>
+                  updateField('career_gap', event.target.value)
+                }
+                aria-describedby="ghost-twin-editor-description"
+                className={FIELD_CONTROL_CLASS}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="ghost-twin-gender" className={FIELD_LABEL_CLASS}>
+                Gender
+              </label>
+              <select
+                id="ghost-twin-gender"
+                name="gender"
+                value={form.gender}
+                onChange={(event) => updateField('gender', event.target.value)}
+                aria-describedby="ghost-twin-editor-description"
+                className={FIELD_CONTROL_CLASS}
+              >
+                {GENDER_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="ghost-twin-age" className={FIELD_LABEL_CLASS}>
+                Age
+              </label>
+              <input
+                id="ghost-twin-age"
+                name="age"
+                type="number"
+                min="18"
+                max="100"
+                step="1"
+                value={form.age}
+                onChange={(event) => updateField('age', event.target.value)}
+                aria-describedby="ghost-twin-editor-description"
+                className={FIELD_CONTROL_CLASS}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="ghost-twin-college-tier"
+                className={FIELD_LABEL_CLASS}
+              >
+                College tier
+              </label>
+              <select
+                id="ghost-twin-college-tier"
+                name="college_tier"
+                value={form.college_tier}
+                onChange={(event) =>
+                  updateField('college_tier', event.target.value)
+                }
+                aria-describedby="ghost-twin-editor-description"
+                className={FIELD_CONTROL_CLASS}
+              >
+                {COLLEGE_TIER_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="ghost-twin-city" className={FIELD_LABEL_CLASS}>
+                City
+              </label>
+              <select
+                id="ghost-twin-city"
+                name="city"
+                value={form.city}
+                onChange={(event) => updateField('city', event.target.value)}
+                aria-describedby="ghost-twin-editor-description"
+                className={FIELD_CONTROL_CLASS}
+              >
+                {CITY_OPTIONS.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="ghost-twin-skill-score"
+                className={FIELD_LABEL_CLASS}
+              >
+                Skill score
+              </label>
+              <input
+                id="ghost-twin-skill-score"
+                name="skill_score"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={form.skill_score}
+                onChange={(event) =>
+                  updateField('skill_score', event.target.value)
+                }
+                aria-describedby="ghost-twin-editor-description"
+                className={FIELD_CONTROL_CLASS}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-5 text-off-white/55" data-testid="edit-summary">
+              {hasPendingEdits
+                ? `Edited: ${editedFields
+                    .map((field) => ATTRIBUTE_LABELS[field] ?? 'Skill score')
+                    .join(', ')}`
+                : 'No edits yet. The seeded profile is Kavya’s.'}
+            </p>
+            <button
+              type="button"
+              onClick={runAudit}
+              disabled={isLoading || !hasPendingEdits}
+              aria-busy={isLoading}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-teal/50 bg-teal/10 px-5 py-3 text-sm font-bold uppercase tracking-[0.14em] text-teal transition hover:bg-teal/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            >
+              Re-run audit
+            </button>
+          </div>
+        </fieldset>
+
         <div
           className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-off-white/45"
           aria-live="polite"
@@ -462,7 +601,8 @@ export default function GhostTwinPanel() {
               Loading audit…
             </p>
             <p className="mt-2 text-sm leading-6 text-off-white/70">
-              Comparing Kavya with counterfactual twins.
+              Comparing {form.age}-year-old candidates in {form.city} against
+              counterfactual twins.
             </p>
           </div>
         ) : error ? (
@@ -565,36 +705,50 @@ export default function GhostTwinPanel() {
                 </thead>
                 <tbody className="divide-y divide-white/10">
                   {twins.length > 0 ? (
-                    twins.map((twin, index) => (
-                      <tr key={`${getTwinAttribute(twin)}-${index}`}>
-                        <th scope="row" className="px-4 py-4 font-normal">
-                          <span className="block font-semibold text-off-white">
-                            {getTwinLabel(twin)}
-                          </span>
-                          <span className="mt-1 block text-xs text-off-white/50">
-                            {formatCounterfactualValue(twin.original_value)} →{' '}
-                            {formatCounterfactualValue(twin.counterfactual_value)}
-                          </span>
-                        </th>
-                        <td className="px-4 py-4 font-mono text-off-white/75">
-                          {formatScore(audit.actual_score)}
-                        </td>
-                        <td className="px-4 py-4 font-mono text-off-white">
-                          {formatScore(twin.score)}
-                        </td>
-                        <td
-                          className={`px-4 py-4 font-mono ${
-                            twin.delta > 0
-                              ? 'text-amber'
-                              : twin.delta < 0
-                                ? 'text-red-300'
-                                : 'text-off-white/60'
-                          }`}
-                        >
-                          {formatSignedDelta(twin.delta)}
-                        </td>
-                      </tr>
-                    ))
+                    twins.map((twin, index) => {
+                      const attribute = getTwinAttribute(twin)
+                      const isEdited =
+                        attribute in INITIAL_FORM &&
+                        form[attribute] !== INITIAL_FORM[attribute]
+
+                      return (
+                        <tr key={`${attribute}-${index}`}>
+                          <th scope="row" className="px-4 py-4 font-normal">
+                            <span className="flex flex-wrap items-center gap-2">
+                              <span className="font-semibold text-off-white">
+                                {getTwinLabel(twin)}
+                              </span>
+                              {isEdited ? (
+                                <span className="rounded-full border border-amber/50 bg-amber/10 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.12em] text-amber">
+                                  edited
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="mt-1 block text-xs text-off-white/50">
+                              {formatCounterfactualValue(twin.original_value)} →{' '}
+                              {formatCounterfactualValue(twin.counterfactual_value)}
+                            </span>
+                          </th>
+                          <td className="px-4 py-4 font-mono text-off-white/75">
+                            {formatScore(audit.actual_score)}
+                          </td>
+                          <td className="px-4 py-4 font-mono text-off-white">
+                            {formatScore(twin.score)}
+                          </td>
+                          <td
+                            className={`px-4 py-4 font-mono ${
+                              twin.delta > 0
+                                ? 'text-amber'
+                                : twin.delta < 0
+                                  ? 'text-red-300'
+                                  : 'text-off-white/60'
+                            }`}
+                          >
+                            {formatSignedDelta(twin.delta)}
+                          </td>
+                        </tr>
+                      )
+                    })
                   ) : (
                     <tr>
                       <td
