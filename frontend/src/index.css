@@ -2,17 +2,19 @@
 @import "./styles/tokens.css";
 
 @layer base {
+  /* Dark is the default state of the product: Obsidian is the page canvas. */
   html {
-    background: var(--white);
+    background: var(--color-obsidian);
   }
 
   body {
     min-width: 320px;
     min-height: 100vh;
     margin: 0;
-    background: var(--white);
-    color: var(--black);
-    font-family: var(--font-sans);
+    background: var(--color-obsidian);
+    color: var(--color-chalk);
+    font-family: var(--font-utility);
+    font-weight: var(--font-weight-regular);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
   }
@@ -24,6 +26,7 @@
     font: inherit;
   }
 
+  /* Number inputs get no native spinner — NumberInput draws its own. */
   input[type="number"] {
     appearance: textfield;
     -moz-appearance: textfield;
@@ -37,13 +40,13 @@
   }
 
   select option {
-    background: var(--black);
-    color: var(--white);
+    background: var(--color-carbon);
+    color: var(--color-chalk);
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--accent) 30%, transparent);
-    color: var(--black);
+    background: color-mix(in srgb, var(--color-compass-amber) 30%, transparent);
+    color: var(--color-chalk);
   }
 }
 
@@ -64,7 +67,7 @@
   transform: none;
 }
 
-/* Subtle status pulse for "running" dots. */
+/* Status Line "running": an outlined dot breathing at a 1.5s cycle. */
 @keyframes running-dot-pulse {
   0%,
   100% {
