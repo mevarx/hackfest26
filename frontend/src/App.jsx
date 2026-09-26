@@ -1,9 +1,14 @@
 import { useCallback, useMemo, useState } from 'react'
-import AgentLog from './components/AgentLog.jsx'
+import DotMapRoute from './components/DotMapRoute.jsx'
 import GhostTwinPanel from './components/GhostTwinPanel.jsx'
+import Manifesto from './components/Manifesto.jsx'
+import PipelineAgentGrid from './components/PipelineAgentGrid.jsx'
 import Reveal from './components/Reveal.jsx'
+import SessionCard from './components/SessionCard.jsx'
 import StageProgress from './components/StageProgress.jsx'
+import StatusBadge from './components/StatusBadge.jsx'
 import Switch from './components/Switch.jsx'
+import { Button } from './components/Button.jsx'
 import { useDemoMode } from './context/DemoModeContext.jsx'
 import { startSession } from './api.js'
 import { useSessionStream } from './hooks/useSessionStream.js'
@@ -13,25 +18,22 @@ import RouteMap from './pages/RouteMap.jsx'
 import WorkerApp from './pages/WorkerApp.jsx'
 import {
   bodyClass,
-  bodyCopyClass,
-  captionClass,
   chalkClass,
   displayClass,
-  headingSmClass,
-  inkClass,
-  measureClass,
+  headingXsClass,
   metaClass,
-  ruleDarkClass,
-  sectionHeadingClass,
-  slateClass,
+  pageColumnClass,
+  readingClass,
+  ruleClass,
   smokeClass,
+  subheadingClass,
 } from './styles/classes.js'
 
 const DEMO_STAGES = [
-  { number: '01', label: 'Understand', description: 'Recover durable skills' },
-  { number: '02', label: 'Plan', description: 'Build a credible route' },
-  { number: '03', label: 'Match', description: 'Compare fair work' },
-  { number: '04', label: 'Audit', description: 'Challenge every score' },
+  { label: 'Understand', description: 'Recover durable skills' },
+  { label: 'Plan', description: 'Build a credible route' },
+  { label: 'Match', description: 'Compare fair work' },
+  { label: 'Audit', description: 'Challenge every score' },
 ]
 
 /** @type {Record<string, ('complete' | 'active' | 'upcoming')[]>} */
@@ -41,41 +43,72 @@ const STAGE_STATUS_LABELS = {
   settled: ['complete', 'active', 'upcoming', 'upcoming'],
 }
 
-/** Content column. The style reference caps the page at 1120px. */
-const PAGE_COLUMN_CLASS = 'mx-auto max-w-[70rem] px-5 sm:px-8'
+// The nav links the reference specifies. They are in-page anchors: the grid
+// above them is the agent catalogue, but PIPELINE has to land on the live run
+// the nav pill starts.
+const NAV_LINKS = [
+  { href: '#pipeline', label: 'Pipeline', isNew: false },
+  { href: '#route', label: 'Route map', isNew: false },
+  { href: '#audit', label: 'Audit', isNew: true },
+]
 
-/** One small-caps caption, then a 1px Graphite hairline across the full content
- *  width — the divider the system uses instead of a background-color change.
- *  A filled 1px box, not a border: the hairline spans the whole width with no
- *  side edges, so a border would draw verticals where none belong. */
-function SectionDivider({ children }) {
+/** The reference's nav: the wordmark carries the subtitle underneath. */
+const WORDMARK_CLASS = `${headingXsClass} font-medium ${chalkClass}`
+const WORDMARK_SUB_CLASS = `${metaClass} uppercase ${smokeClass}`
+const NAV_LINK_CLASS =
+  'font-aeonik text-sm font-normal uppercase leading-none text-smoke transition-colors hover:text-chalk'
+const NAV_RULE_CLASS = 'text-iron'
+
+// The 24px icon-avatar that sits inside the glossy pill: dark fill, light
+// glyph, circular. Specified for the nav CTA and part of the button's own
+// description, so the hero CTA carries the same mark.
+const LOGOMARK_CLASS =
+  'grid h-6 w-6 shrink-0 place-items-center rounded-full bg-obsidian text-[0.625rem] font-medium leading-none text-chalk'
+
+function Logomark() {
   return (
-    <div className="space-y-6">
-      <p className={sectionHeadingClass}>{children}</p>
-      <div className="h-px w-full bg-graphite" aria-hidden="true" />
-    </div>
+    <span aria-hidden="true" className={LOGOMARK_CLASS}>
+      R
+    </span>
   )
 }
 
 /**
- * A major section: 96px of air, one hairline, 96px more. A `label` renders the
- * small-caps divider; without one the hairline alone separates the block.
+ * The nav links the reference specifies, as real anchors so the page's own
+ * sections are reachable without scripting.
+ */
+function NavLinks() {
+  return (
+    <nav aria-label="Sections" className="flex items-center gap-6">
+      {NAV_LINKS.map((link) => (
+        <a key={link.href} href={link.href} className={NAV_LINK_CLASS}>
+          {link.label}
+          {link.isNew ? (
+            <sup className="ml-1 font-input text-[0.625rem] tracking-normal text-compass-gold">
+              new
+            </sup>
+          ) : null}
+        </a>
+      ))}
+    </nav>
+  )
+}
+
+/**
+ * A full-content-width 1px Graphite rule. The reference calls this "the single
+ * most repeated visual element — it IS the page structure", so sections are
+ * separated by the line and by air, never by a change of background.
  *
  * @param {{
- *   label?: string,
- *   className?: string,
  *   children?: import('react').ReactNode,
+ *   className?: string,
+ *   id?: string,
  * }} props
  */
-function SectionStack({ label, children, className = '' }) {
+function Section({ children, className = '', id }) {
   return (
-    <section className={`mt-24 border-t ${ruleDarkClass} pt-24 ${className}`.trim()}>
-      {label === undefined ? null : (
-        <Reveal>
-          <SectionDivider>{label}</SectionDivider>
-        </Reveal>
-      )}
-      <div className="mt-16 space-y-24">{children}</div>
+    <section id={id} className={`mt-30 border-t pt-30 ${ruleClass} ${className}`.trim()}>
+      {children}
     </section>
   )
 }
@@ -85,6 +118,7 @@ export default function App() {
   const [sessionId, setSessionId] = useState(null)
   const [startError, setStartError] = useState('')
   const [isStarting, setIsStarting] = useState(false)
+  const [runSignal, setRunSignal] = useState(0)
 
   const fallback = useAgentStream()
   const stream = useSessionStream({
@@ -95,7 +129,6 @@ export default function App() {
 
   const usingLiveTransport = !demoMode && Boolean(sessionId)
   const events = usingLiveTransport ? stream.events : fallback.events
-  const streamSource = usingLiveTransport ? stream.source : fallback.source
 
   const handleSessionStart = useCallback(
     async (payload) => {
@@ -117,8 +150,16 @@ export default function App() {
 
   const isStreaming = isStarting || (usingLiveTransport && stream.status === 'connecting')
 
+  // The reference puts two glossy pills on this page — the nav CTA and the hero
+  // CTA — and both are the same primary action, so both raise the same signal.
+  // The form is the only thing that knows the transcript, hence the counter
+  // rather than a duplicated request.
+  const requestRun = useCallback(() => {
+    setRunSignal((current) => current + 1)
+  }, [])
+
   // No per-stage progress signal exists in the session or event payload, so the
-  // route line is driven by the two states the app already knows: whether a
+  // stage track is driven by the two states the app already knows: whether a
   // session is open, and whether its stream is still settling.
   const stages = useMemo(() => {
     const phase = sessionId
@@ -134,166 +175,192 @@ export default function App() {
     }))
   }, [isStreaming, sessionId])
 
+  const isBusy = isStreaming || (isStarting && !sessionId)
+
+  // "VIEW ROUTE ↓" is the reference's reveal/scroll action, so it moves to the
+  // route section rather than doing anything to the session. Anchors already
+  // cover the nav links; this is the only button that has to reach for one.
+  const scrollToRoute = useCallback(() => {
+    document.getElementById('route')?.scrollIntoView({ behavior: 'smooth' })
+  }, [])
+
   return (
-    <div className="min-h-dvh bg-obsidian font-utility text-chalk">
-      {/* Nav bar: Obsidian with a 1px Graphite bottom border and no shadow —
-          depth comes from the hairline, never from elevation. */}
-      <header className={`border-b ${ruleDarkClass} bg-obsidian`}>
+    <div className="min-h-dvh bg-obsidian font-aeonik text-chalk">
+      {/* Nav: transparent over the canvas with no bottom border at the very top,
+          per the reference. The hairline it earns appears only once content
+          scrolls underneath it. */}
+      <header className="bg-transparent">
         <div
-          className={`${PAGE_COLUMN_CLASS} flex flex-wrap items-center justify-between gap-4 py-4`}
+          className={`${pageColumnClass} flex flex-wrap items-center justify-between gap-6 py-6`}
         >
-          <div className="flex items-center gap-3">
-            <span
-              className={`grid h-9 w-9 place-items-center rounded-tag border ${ruleDarkClass} bg-obsidian font-editorial text-[1.125rem] leading-none ${chalkClass}`}
-            >
-              R
-            </span>
-            <div>
-              <p className={`font-editorial text-[1.125rem] leading-none ${chalkClass}`}>
-                ReRoute
-              </p>
-              <p className={`mt-1 ${captionClass} ${smokeClass}`}>Career orchestration</p>
-            </div>
-          </div>
-          {/* Right rail is plain metadata text: a mono meta line, the demo switch,
-              then the slice indicator as bare text — no bordered pill. */}
           <div className="flex flex-wrap items-center gap-6">
-            <span className={`hidden sm:inline ${metaClass} ${smokeClass}`}>
-              Re Route · Hackfest demo
+            <div className="flex flex-col">
+              <span className={WORDMARK_CLASS}>ReRoute</span>
+              <span className={`mt-1 ${WORDMARK_SUB_CLASS}`}>Career orchestration</span>
+            </div>
+            <span aria-hidden="true" className={NAV_RULE_CLASS}>
+              |
             </span>
+            <NavLinks />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-5">
             <Switch
               id="demo-mode"
               checked={demoMode}
               onChange={toggleDemoMode}
               label="Demo mode"
             />
-            <span className={`${metaClass} ${smokeClass}`}>Slice 04</span>
+            <Button
+              variant="glossy"
+              onClick={requestRun}
+              disabled={isBusy}
+              aria-busy={isBusy}
+            >
+              <Logomark />
+              Run pipeline
+            </Button>
           </div>
         </div>
       </header>
 
-      <main className={PAGE_COLUMN_CLASS}>
-        {/* Hero: left-aligned (this is a working tool, not a landing-page
-            manifesto) — one serif display line, one measure of body copy, then
-            the persona card, the single bordered card on the page. */}
-        <section aria-labelledby="demo-title" className="pb-4 pt-20 sm:pt-24 lg:pt-28">
+      <main>
+        {/* Hero, left-aligned: the reference is explicit that a working tool
+            does not take the source's centred marketing hero. Display steps
+            63 → 44 → 34px, the same line-height and tracking throughout. */}
+        <div className={pageColumnClass}>
           <Reveal>
-            <p className={`${captionClass} ${smokeClass}`}>Demo stage · Kavya</p>
-          </Reveal>
-
-          <Reveal delay={70}>
-            <h1 id="demo-title" className={`mt-6 ${displayClass} ${chalkClass}`}>
-              Every agent,{' '}
-              {/* Same size, italic, one step quieter than the line above it. */}
+            <h1
+              id="demo-title"
+              className={`${displayClass} ${chalkClass} text-[2.125rem] sm:text-heading-lg lg:text-display`}
+            >
+              Every agent,
               <span className={`block italic ${smokeClass}`}>in sequence.</span>
             </h1>
           </Reveal>
 
-          <Reveal delay={140}>
-            <p className={`mt-8 ${bodyCopyClass}`}>
+          <Reveal delay={70}>
+            <p className={`mt-8 ${subheadingClass} ${readingClass} ${smokeClass}`}>
               A transparent view of the orchestration backbone as ReRoute turns a career
               transition into a fair, evidence-led plan.
             </p>
           </Reveal>
 
-          {/* Demo persona: the one card allowed to invert. Paper surface, Fog
-              hairline, 8px radius, and a single 2px amber stroke on the left
-              edge — capped at the reading width so it breaks out of the column
-              directly below the headline. */}
-          <Reveal delay={210}>
-            <div className="relative mt-16 max-w-[40rem] overflow-hidden rounded-card border border-fog bg-paper p-8">
-              <span
-                className="pointer-events-none absolute inset-y-0 left-0 w-0.5 bg-compass-amber"
-                aria-hidden="true"
+          {/* The reference's own example prompt orders this block headline →
+              sub-headline → badge → buttons, which is what is built here; the
+              summary list in the build instructions puts the badge first, and
+              the component spec is the more specific of the two. */}
+          <Reveal delay={140}>
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <StatusBadge
+                live={!demoMode}
+                label={`SLICE 04 · DEMO MODE ${demoMode ? 'ON' : 'OFF'}`}
               />
-              <div className="pl-4">
-                <p className={`${captionClass} ${slateClass}`}>Demo persona</p>
-                <p className={`mt-3 ${headingSmClass} ${inkClass}`}>Kavya · 29 · Chennai</p>
-                <p className={`mt-3 text-left ${bodyClass} ${slateClass}`}>
-                  Manual tester returning after an 18-month caregiving break
-                </p>
-              </div>
             </div>
           </Reveal>
-        </section>
 
-        <SectionStack label="Intake">
-          <Reveal delay={80}>
-            <WorkerApp
-              baseUrl={backendBaseUrl}
-              sessionId={sessionId}
-              onSessionStart={handleSessionStart}
-              events={events}
-              isStreaming={isStreaming}
-            />
+          <Reveal delay={210}>
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <Button
+                variant="glossy"
+                onClick={requestRun}
+                disabled={isBusy}
+                aria-busy={isBusy}
+                arrow="↗"
+              >
+                <Logomark />
+                Run pipeline
+              </Button>
+              <Button variant="ghost" arrow="↓" onClick={scrollToRoute}>
+                View route
+              </Button>
+            </div>
           </Reveal>
-          {/* Plain text, no second hairline and no alert box — the section
-              divider already separates this from the form above it. */}
-          {startError === '' ? null : (
-            <Reveal delay={60}>
-              <div role="alert" className="space-y-3">
-                <p className={`${captionClass} ${smokeClass}`}>Session could not start</p>
-                <p className={`${measureClass} text-left ${bodyClass} ${chalkClass}`}>
-                  {startError}
-                </p>
-              </div>
+        </div>
+
+        {/* The dot-density route graphic sits exactly where the source's globe
+            sits: full-bleed, bleeding off the bottom of the hero. */}
+        <Reveal delay={280}>
+          <DotMapRoute className="mt-24" />
+        </Reveal>
+
+        <div className={pageColumnClass}>
+          <Section>
+            <Reveal>
+              <PipelineAgentGrid />
             </Reveal>
-          )}
-        </SectionStack>
+          </Section>
 
-        <SectionStack label="Stage progression">
-          <Reveal delay={80}>
-            <StageProgress stages={stages} />
-          </Reveal>
-        </SectionStack>
+          <Section>
+            <Reveal>
+              <SessionCard />
+            </Reveal>
+          </Section>
 
-        <SectionStack label="Route">
-          <Reveal delay={80}>
-            <RouteMap baseUrl={backendBaseUrl} />
-          </Reveal>
-        </SectionStack>
+          <Section>
+            <Reveal>
+              <Manifesto />
+            </Reveal>
+          </Section>
 
-        <SectionStack label="Orchestration detail">
-          <Reveal delay={80}>
-            <AgentLog
-              events={events}
-              source={streamSource}
-              status={usingLiveTransport ? stream.status : null}
-              lastEventId={usingLiveTransport ? stream.lastEventId : 0}
-              reconnectAttempts={usingLiveTransport ? stream.reconnectAttempts : 0}
-              onReconnect={usingLiveTransport ? stream.reconnectNow : undefined}
-            />
-          </Reveal>
-        </SectionStack>
+          <Section id="pipeline">
+            <Reveal>
+              <StageProgress stages={stages} />
+            </Reveal>
+            <div className="mt-16">
+              <WorkerApp
+                baseUrl={backendBaseUrl}
+                sessionId={sessionId}
+                onSessionStart={handleSessionStart}
+                events={events}
+                isStreaming={isStreaming}
+                runSignal={runSignal}
+              />
+            </div>
+            {startError === '' ? null : (
+              <Reveal delay={60}>
+                <div role="alert" className="mt-12 space-y-3">
+                  <p className={`font-aeonik text-caption uppercase ${smokeClass}`}>
+                    Session could not start
+                  </p>
+                  <p className={`${readingClass} ${bodyClass} ${chalkClass}`}>{startError}</p>
+                </div>
+              </Reveal>
+            )}
+          </Section>
 
-        <SectionStack>
-          <Reveal>
-            <GhostTwinPanel baseUrl={backendBaseUrl} />
-          </Reveal>
-        </SectionStack>
+          <Section id="route">
+            <Reveal>
+              <RouteMap baseUrl={backendBaseUrl} />
+            </Reveal>
+          </Section>
 
-        <SectionStack>
-          <Reveal>
-            <HRConsole baseUrl={backendBaseUrl} />
-          </Reveal>
-        </SectionStack>
+          <Section id="audit">
+            <Reveal>
+              <GhostTwinPanel baseUrl={backendBaseUrl} />
+            </Reveal>
+          </Section>
 
-        {/* Footer: 1px Graphite top border, transparent, 40px of vertical air.
-            No fill, no shadow. */}
-        <footer className={`mt-24 border-t ${ruleDarkClass} py-10`}>
-          <Reveal>
-            <p
-              className={`${measureClass} text-left font-utility text-label font-normal leading-body ${smokeClass}`}
-            >
-              Every panel labels its own data source. Simulated results are never presented as
-              SAP results.
-            </p>
-            <p className={`mt-6 ${metaClass} ${smokeClass}`}>
-              Re Route · Hackfest demo build · Slice 04
-            </p>
-          </Reveal>
-        </footer>
+          <Section id="employer">
+            <Reveal>
+              <HRConsole baseUrl={backendBaseUrl} />
+            </Reveal>
+          </Section>
+        </div>
       </main>
+
+      {/* Footer: 1px Graphite top border, transparent, 32px of vertical air. No
+          fill. */}
+      <footer className={`mt-30 border-t py-8 ${ruleClass}`}>
+        <div className={pageColumnClass}>
+          <p className={`font-aeonik text-sm font-normal ${chalkClass}`}>
+            Team ReRoute · SRM University AP
+          </p>
+          <p className={`mt-2 ${metaClass} ${smokeClass}`}>
+            github.com/mevarx/hackfest26 · SAP Hackfest 2026
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }
