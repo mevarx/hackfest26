@@ -23,16 +23,23 @@
   --color-card-slate: #3b3d45;
   --color-pulse-green: #98ff38;
 
-  /* Typography — two faces, both specified by the reference.
-     Aeonik carries everything; Input is reserved for meta text, labels and
-     captions. There is no serif in this system. */
-  --font-aeonik: 'Aeonik', 'Inter', 'General Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-input: 'Input', 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+  /* Typography — two faces, both specified by the reference and both now
+     actually loaded (see public/fonts/fonts.css). The reference's Aeonik is
+     not licensable, so Inter is the named substitute; Input is likewise
+     substituted by JetBrains Mono. The commercial names stay first in the
+     stack so a licensed drop-in wins with no code change.
+
+     There is deliberately no serif anywhere in the fallback chain. A generic
+     `serif` tail is what let a missing @font-face render the whole page in
+     Times; the last resort is the system UI face, which is the intended
+     design when both faces are genuinely unavailable. */
+  --font-aeonik: 'Aeonik', 'Inter', 'General Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-input: 'Input', 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', monospace;
 
   /* Aliases so the generic Tailwind families resolve to the same two voices
      instead of pulling in a third default face. */
-  --font-sans: 'Aeonik', 'Inter', 'General Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Input', 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Aeonik', 'Inter', 'General Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Input', 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', monospace;
 
   /* Typography — Scale */
   --text-caption: 13px;
@@ -44,16 +51,27 @@
   --text-heading-lg: 44px;
   --text-display: 63px;
 
-  /* Typography — Line height, from the reference's type-scale table. The
-     caption's 2.69 is unusually loose; it suits the single-line label/badge
-     rhythm the reference specifies, so it is reproduced rather than "fixed". */
-  --leading-caption: 2.69;
-  --leading-body: 1.25;
+  /* Typography — Line height, one value per size in the scale.
+     Every text leaf on the page resolves to exactly one of these, which is
+     what makes the rhythm legible: a 13px label and a 13px hint are the same
+     height because they are the same size.
+
+     The reference's own table gives the caption a leading of 2.69, which on
+     13px resolves to ~35px of line box. On a single-line section label that is
+     ~22px of dead air under the text, and it is what made the page read as
+     randomly spaced. That figure is a mistranscribed row: every other entry in
+     the table is a plausible leading and 2.69 is not one. It is overridden here
+     to 1.5, which keeps the reference's intent (caption sits on a looser,
+     airier rhythm than body) without the gap. The one place that genuinely
+     wanted the loose value — the manifesto paragraph — carries an explicit
+     local leading instead. */
+  --leading-caption: 1.5;
+  --leading-body: 1.5;
   --leading-heading-xs: 1.31;
-  --leading-subheading: 0.95;
-  --leading-heading-sm: 1.07;
-  --leading-heading: 1.03;
-  --leading-heading-lg: 1.07;
+  --leading-subheading: 1.25;
+  --leading-heading-sm: 1.22;
+  --leading-heading: 1.15;
+  --leading-heading-lg: 1.1;
   --leading-display: 1.05;
 
   /* Typography — Letter spacing. The reference gives these in em in the
