@@ -9,8 +9,9 @@ role catalogue with the offline hashing embedder, and when HANA is configured
 and reachable it upserts one row per role into ``ROLE_EMBEDDINGS`` and then
 verifies the row count with ``hana_client.run_scalar``. When HANA is missing or
 rejects the statement it logs a warning and writes
-``backend/app/mocks/role_embeddings.json`` instead, which is the file
-``app.services.inclusive_matching`` reads for its simulated pathway.
+``ROLE_EMBEDDINGS_PATH`` instead, which is the file
+``app.services.inclusive_matching`` reads for its simulated pathway. That path is
+owned by the application module and imported from it, so the two cannot drift.
 
 ``init_hana_schema.sql`` creates ``ROLE_EMBEDDINGS`` with ``ROLE_ID`` and
 ``EMBEDDING`` only, so the wide upsert is tried first and the two-column upsert
@@ -28,8 +29,14 @@ from pathlib import Path
 from typing import Any
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
-ROLE_EMBEDDINGS_PATH = BACKEND_ROOT / "app" / "mocks" / "role_embeddings.json"
 EMBEDDING_PRECISION = 6
+
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from app.services.inclusive_matching import ROLE_EMBEDDINGS_PATH  # noqa: E402
+
+__all__ = ["ROLE_EMBEDDINGS_PATH", "main"]
 
 logger = logging.getLogger("scripts.seed_role_embeddings")
 

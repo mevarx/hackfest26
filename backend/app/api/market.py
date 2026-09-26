@@ -1,24 +1,25 @@
-import logging
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.mocks import employer_fixtures, market_fixtures
 from app.models import (
+    ROLE_QUERY_MAX_LENGTH,
     DisplacementRadarResponse,
     EmployerFilterRewriteRequest,
     EmployerFilterRewriteResponse,
 )
 
-logger = logging.getLogger(__name__)
-
 router = APIRouter(tags=["market", "employer"])
+
+RoleQuery = Annotated[str, Query(min_length=1, max_length=ROLE_QUERY_MAX_LENGTH)]
+CityQuery = Annotated[str, Query(min_length=1, max_length=ROLE_QUERY_MAX_LENGTH)]
 
 
 @router.get("/market/displacement-radar", response_model=DisplacementRadarResponse)
-async def displacement_radar(
-    role: str,
-    city: str = market_fixtures.DEFAULT_CITY,
+def displacement_radar(
+    role: RoleQuery,
+    city: CityQuery = market_fixtures.DEFAULT_CITY,
 ) -> DisplacementRadarResponse:
     entry = _radar_entry(role, city)
     return DisplacementRadarResponse(
@@ -34,7 +35,7 @@ async def displacement_radar(
     "/employer/rewrite-filter",
     response_model=EmployerFilterRewriteResponse,
 )
-async def rewrite_filter(
+def rewrite_filter(
     request: EmployerFilterRewriteRequest,
 ) -> EmployerFilterRewriteResponse:
     post = employer_fixtures.JOB_POSTS_BY_ID.get(request.job_post_id)

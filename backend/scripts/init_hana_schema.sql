@@ -9,7 +9,14 @@
 CREATE COLUMN TABLE SKILLS_NODES (ID INT PRIMARY KEY, NAME NVARCHAR(50));
 
 -- Skills graph edges. HOURS is the investment needed to move SOURCE -> TARGET.
-CREATE COLUMN TABLE SKILLS_EDGES (SOURCE INT, TARGET INT, HOURS INT);
+-- The composite primary key is what makes the UPSERTs below replayable: HANA
+-- resolves UPSERT to insert-or-replace and needs a unique key to do it.
+CREATE COLUMN TABLE SKILLS_EDGES (
+  SOURCE INT,
+  TARGET INT,
+  HOURS INT,
+  PRIMARY KEY (SOURCE, TARGET)
+);
 
 -- Graph workspace wrapping the two column tables above. The workspace is what
 -- learning_pathway.py reads to solve the least-hours path.
@@ -17,8 +24,14 @@ CREATE GRAPH WORKSPACE SKILLS_GRAPH
   EDGE TABLE SKILLS_EDGES SOURCE COLUMN SOURCE TARGET COLUMN TARGET
   VERTEX TABLE SKILLS_NODES KEY COLUMN ID;
 
--- Role embeddings for inclusive matching, written by the MiniLM encoder.
-CREATE COLUMN TABLE ROLE_EMBEDDINGS (ROLE_ID NVARCHAR(20), EMBEDDING REAL_VECTOR(384));
+-- Role embeddings for inclusive matching, written by the configured encoder
+-- (the offline hashing embedder by default, MiniLM when REROUTE_EMBEDDING_BACKEND
+-- selects it). ROLE_ID is the primary key so scripts/seed_role_embeddings.py can
+-- upsert one row per role.
+CREATE COLUMN TABLE ROLE_EMBEDDINGS (
+  ROLE_ID NVARCHAR(20) PRIMARY KEY,
+  EMBEDDING REAL_VECTOR(384)
+);
 
 -- Seed: same fixtures as app/mocks/hana_fixtures.py, in the same order.
 UPSERT SKILLS_NODES VALUES (1, 'Manual testing');

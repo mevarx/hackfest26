@@ -61,7 +61,7 @@ SCORE_PRECISION: Final[int] = 4
 GUARDRAIL_REASON: Final[str] = (
     "Pay cut of {pay_cut:.1f}% exceeds the {threshold:.0f}% wage-scar guardrail"
 )
-FALLBACK_ROLE_EMBEDDINGS_PATH: Final[Path] = (
+ROLE_EMBEDDINGS_PATH: Final[Path] = (
     Path(__file__).resolve().parents[1] / "mocks" / "role_embeddings.json"
 )
 DEFAULT_PASSPORT_SKILLS: Final[tuple[SkillClaim, ...]] = (
@@ -178,7 +178,7 @@ def load_role_embeddings(path: Path | None = None) -> dict[str, list[float]]:
     wrong dimension all return an empty mapping so the caller recomputes the
     same vectors in process from the fixtures instead of failing the request.
     """
-    target = path if path is not None else role_embeddings_path()
+    target = path if path is not None else ROLE_EMBEDDINGS_PATH
     if not target.is_file():
         return {}
     try:
@@ -202,15 +202,6 @@ def load_role_embeddings(path: Path | None = None) -> dict[str, list[float]]:
             logger.warning("role embeddings file %s holds a bad vector", target)
             return {}
     return embeddings
-
-
-def role_embeddings_path() -> Path:
-    """Return the seeded local embeddings path owned by the seed script."""
-    try:
-        from scripts.seed_role_embeddings import ROLE_EMBEDDINGS_PATH
-    except ImportError:
-        return FALLBACK_ROLE_EMBEDDINGS_PATH
-    return Path(ROLE_EMBEDDINGS_PATH)
 
 
 def _rank_match(

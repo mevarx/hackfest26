@@ -5,9 +5,10 @@
 # fixtures. The env vars below are listed by NAME only; no value, hostname, or
 # credential belongs in this file, and none is inlined here.
 #
-# The build command installs only the declared dependencies. `hdbcli` is not one
-# of them, so USE_MOCK_HANA=false additionally needs `pip install hana-hdbcli`
-# appended to buildCommand.
+# The build command installs only the declared dependencies in
+# backend/pyproject.toml, which now include `hdbcli` and `httpx` alongside
+# fastapi/langgraph. USE_MOCK_HANA=false therefore needs no extra install step;
+# it only needs real HANA_* credentials in the dashboard.
 #
 # Reference: backend/Procfile holds the same start command, and
 # backend/.env.example documents every variable with its default.
@@ -44,7 +45,8 @@ services:
     #   HANA_PORT                    - 443 for HANA Cloud over TLS
     #   HANA_USER                    - blank unless live HANA Cloud is intended
     #   HANA_PASSWORD                - blank unless live HANA Cloud is intended
-    #   HANA_KEEP_ALIVE_SECONDS      - not yet started by the app lifespan
+    #   HANA_KEEP_ALIVE_SECONDS      - started by the app lifespan as a
+    #                                  background task when HANA is live
     #   HANA_QUERY_TIMEOUT_SECONDS   - bounds a hung instance before fallback
     envVars:
       - key: PYTHON_VERSION

@@ -113,11 +113,10 @@ def test_the_guardrail_threshold_is_the_response_contract(settings: Settings) ->
     assert empty.matches
 
 
-def test_the_role_embeddings_path_agrees_with_the_seed_script() -> None:
-    from scripts.seed_role_embeddings import ROLE_EMBEDDINGS_PATH
+def test_the_seed_script_writes_exactly_where_the_matcher_reads() -> None:
+    import scripts.seed_role_embeddings as seed_script
 
-    assert inclusive_matching.role_embeddings_path() == Path(ROLE_EMBEDDINGS_PATH)
-    assert Path(ROLE_EMBEDDINGS_PATH) == inclusive_matching.FALLBACK_ROLE_EMBEDDINGS_PATH
+    assert seed_script.ROLE_EMBEDDINGS_PATH is inclusive_matching.ROLE_EMBEDDINGS_PATH
 
 
 def test_guardrail_blocks_a_pay_cut_the_candidate_did_not_accept(settings: Settings) -> None:
@@ -351,7 +350,7 @@ def test_a_seeded_embeddings_file_drives_the_simulated_ranking(
     tmp_path: Path,
 ) -> None:
     seed_path = tmp_path / "role_embeddings.json"
-    monkeypatch.setattr(inclusive_matching, "role_embeddings_path", lambda: seed_path)
+    monkeypatch.setattr(inclusive_matching, "ROLE_EMBEDDINGS_PATH", seed_path)
     replacement = embedding_provider.embed_text("Data validation for warehouse migrations")
     seed_path.write_text(json.dumps({LOW_PAY_ROLE_ID: replacement}), encoding="utf-8")
     candidate_vector = embedding_provider.embed_text(
@@ -373,7 +372,7 @@ def test_a_seeded_file_with_the_wrong_dimension_is_ignored(
 ) -> None:
     seed_path = tmp_path / "broken.json"
     seed_path.write_text(json.dumps({LOW_PAY_ROLE_ID: [0.5, 0.5]}), encoding="utf-8")
-    monkeypatch.setattr(inclusive_matching, "role_embeddings_path", lambda: seed_path)
+    monkeypatch.setattr(inclusive_matching, "ROLE_EMBEDDINGS_PATH", seed_path)
 
     assert inclusive_matching.load_role_embeddings() == {}
 

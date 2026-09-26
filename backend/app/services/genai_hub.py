@@ -2,7 +2,7 @@ import json
 import logging
 import re
 from collections.abc import Mapping
-from typing import Any, Literal
+from typing import Any
 
 import httpx
 
@@ -11,6 +11,7 @@ from app.mocks.genai_fixtures import (
     CREDENTIAL_THRESHOLD,
     NEEDS_PROOF_TERMS,
     SKILL_CATALOG,
+    proof_request_for,
 )
 from app.models import (
     ExtractedSkill,
@@ -19,8 +20,6 @@ from app.models import (
 )
 
 logger = logging.getLogger(__name__)
-
-SkillsSource = Literal["live", "simulated"]
 
 _TOKEN_PATTERN = re.compile(r"[a-z0-9+#.]+")
 _STOP_WORDS = frozenset(
@@ -188,6 +187,11 @@ def _post_orchestration(payload: dict[str, Any], settings: Settings) -> Any:
         return response.json()
 
 
+def proof_requests() -> dict[str, str]:
+    """Canonical skill name -> the evidence a worker must supply for it."""
+    return dict(NEEDS_PROOF_TERMS)
+
+
 def _require_live_configuration(settings: Settings) -> None:
     missing = [
         name
@@ -308,7 +312,7 @@ def _mock_extraction(transcript: str) -> SkillExtractionResponse:
         ]
     skills.sort(key=lambda skill: (-skill.confidence, skill.name))
     skills = skills[:8]
-    needs_proof = [skill.name for skill in skills if skill.name in NEEDS_PROOF_TERMS]
+    needs_proof = [skill.name for skill in skills if proof_request_for(skill.name) is not None]
     if not needs_proof and skills:
         needs_proof = [skills[-1].name]
     return SkillExtractionResponse(
