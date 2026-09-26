@@ -4,7 +4,13 @@ import Icon from './Icon.jsx'
 // 8px, not the 12px `--radius-card`: the Session Card's own spec asks for a
 // tighter corner than the general card radius, so this component overrides the
 // token rather than redefining a new one.
-const CARD_CLASS = 'flex flex-col items-center rounded-[8px] px-6 py-6 text-center'
+//
+// Horizontal padding is generous and the row is full width, because this card
+// is a single record in a 1200px column: a card the width of its own text
+// floated in the middle of the row read as stranded rather than composed. The
+// content stays centred inside the frame because the card is about one subject,
+// but the frame itself now shares the page's left edge.
+const CARD_CLASS = 'flex flex-col items-center rounded-[8px] px-6 py-10 text-center'
 
 // The persona is the subject of the card, so it takes Aeonik at the body size;
 // the category and the date are metadata about the run, so both take Input at
