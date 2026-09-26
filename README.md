@@ -253,9 +253,9 @@ Nothing freezes the demo. The fallbacks, in the order they matter:
 
 Every response carries a `source` field (`live`, `simulated`, or `local`), agent
 events repeat that label, the market and employer fixtures carry a disclaimer, and
-the UI renders a source tag per data source — a plain mono mark beside the content,
-never a boxed badge. If a source tag says `simulated`, say so out loud. Never
-describe simulated output as an SAP result.
+the UI renders a status badge per data source — a pill with a Pulse Green dot when
+the data is live and a Graphite dot when it is not. If a badge says `simulated`,
+say so out loud. Never describe simulated output as an SAP result.
 
 The visual system behind all of this is specified in `ReRoute_Style_Reference.md`,
 which is the single source of truth for the frontend's colours, type scale, spacing
