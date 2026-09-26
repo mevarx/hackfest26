@@ -370,17 +370,18 @@ export default function RouteMap({
   return (
     <Card
       as="section"
-      eyebrow="Stage 02 · Learning pathway"
-      title="Route map"
-      titleId="route-map-title"
-      description="The cheapest chain of skills from where Kavya is today to the target role, priced in hours."
+      // The section heading lives in App's <Section>; repeating it here gave
+      // the page two competing h2s for the same region. Only the source badge
+      // is a Card concern. `data-testid` is the panel's stable identity for
+      // tests, which used to anchor on the heading that has now moved up a
+      // level — a heading is a label, not a handle.
+      data-testid="route-map"
       actions={
         <StatusBadge
           live={sourceDetails.source === 'live'}
           label={sourceDetails.label}
         />
       }
-      aria-labelledby="route-map-title"
       aria-busy={isLoading}
       padding="none"
       // The Route Builder is a form plus a reading list, so it caps narrower
@@ -393,7 +394,16 @@ export default function RouteMap({
     >
       <div className="space-y-16">
         <form className={SECTION_CLASS} onSubmit={handleSubmit}>
-          <p className={sectionHeadingClass}>Plan a different route</p>
+          {/* The badge describes the route below, so it shares the row that
+              introduces it. It used to be the Card's `actions` slot, which
+              orphaned it above a hairline that separated it from nothing. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <p className={sectionHeadingClass}>Plan a different route</p>
+            <StatusBadge
+              live={sourceDetails.source === 'live'}
+              label={sourceDetails.label}
+            />
+          </div>
 
           <div className="mt-8 grid gap-8 sm:grid-cols-3">
             <Field id="route-from-skill" label="From skill">
