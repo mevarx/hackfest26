@@ -1,210 +1,220 @@
-# ReRoute — Style Reference
-> A blueprint scratched into obsidian. Type and hairline borders carve white space from pure black, with a single amber compass-mark to show the active step.
+# ReRoute — Style Reference (Hyperstudio Ditto)
+> A blueprint scratched into obsidian. Type and hairline borders carve white space from pure black, with the occasional gold compass-mark to show the way.
 
-**Theme:** dark (primary), with a light "paper" surface reserved for readable long-form panels
+**Theme:** dark
 
-Adapted from the Hyperstudio editorial-tech system for ReRoute — Career Orchestration (SAP Hackfest 2026). Source measurements are interpreted for this product's actual components (agent pipeline log, stage progression, Ghost Twin audit, session transcript). This file replaces prior ad-hoc styling — treat it as the single source of truth going forward.
+This is a literal 1:1 port of the Hyperstudio design system — same tokens, same component specs, same button gloss, same badge shape, same dot-graphic motif — with ReRoute's content substituted in. Do not reinterpret or "improve" anything below; build it exactly as specified. Where Hyperstudio had a marketing-site element with no ReRoute equivalent, the mapping is stated explicitly so nothing is invented.
 
-Hyperstudio's core discipline is what ReRoute currently lacks: hierarchy through type and hairlines, not through color-coded boxes. This system carries that discipline over, replacing every bordered status pill, every numbered dashboard row, and every competing accent color with one calm, editorial voice. Weight 400 does the talking. One amber dot marks the one thing that matters right now.
+ReRoute runs on the same near-black canvas where everything is carved out by light. Deep matte black background (#101010), crisp off-white type (#f3f3f3), hairline 1px borders (#212121), and the occasional warm gold or signal-green dot for punctuation. Typography does the heavy lifting — oversized 400-weight headlines with aggressive negative tracking create a quiet, confident voice, never shouting. Components are reduced to their skeleton: outlined buttons, one glossy primary pill, thin dividers, no shadows beyond the button's own bevel, no fills beyond that single pill. The whole system feels like a wireframe rendered in light on obsidian — restrained, precise, deliberate.
+
+---
+
+## Content Mapping (Hyperstudio → ReRoute)
+
+| Hyperstudio element | ReRoute equivalent |
+|---|---|
+| "Hyperstudio" wordmark | "ReRoute" wordmark + "CAREER ORCHESTRATION" subtitle underneath, small caps, Smoke |
+| Nav links: SERVICES / PORTFOLIO / PROCESS | Nav links: PIPELINE / ROUTE MAP / AUDIT |
+| "LET'S CHAT" glossy pill (top right) | "RUN PIPELINE" glossy pill (top right) |
+| Scarcity badge "● 2/5 SPOTS LEFT FOR OCTOBER" | Status badge "● SLICE 04 · DEMO MODE ON" |
+| Headline "World-class branding and websites for startups." | Headline "Every agent, in sequence." (second line italic, Smoke) |
+| Primary CTA "START NOW ↗" | Primary CTA "RUN PIPELINE ↗" |
+| Secondary CTA "VIEW WORK ↓" | Secondary CTA "VIEW ROUTE ↓" |
+| Dot-map world graphic (globe made of dots) | Dot-map route graphic (the Kavya skill-to-role path made of dots — see below) |
+| Service Card grid (2×2) | Pipeline Agent grid (2×3: Skills Discovery, Market Intelligence, Learning Pathway, Inclusive Matching, Employer Readiness, Bias Audit) |
+| Portfolio Card | Session Card (a past demo run — persona, outcome, date) |
+| Manifesto block ("Why Hyperstudio?") | Manifesto block ("Why ReRoute?" — the Two-Key Rule, one paragraph) |
+| Footer email | Footer: team + repo link |
 
 ---
 
 ## Tokens — Colors
 
+*(unchanged from source — do not alter these values)*
+
 | Name | Value | Token | Role |
 |------|-------|-------|------|
-| Obsidian | `#0D0D0D` | `--color-obsidian` | Page canvas, header, and every dark surface — the default state |
-| Carbon | `#070707` | `--color-carbon` | Deepest surface level — hero band, Ghost Twin panel background |
-| Paper | `#FAFAF8` | `--color-paper` | Light "reading" surface reserved for long-form stage content and the demo persona card |
-| Chalk | `#F3F3F1` | `--color-chalk` | Primary text on dark surfaces |
-| Ink | `#141414` | `--color-ink` | Primary text on light (Paper) surfaces |
-| Smoke | `#9C9C99` | `--color-smoke` | Secondary/muted text, captions, timestamps, helper copy — on dark surfaces |
-| Slate | `#6B6B68` | `--color-slate` | Secondary/muted text on light (Paper) surfaces |
-| Graphite | `#212120` | `--color-graphite` | Primary 1px border/divider color on dark surfaces — the structural line work |
-| Fog | `#E4E4E1` | `--color-fog` | Primary 1px border/divider color on light surfaces |
-| Signal White | `#FFFFFF` | `--color-signal-white` | Filled pill button on dark surfaces (Run Pipeline), inverted text on Ink buttons |
-| Signal Black | `#0D0D0D` | `--color-signal-black` | Filled button on light surfaces (Build Route) |
-| Compass Amber | `#F5A623` | `--color-compass-amber` | The ONE accent. Active-stage dot, single primary CTA per view, focus ring. Never a fill, never a background, never more than one instance per viewport |
-| Pulse Dot | `#8AA98A` | `--color-pulse` | Small live-status dot only — muted sage, not a bright "success green," so it doesn't compete with amber |
+| Obsidian | `#101010` | `--color-obsidian` | Page canvas, full-bleed dark background |
+| Carbon | `#080808` | `--color-carbon` | Deepest surface level, hero band, overlay backgrounds |
+| Chalk | `#f3f3f3` | `--color-chalk` | Primary text, headings, body copy on dark surfaces |
+| Smoke | `#9c9c9c` | `--color-smoke` | Secondary muted text, captions, helper labels |
+| Ash | `#c1c1c1` | `--color-ash` | Mid-weight borders, subtle dividers, tertiary text |
+| Graphite | `#212121` | `--color-graphite` | Primary 1px border color for cards, grids, section dividers |
+| Iron | `#474747` | `--color-iron` | Secondary border and stroke detail |
+| Signal White | `#ffffff` | `--color-signal-white` | Glossy pill button base, inverted text on light surfaces |
+| Compass Gold | `#6f6759` | `--color-compass-gold` | Outlined icon strokes — warm metallic against the cool dark |
+| Card Slate | `#3b3d45` | `--color-card-slate` | Card and panel border accent on elevated sections |
+| Pulse Green | `#98ff38` | `--color-pulse-green` | Live/active status dot only (badge prefix) |
 
 ---
 
 ## Tokens — Typography
 
-### Display / Editorial — Serif, weight 400 only. Headlines, section openers, the "Kavya · 29 · Chennai" persona line. Authority through scale, never through bold. · `--font-editorial`
-- **Family:** Noto Serif (substitute: Source Serif 4, Cambria, Georgia)
-- **Weights:** 400 only for headlines; italic 400 for the secondary headline clause ("*in sequence.*")
-- **Sizes:** 18px, 21px, 23px, 34px, 44px, 63px
-- **Line height:** 1.03–1.10 at display sizes
-- **Letter spacing:** -0.31px at 44px, -0.69px at 63px
+*(unchanged from source)*
 
-### Utility — Sans, weight 400–500. Body copy, labels, buttons, form fields, the agent pipeline log. · `--font-utility`
-- **Family:** Inter (substitute: General Sans, Söhne)
-- **Weights:** 400 (body), 500 (labels, agent names, button text — never 700)
-- **Sizes:** 12px, 13px, 14px, 16px, 18px
-- **Line height:** 1.25–1.5
-- **Letter spacing:** 0.04em on small-caps labels (STAGE 01 · SKILLS DISCOVERY), default elsewhere
+### Aeonik — Primary typeface for everything. Weight 400 across all sizes is signature: no bold shouting, authority through scale and tracking alone. · `--font-aeonik`
+- **Substitute:** Inter, Satoshi, or General Sans
+- **Weights:** 400, 700
+- **Sizes:** 13px, 14px, 16px, 17px, 18px, 21px, 23px, 34px, 44px, 63px
+- **Line height:** 0.95–1.43
+- **Letter spacing:** -0.0110em at 63px, -0.0070em at 44px, default at body
+- **OpenType features:** `'ss01' on, 'cv11' on`
 
-### Mono — Meta text only. Timestamps in the agent log, session IDs, source tags. · `--font-mono`
-- **Family:** IBM Plex Mono (substitute: JetBrains Mono, Space Mono)
+### Input — Secondary typeface for meta text, labels, captions. · `--font-input`
+- **Substitute:** IBM Plex Mono, JetBrains Mono, or Space Mono
 - **Weights:** 400
-- **Sizes:** 11px, 12px
-- **Letter spacing:** -0.02em
-- **Role:** Never used for headlines or body copy — reserved strictly for timestamps and IDs, giving them a quiet "system log" feel without turning the whole UI into a terminal.
+- **Sizes:** 8px, 13px, 14px, 16px, 17px, 18px
+- **Line height:** 1.20–1.54
+- **Letter spacing:** -0.0370em, -0.0220em
 
 ### Type Scale
 
-| Role | Family | Weight | Size | Line Height | Letter Spacing | Token |
-|------|--------|--------|------|-------------|-----------------|-------|
-| meta | mono | 400 | 12px | 1.4 | -0.02em | `--text-meta` |
-| caption | sans | 400 | 13px | 1.5 | 0.04em (uppercase) | `--text-caption` |
-| body | sans | 400 | 16px | 1.5 | — | `--text-body` |
-| label | sans | 500 | 14px | 1.3 | — | `--text-label` |
-| heading-sm | serif | 400 | 23px | 1.15 | — | `--text-heading-sm` |
-| heading | serif | 400 | 34px | 1.08 | — | `--text-heading` |
-| heading-lg | serif | 400 | 44px | 1.07 | -0.31px | `--text-heading-lg` |
-| display | serif | 400 | 63px | 1.05 | -0.69px | `--text-display` |
+| Role | Size | Line Height | Letter Spacing | Token |
+|------|------|-------------|-----------------|-------|
+| caption | 13px | 2.69 | — | `--text-caption` |
+| body | 16px | 1.25 | — | `--text-body` |
+| heading-xs | 18px | 1.31 | — | `--text-heading-xs` |
+| subheading | 21px | 0.95 | — | `--text-subheading` |
+| heading-sm | 23px | 1.07 | — | `--text-heading-sm` |
+| heading | 34px | 1.03 | — | `--text-heading` |
+| heading-lg | 44px | 1.07 | -0.31px | `--text-heading-lg` |
+| display | 56–63px | 1.05 | -0.69px | `--text-display` |
 
 ---
 
 ## Tokens — Spacing & Shapes
 
-**Base unit:** 4px
-**Density:** comfortable — generous section gaps, not a dense dashboard
+**Base unit:** 4px · **Density:** comfortable
 
-### Spacing Scale
-
-| Name | Value | Token |
-|------|-------|-------|
-| 4 | 4px | `--spacing-4` |
-| 8 | 8px | `--spacing-8` |
-| 12 | 12px | `--spacing-12` |
-| 16 | 16px | `--spacing-16` |
-| 24 | 24px | `--spacing-24` |
-| 40 | 40px | `--spacing-40` |
-| 64 | 64px | `--spacing-64` |
-| 96 | 96px | `--spacing-96` |
+| Name | Value |
+|------|-------|
+| 4 | 4px |
+| 8 | 8px |
+| 12 | 12px |
+| 16 | 16px |
+| 20 | 20px |
+| 24 | 24px |
+| 40 | 40px |
 
 ### Border Radius
 
 | Element | Value |
 |---------|-------|
-| tags / small controls | 4px |
-| cards / panels | 8px |
-| form inputs | 6px |
-| primary buttons | 9999px (pill) — the ONLY fully-rounded element in the system |
+| tags / badges | 9999px (full pill, matches screenshot) |
+| cards | 12px |
+| primary/secondary buttons | 12–14px (rounded rect, NOT full pill — see button spec below, this matches the actual screenshot, not the earlier assumption) |
+| icons | 99px |
 
 ### Layout
 
-- **Page max-width:** 1120px
-- **Reading column max-width:** 640px (body copy, manifesto-style paragraphs)
-- **Section gap:** 96–160px
-- **Panel padding:** 32–48px
-- **Element gap:** 16–24px
+- **Page max-width:** 1200px
+- **Section gap:** 120–210px
+- **Card padding:** 32–48px
+- **Element gap:** 20–24px
 
 ---
 
-## Components
+## Components — Exact Specs
 
 ### Top Navigation Bar
-**Role:** Persistent header — brand, demo-mode state, slice indicator
+Transparent, floating over Obsidian canvas, no bottom border visible in the reference shot (hairline only appears once content scrolls under it — keep it borderless at the very top). Left: "ReRoute" wordmark, Aeonik 18px weight 500 Chalk, immediately followed by a thin vertical divider `|` in Iron, then nav links. Nav links: PIPELINE, ROUTE MAP, AUDIT — Aeonik 14px weight 400 uppercase, Smoke, 24px gaps, one link ("AUDIT") may carry a small superscript "NEW" tag in Compass Gold 10px if it's the newest feature. Right: the Glossy Pill Button (see below) labeled "RUN PIPELINE" with a small circular icon-avatar to its left inside the same pill (use the "R" logomark tile, dark-on-light, 24px circle).
 
-Obsidian background, 1px Graphite bottom border, no shadow. Left: square logomark (Chalk "R" on Obsidian tile, or inverted) + "ReRoute" in serif 18px + "CAREER ORCHESTRATION" caption below in Smoke, letter-spaced. Right: plain text meta ("RE ROUTE · HACKFEST DEMO") in Smoke mono/caption, a minimal toggle switch (no colored track — Graphite off, Chalk-outlined on) labeled "DEMO MODE", and a plain text "SLICE 04" — no bordered pill around it.
+### Glossy Pill Button (Primary Action)
+**This is the exact button style from the screenshot — reproduce precisely:**
+```css
+background: linear-gradient(180deg, #ffffff 0%, #e9e9e6 100%);
+color: #101010;
+border-radius: 14px; /* rounded rect, not a full pill */
+padding: 10px 20px 10px 10px; /* tighter left padding to fit the icon circle */
+box-shadow:
+  inset 0 1px 0 rgba(255,255,255,0.9),   /* top inner highlight = the glossy bevel */
+  0 1px 2px rgba(0,0,0,0.4);              /* soft contact shadow, NOT a drop shadow halo */
+font: 400 14px/1 'Aeonik', sans-serif;
+letter-spacing: 0.02em;
+text-transform: uppercase;
+display: inline-flex;
+align-items: center;
+gap: 8px;
+```
+Icon-avatar circle sits inside the pill at the far left (24px diameter, dark fill, light glyph). No hover-color change — only a subtle brightness increase (~4%) on the gradient.
 
-### Hero Headline Block
-**Role:** Page/section opener
+### Ghost Outline Button (Secondary Action)
+```css
+background: rgba(255,255,255,0.03);
+border: 1px solid #2a2a2a;
+color: #f3f3f3;
+border-radius: 12px;
+padding: 10px 20px;
+font: 400 14px/1 'Aeonik', sans-serif;
+text-transform: uppercase;
+letter-spacing: 0.02em;
+```
+Small arrow glyph right-aligned inside the button ("↗" for forward actions, "↓" for reveal/scroll actions). No border-color change on hover — background lightens to `rgba(255,255,255,0.06)` only.
 
-Serif 63px weight 400, Ink on Paper (or Chalk on Obsidian), line-height 1.05, letter-spacing -0.69px. Second line in italic serif, Slate/Smoke color, same size — this is how "in sequence." reads quieter than "Every agent,". Sub-headline below in sans 16px body, Slate, max-width 640px. No decoration, no icon, no background shift behind the text.
+### Status/Scarcity Badge (Pill)
+**Exact reproduction of "2/5 SPOTS LEFT FOR OCTOBER":**
+```css
+background: #1a1a1a;
+border: 1px solid #212121;
+border-radius: 9999px;
+padding: 6px 14px;
+display: inline-flex;
+align-items: center;
+gap: 8px;
+font: 400 12px/1 'Input', monospace;
+color: #9c9c9c;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+```
+Prefix: a 6px solid-filled circle in Pulse Green (`#98ff38`) with a very subtle glow (`box-shadow: 0 0 4px rgba(152,255,56,0.5)`), vertically centered.
+ReRoute content: `● SLICE 04 · DEMO MODE ON`
 
-### Demo Persona Card
-**Role:** Shows the active demo subject (Kavya)
+### Headline Display Block
+Aeonik, weight 400, size 56–63px (scale down to 44px on tablet, 34px on mobile), color Chalk, line-height 1.05, letter-spacing -0.69px. Two lines, left-aligned (not centered — ReRoute is a working tool, the reference's centered marketing hero doesn't apply). Line 1: "Every agent," in full-weight Chalk. Line 2: "in sequence." in italic, Ash/Smoke color, same size. Sub-headline directly below: Aeonik 21px weight 400 Smoke, max-width 620px: "A transparent view of the orchestration backbone as ReRoute turns a career transition into a fair, evidence-led plan."
 
-Paper background even inside a dark page (deliberate — this is the one card allowed to invert), 1px Fog border, 8px radius, one 2px Compass Amber left-edge accent bar (not a full border — a single vertical stroke on the left edge only). Caption label "DEMO PERSONA" in small-caps Slate. Name line in serif 23px Ink. Description in sans body, Slate. No icon, no photo.
+Below the sub-headline: the Status Badge, then the two buttons side by side (Glossy Pill primary "RUN PIPELINE ↗", Ghost Outline secondary "VIEW ROUTE ↓"), 16px gap between them.
 
-### Session Transcript Panel
-**Role:** Displays the raw input text (voice/paste) that feeds the pipeline
+### Dot-Map Route Graphic (replaces the world-map dot graphic)
+Full-width illustration, positioned exactly where Hyperstudio's globe sits — spanning the viewport width, bleeding off the bottom edge of the hero section. Composed of small white/Chalk circular dots (`#f3f3f3` at full opacity for "path" dots, `#3b3d45` at reduced opacity for "background field" dots) forming the shape of a metro-line route: a horizontal path from left (labeled small-caps "MANUAL TESTER") through 2-3 intermediate nodes (denser dot clusters marking "SKILLS PROVEN" and "PAID BRIDGE") to a bright cluster on the right (labeled "NEW ROLE"), echoing the pitch deck's route motif but rendered entirely in dot-density rather than lines/icons. No stroke, no fill beyond dot density — same technique as the source globe, different subject.
 
-Plain content on the page background — no card border unless it's the active editable textarea. The textarea itself: 1px Fog/Graphite border, 6px radius, sans body text, generous padding (16-20px), resize handle visible but understated. Label above in caption style, helper line below in Slate/Smoke, one sentence, no icon.
+### Pipeline Agent Card (2×3 Grid Cell)
+**Replaces the 2×2 Service Card grid — same visual spec, one more cell:**
+Transparent background, 1px Graphite border on bottom and sides (no top border, merges with section divider). Compass Gold outlined icon top-left, 32px (simple geometric glyphs: a checklist mark for Skills Discovery, a radar sweep for Market Intelligence, a compass/path for Learning Pathway, a handshake for Inclusive Matching, a building for Employer Readiness, a ghost/twin silhouette for Bias Audit). Heading Aeonik 14px weight 400 uppercase Chalk (agent name). Body Aeonik 14px weight 400 Smoke (one-line description, e.g. "Turns a 15-minute work sample into a verified credential."). 48px padding.
 
-### Primary Button — "Run Pipeline" / "Build Route"
-**Role:** The single primary action per view
+### Session Card (replaces Portfolio Card)
+No background fill, 1px Graphite border/divider, 8px radius. Centered small outlined icon (a document/passport glyph). Persona name in Aeonik 16px weight 400 Chalk ("Kavya · 29 · Chennai"), category label below in Input 13px uppercase Smoke ("AUTOMATED TO HIRED · 10 WEEKS"). Tight vertical padding 24px.
 
-On dark surfaces: filled Signal White pill is reserved for the *most* primary global action; for a page-local primary action (Run Pipeline, Build Route) use a solid Ink/Obsidian-filled rounded-rect (6-8px radius, NOT full pill — pills are reserved for the one top-level CTA) with Chalk text, sans 14px weight 500, uppercase, 12px 24px padding. Only ONE such filled button visible per viewport. A second action on the same view is always the Ghost Outline style below — never two filled buttons side by side.
+### Manifesto Block ("Why ReRoute?")
+Centered, max-width 600px. Title Aeonik 23px weight 400 Chalk: "Why ReRoute?" Body Aeonik 16px weight 400 Smoke, 24px line-height: "AI proposes, a human decides on every high-stakes step. Rejections, terminations and pay are never automated." Ghost Outline button below labeled "READ THE TWO-KEY RULE".
 
-### Ghost Outline Button (Secondary)
-**Role:** Secondary action beside a primary one
-
-Transparent background, 1px Ink/Chalk border (matches current text color), same text color, 6px radius, 10px 20px padding, sans 14px weight 500, uppercase. No fill, no hover-fill — on hover, only the border opacity increases.
-
-### Status Line (replaces bordered "RUNNING/DONE" pills)
-**Role:** Communicates agent/task state inline, without a badge
-
-No box, no border, no background fill. Rendered as: a 6px dot + one word, inline with the surrounding text, in the *same* font weight as adjacent copy.
-- `running` → outlined dot, slow opacity pulse (1.5s cycle), word "running" in Smoke
-- `done` → filled Pulse Dot (muted sage) dot, word "done" in Chalk/Ink (not colored — the dot alone carries the state)
-- `waiting` → outlined dot with a thin Amber ring (the one exception where amber may repeat per row, since "waiting for consent" is a genuinely blocking, singular state) + word in Chalk/Ink
-This is the direct replacement for the bordered pill list in the current agent log — same information, zero visual weight added.
-
-### Source Tag (replaces "LIVE / SIMULATED / SOURCE PENDING" pills)
-**Role:** Marks whether data is real, mocked, or local
-
-Plain mono 12px text, Smoke color, no border, no background:
-- `live` → "· live" appended after the content, small filled dot before it
-- `simulated` → "· simulated" in Smoke, small outlined dot
-- `local` → "· local" in Smoke, no dot
-- `pending` → "source pending" with a dotted underline under the words themselves (no box at all)
-
-### Agent Pipeline Log (Timeline)
-**Role:** Replaces the numbered (01, 02, 03…) bordered-row list
-
-A single 1px Graphite vertical line on the left. Each entry is a small dot on that line (outline = pending, filled Pulse = done, pulsing outline = running). To the right: agent name in sans 14px weight 500, message in sans 14px weight 400 Smoke, directly below or inline. Timestamp in mono 11px Smoke, right-aligned. No per-row border, no per-row background, no numbering. Reads like a commit log, not a dashboard grid.
-
-### Stage Progression
-**Role:** The 4-step Understand → Plan → Match → Audit indicator
-
-A single 1px Graphite horizontal line spanning the row. Small dots at each stage: current stage dot filled Compass Amber (the one intentional accent use on this component), completed stages filled Chalk/Ink, upcoming stages outline only. Stage label below each dot in caption style — current stage label in full text-color weight 500, others in Slate/Smoke weight 400. No large standalone numerals (01/02/03/04) as independent typography — if a number is needed, fold it into the caption label at reduced size.
-
-### Ghost Twin Audit Panel
-**Role:** The editable candidate-attribute form + live re-run
-
-Carbon background (deepest surface — this panel is the product's signature moment and earns slightly more visual weight than everything else). Fields use the standard form-input style below. The "RUN AUDIT" / "RE-RUN AUDIT" button is the one filled primary button on this view; a toggle ("Simulate legacy ATS") uses the minimal switch style from the nav bar, not a colored track. Result renders as a plain comparison list (candidate vs. twins) with Status Line dots for PASS/FLAGGED — never a colored banner box.
-
-### Form Input (Select / Text / Number)
-**Role:** All form fields — From Skill, Target Role, Hours per Week, Ghost Twin attribute editors
-
-1px Fog (light) or Graphite (dark) border, 6px radius, sans body text, 10-12px vertical padding. Custom chevron for selects (no native browser arrow), custom or hidden spinner for number inputs. Focus state: border becomes Compass Amber, 1px — this is the ONLY place amber appears as a border, and only while actively focused. No permanent colored borders on any field.
-
-### Section Divider
-**Role:** Separates major sections
-
-1px solid Graphite (dark) or Fog (light) line, full content width, no gradient or fade. Used instead of background-color shifts between sections — sections are separated by space and a hairline, never by a new background tint.
+### Section Divider Line
+1px solid Graphite (`#212121`), full content width. The single most repeated visual element — it IS the page structure. No gradients, no fades.
 
 ### Footer
-**Role:** Closes the page
-
-1px Graphite top border, transparent background, generous 32-40px vertical padding. Plain sans 14px text for links/meta, mono 12px Smoke for secondary/build info. No background fill.
+1px Graphite top border, transparent background. Aeonik 14px Chalk: "Team ReRoute · SRM University AP". Input 13px Smoke secondary line: repo/link + "SAP Hackfest 2026". No background fill, 32px vertical padding.
 
 ---
 
 ## Do's and Don'ts
 
 ### Do
-- Use weight 400 for every headline, weight 500 (max) for labels and buttons — never bold/700 anywhere in the interface.
-- Separate every section with a single 1px hairline. No alternating background bands.
-- Use full pill radius (9999px) only for the single top-level primary CTA in the nav bar. Everything else stays 4-8px.
-- Show state (running/done/waiting/live/simulated) as a dot + plain text inline — never as a bordered, filled, colored capsule.
-- Reserve Compass Amber for exactly one element per screen: the current-stage dot, the one primary button, or an active focus ring. If you can count two amber elements in one viewport, remove one.
-- Let the vertical timeline line + dots carry the agent log's structure — no row numbering, no per-row borders.
-- Keep muted text in Smoke/Slate, never pure mid-gray — the slight warm-neutral tilt matches the paper/obsidian pairing.
+- Use weight 400 for all headings — never bold. Scale and tracking carry hierarchy.
+- Separate every section with a 1px `#212121` hairline. No background color shifts between sections.
+- Reproduce the Glossy Pill button's exact gradient + inset highlight — this bevel is what makes it look premium, not flat like a generic dark-mode button.
+- Use rounded-rect (12–14px) buttons, NOT full pill radius, except on the status badge which IS full pill.
+- Use `#6f6759` Compass Gold exclusively for icon strokes — never for text or backgrounds.
+- Apply Pulse Green only for the single live-status dot in the badge.
+- Keep all body text in `#9c9c9c` Smoke.
+- Left-align the hero (not centered) since this is a product, not a marketing manifesto page.
 
 ### Don't
-- Never add a drop shadow. Elevation comes from the Carbon/Obsidian/Paper surface steps and hairline borders only.
-- Never use two filled/solid buttons in the same viewport — one primary action, everything else is Ghost Outline or plain text.
-- Never render a status as a bordered pill with a background fill. That pattern is explicitly retired.
-- Never use amber as a background fill or a repeated per-row accent (the single "waiting" ring is the one exception, because it marks a true blocking state, not routine status).
-- Never mix more than two typefaces on one screen (serif for display, sans for everything else, mono only for timestamps/IDs).
-- Never give every card the same treatment — most content sits on bare background separated by hairlines; actual bordered cards are reserved for the persona card and the Ghost Twin panel.
-- Never use large standalone numerals (01/02/03) as decorative typography — numbers are metadata, not headlines.
+- Never add drop shadows beyond the button's own subtle contact shadow.
+- Never use bold/semibold weight on display type.
+- Never use a colored fill behind text.
+- Never use full pill radius on cards or secondary buttons — only the badge and the primary Glossy Pill get that treatment (correcting the earlier assumption that all buttons were full pill).
+- Never place icons in any color other than Compass Gold or Chalk.
+- Never use literal photography — the dot-density technique is the only illustrative device, applied here to the route/skills path instead of a globe.
+- Never break the 1200px content column.
 
 ---
 
@@ -212,58 +222,43 @@ Carbon background (deepest surface — this panel is the product's signature mom
 
 | Level | Name | Value | Purpose |
 |-------|------|-------|---------|
-| 0 | Obsidian Canvas | `#0D0D0D` | Base dark page background, nav bar |
-| 0 (light) | Paper | `#FAFAF8` | Base light page background, persona card, reading sections |
-| 1 | Carbon Depth | `#070707` | Ghost Twin panel, deepest/most important interactive surface |
-| 2 | Hairline Grid | `#212120` / `#E4E4E1` | 1px border/divider lines that define every boundary in the system |
+| 0 | Obsidian Canvas | `#101010` | Base page background |
+| 1 | Carbon Depth | `#080808` | Hero band, elevation, overlay depth |
+| 2 | Hairline Grid | `#212121` | 1px border lines |
 
 ## Elevation
-
-No drop shadows anywhere. Elevation is entirely hairline-and-contrast based: the Ghost Twin panel reads as "elevated" because it sits on Carbon (darker than Obsidian) with the same 1px border discipline — depth through value shift, not blur. The only visual "lift" in the whole system is the single filled primary button per screen, and that lift is pure color contrast.
+No drop shadows except the Glossy Pill button's own inset-highlight + soft contact shadow (see exact CSS above). Every other "lift" comes from hairline borders and contrast alone.
 
 ## Imagery
-
-No photography, no illustration, no icon library beyond the wordmark tile. The stage-progression dots-and-line and the timeline dots-and-line are the only recurring graphic motifs — both are typographic/structural, not decorative. Whitespace and type carry the product; nothing is added purely for visual interest.
+Near-zero photography. The only imagery is the dot-matrix route graphic — white/Chalk circular dots on Obsidian forming the skill-to-role path through density alone. Icons are the only other graphic motif: 1.5px outlined strokes in Compass Gold or Chalk, geometric and minimal.
 
 ## Layout
-
-Full-bleed Obsidian/Paper canvas per section, content constrained to a 1120px max-width column. Hero is left-aligned (not centered — this is a working tool, not a landing page manifesto) with the persona card breaking into view directly below at a narrower reading width. Sections separated exclusively by hairline dividers and generous vertical space (96-160px), never by background-color banding. The agent pipeline log and stage progression are full-width within the content column; forms and panels (Ghost Twin, Route Builder) cap at a slightly narrower width for readability. Navigation is a fixed hairline-bordered bar, not sticky-elevated with shadow.
+Full-bleed Obsidian canvas, content constrained to a 1200px max-width column. Hero is left-aligned with the dot-map route graphic bleeding full-width below it. Sections separated exclusively by 1px Graphite dividers. Pipeline Agent grid is 2×3 inside a bordered frame. Manifesto block is a narrow centered column. Navigation is transparent, no sticky shadow. Spacing 120–210px between sections.
 
 ---
 
 ## Agent Prompt Guide
 
-**Primary action color:** Compass Amber (`#F5A623`) — used once per screen, never repeated.
-
 ### Quick Color Reference
-- Dark canvas: `#0D0D0D`
-- Light canvas: `#FAFAF8`
-- Primary text (dark bg): `#F3F3F1`
-- Primary text (light bg): `#141414`
-- Muted text: `#9C9C99` (dark) / `#6B6B68` (light)
-- Border: `#212120` (dark) / `#E4E4E1` (light)
-- Accent (single use only): `#F5A623`
-- Status dot (done): `#8AA98A`
+- Canvas: `#101010`
+- Primary text: `#f3f3f3`
+- Muted text: `#9c9c9c`
+- Border: `#212121`
+- Icon stroke: `#6f6759`
+- Primary button: gradient `#ffffff → #e9e9e6`, text `#101010`, radius `14px`
+- Live-status dot: `#98ff38`
 
 ### Example Component Prompts
 
-1. **Hero headline block**: Paper (#FAFAF8) or Obsidian (#0D0D0D) background. First line serif 63px weight 400, color Ink/Chalk, letter-spacing -0.69px, line-height 1.05. Second line same size in italic serif, color Slate/Smoke. Sub-headline below in sans 16px, Slate, max-width 640px. No icon, no button in the hero itself.
+1. **Hero**: Obsidian background. Left-aligned headline, Aeonik 63px weight 400, `#f3f3f3`, letter-spacing -0.69px, line-height 1.05: "Every agent," then italic Smoke second line "in sequence." Sub-headline 21px Smoke below, max-width 620px. Status badge (pill, `#1a1a1a` bg, `#212121` border, Pulse Green dot, "SLICE 04 · DEMO MODE ON"). Two buttons: Glossy Pill "RUN PIPELINE ↗" + Ghost Outline "VIEW ROUTE ↓".
 
-2. **Agent log timeline entry**: No card, no border. A 6px dot on a 1px vertical Graphite line (filled sage `#8AA98A` if done, pulsing outline if running). Agent name in sans 14px weight 500 to the right, message in sans 14px weight 400 Smoke below it, timestamp in mono 11px Smoke right-aligned.
+2. **Glossy Pill button**: `linear-gradient(180deg, #ffffff, #e9e9e6)` fill, `#101010` text, 14px radius, inset top highlight + soft contact shadow, 24px icon-avatar circle at the left inside the pill, Aeonik 14px uppercase.
 
-3. **Stage progression dot**: 1px Graphite horizontal line. Current stage: 10px filled Compass Amber (#F5A623) circle. Other stages: 10px outline circle, Graphite stroke. Caption label below each in small-caps, current stage weight 500 in main text color, others weight 400 in Smoke.
+3. **Pipeline Agent card**: Transparent bg, 1px `#212121` border (bottom+sides only). Compass Gold 32px outlined icon top-left. Heading Aeonik 14px uppercase `#f3f3f3`. Body Aeonik 14px `#9c9c9c`. 48px padding.
 
-4. **Primary button (Run Pipeline)**: Solid Ink (#141414) or Obsidian fill depending on surface, Chalk (#F3F3F1) text, 6-8px radius (not full pill), sans 14px weight 500 uppercase, 12px 24px padding. Only one per screen.
+4. **Dot-map route graphic**: Full-width dot-density illustration on Obsidian. White dots at full opacity trace a horizontal metro-line path with 3 labeled node clusters (Manual Tester → Skills Proven / Paid Bridge → New Role); background field dots in muted `#3b3d45` at low opacity fill the negative space.
 
-5. **Source tag**: No box. Mono 12px text, Smoke color: a small filled dot + "live", or an outline dot + "simulated", or a dotted underline under "source pending" with no dot at all.
-
-6. **Form input focus state**: 1px border, default Fog/Graphite at rest, transitions to 1px Compass Amber only while the field has focus. No permanent colored border on any field.
-
-### Similar Brands / References
-- **Hyperstudio** — the direct source: obsidian canvas, hairline structure, weight-400 authority, single-accent discipline
-- **Linear** — status-as-dot-plus-text rather than colored pill badges, restrained single-accent product UI
-- **Vercel Dashboard** — dark canvas, hairline card borders, monospace reserved strictly for metadata
-- **Arc Browser (marketing site)** — editorial serif headlines paired with a minimal utility sans, generous section rhythm
+5. **Section divider**: Full-width 1px solid `#212121` line, zero margin — the line IS the layout.
 
 ---
 
@@ -273,63 +268,48 @@ Full-bleed Obsidian/Paper canvas per section, content constrained to a 1120px ma
 
 ```css
 :root {
-  /* Colors */
-  --color-obsidian: #0D0D0D;
-  --color-carbon: #070707;
-  --color-paper: #FAFAF8;
-  --color-chalk: #F3F3F1;
-  --color-ink: #141414;
-  --color-smoke: #9C9C99;
-  --color-slate: #6B6B68;
-  --color-graphite: #212120;
-  --color-fog: #E4E4E1;
-  --color-signal-white: #FFFFFF;
-  --color-signal-black: #0D0D0D;
-  --color-compass-amber: #F5A623;
-  --color-pulse: #8AA98A;
+  --color-obsidian: #101010;
+  --color-carbon: #080808;
+  --color-chalk: #f3f3f3;
+  --color-smoke: #9c9c9c;
+  --color-ash: #c1c1c1;
+  --color-graphite: #212121;
+  --color-iron: #474747;
+  --color-signal-white: #ffffff;
+  --color-compass-gold: #6f6759;
+  --color-card-slate: #3b3d45;
+  --color-pulse-green: #98ff38;
 
-  /* Typography — Families */
-  --font-editorial: 'Noto Serif', 'Source Serif 4', Georgia, serif;
-  --font-utility: 'Inter', 'General Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --font-aeonik: 'Aeonik', 'Inter', 'General Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-input: 'Input', 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Typography — Scale */
-  --text-meta: 12px;
   --text-caption: 13px;
   --text-body: 16px;
-  --text-label: 14px;
+  --text-heading-xs: 18px;
+  --text-subheading: 21px;
   --text-heading-sm: 23px;
   --text-heading: 34px;
-  --text-heading-lg: 44px;
   --tracking-heading-lg: -0.31px;
+  --text-heading-lg: 44px;
   --text-display: 63px;
   --tracking-display: -0.69px;
 
-  /* Weights */
-  --font-weight-regular: 400;
-  --font-weight-medium: 500;
-
-  /* Spacing */
   --spacing-4: 4px;
   --spacing-8: 8px;
   --spacing-12: 12px;
   --spacing-16: 16px;
+  --spacing-20: 20px;
   --spacing-24: 24px;
   --spacing-40: 40px;
-  --spacing-64: 64px;
-  --spacing-96: 96px;
 
-  /* Layout */
-  --page-max-width: 1120px;
-  --reading-max-width: 640px;
-  --section-gap: 96px;
-  --panel-padding: 40px;
+  --page-max-width: 1200px;
 
-  /* Border Radius */
-  --radius-tag: 4px;
-  --radius-card: 8px;
-  --radius-input: 6px;
-  --radius-pill: 9999px;
+  --radius-badge: 9999px;
+  --radius-card: 12px;
+  --radius-button: 14px;
+
+  --button-gradient: linear-gradient(180deg, #ffffff 0%, #e9e9e6 100%);
+  --button-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 2px rgba(0,0,0,0.4);
 }
 ```
 
@@ -337,45 +317,41 @@ Full-bleed Obsidian/Paper canvas per section, content constrained to a 1120px ma
 
 ```css
 @theme {
-  --color-obsidian: #0D0D0D;
-  --color-carbon: #070707;
-  --color-paper: #FAFAF8;
-  --color-chalk: #F3F3F1;
-  --color-ink: #141414;
-  --color-smoke: #9C9C99;
-  --color-slate: #6B6B68;
-  --color-graphite: #212120;
-  --color-fog: #E4E4E1;
-  --color-compass-amber: #F5A623;
-  --color-pulse: #8AA98A;
+  --color-obsidian: #101010;
+  --color-carbon: #080808;
+  --color-chalk: #f3f3f3;
+  --color-smoke: #9c9c9c;
+  --color-ash: #c1c1c1;
+  --color-graphite: #212121;
+  --color-iron: #474747;
+  --color-compass-gold: #6f6759;
+  --color-card-slate: #3b3d45;
+  --color-pulse-green: #98ff38;
 
-  --font-editorial: 'Noto Serif', Georgia, serif;
-  --font-utility: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-aeonik: 'Aeonik', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-input: 'Input', 'IBM Plex Mono', ui-monospace, monospace;
 
-  --text-meta: 12px;
   --text-caption: 13px;
   --text-body: 16px;
-  --text-label: 14px;
+  --text-subheading: 21px;
   --text-heading-sm: 23px;
   --text-heading: 34px;
   --text-heading-lg: 44px;
   --text-display: 63px;
 
-  --radius-tag: 4px;
-  --radius-card: 8px;
-  --radius-input: 6px;
-  --radius-pill: 9999px;
+  --radius-badge: 9999px;
+  --radius-card: 12px;
+  --radius-button: 14px;
 }
 ```
 
 ---
 
-## Migration notes (from current build)
+## Build Instructions for OpenCode
 
-- Delete every bordered pill Badge variant. Replace with the **Status Line** and **Source Tag** patterns above (dot + inline text, no box).
-- Delete the numbered (01, 02, 03…) styling in the agent log. Replace with the **Agent Pipeline Log (Timeline)** component.
-- Reduce the stage-progression component's large standalone numerals to small captions per **Stage Progression** above.
-- Audit every screen for accent-color count. Amber should appear at most once per viewport outside of the "waiting" ring exception.
-- Consolidate all buttons into exactly two variants: filled primary (one per screen) and Ghost Outline (everything else). Remove any third button style currently in the codebase.
-- Apply the Compass Amber focus ring to form inputs and remove any permanent colored borders on form containers.
+1. Do not invent new components. Every element above maps 1:1 to a Hyperstudio source element via the Content Mapping table — build exactly what's specified, in the exact order it appears in the reference screenshot (nav → badge → headline → sub-headline → buttons → dot graphic → agent grid → manifesto → footer).
+2. The Glossy Pill button's gradient + inset highlight is the single most important visual detail to get right — it is what separates this from a flat "AI dashboard" button. Test it against the CSS block above pixel-for-pixel.
+3. Remove every previously-built bordered status pill, numbered agent-log row, and multi-accent-color pattern from earlier iterations of this UI — none of that exists in this spec. The agent pipeline log becomes the "Pipeline Agent" 2×3 grid shown on the homepage; live run status (if shown at all on this page) uses the same Status Badge component, never a per-row pill.
+4. Left-align the hero text block (the source Hyperstudio hero is centered because it's a marketing page; ReRoute's hero stays left-aligned per the Headline Display Block spec above, since underlying app pages already established left-alignment).
+5. Ship the dot-map route graphic as inline SVG or canvas-rendered dots — do not use a raster image.
+6. After building, compare side-by-side against the attached Hyperstudio homepage screenshot and this ReRoute spec: nav layout, badge shape, button gloss, headline weight/tracking, and dot-graphic density should all match structurally, with only the words and the illustrated subject (route path vs. globe) differing.
