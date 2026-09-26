@@ -64,10 +64,11 @@ const SECTION_CLASS = `border-t ${ruleClass} pt-8`
 // that used to make these read as status chips rather than as sentences.
 const ALERT_CLASS = `mt-4 ${readingClass} text-left ${bodyClass} ${chalkClass}`
 
-// Idle, loading and empty states say so in plain muted copy with room around
-// them — no box, no placeholder border.
-const EMPTY_STATE_COPY_CLASS =
-  `mx-auto mt-3 ${readingClass} text-center ${bodyClass} ${smokeClass}`
+// Idle, loading and empty states say so in plain muted copy with the same
+// rhythm as every other block. No box, no placeholder border, and no centred
+// copy: a 1136px row of centred prose read as a layout bug rather than as a
+// state.
+const EMPTY_STATE_COPY_CLASS = `mt-3 ${bodyClass} ${smokeClass}`
 
 // A confidence reading is a number the server returned, not a headline: a 6px
 // track with square ends. The reference reserves full pill radius for the badge
@@ -489,22 +490,20 @@ export default function WorkerApp({
       : 'No session yet'
   const statusDetail = hasSession
     ? `Session ${activeSessionId} · ${sessionStatus ?? 'status pending'} · ${events.length} agent events received`
-    : 'Press Run pipeline to open a session for Kavya. The seven agents fill the skill passport in the background.'
+    : 'Press Run pipeline to open a session for Kavya. The six agents fill the skill passport in the background, then the orchestrator holds for your Two-Key approval.'
 
   return (
     <Card
       as="section"
-      eyebrow="Stage 01 · Skills discovery"
-      title="Worker intake & skill passport"
-      titleId="worker-app-title"
-      description="Speak or paste what Kavya actually did, then let the pipeline recover durable skills instead of keywords."
-      actions={
-        <StatusBadge
-          live={passportSourceDetails.source === 'live'}
-          label={passportSourceDetails.label}
-        />
-      }
-      aria-labelledby="worker-app-title"
+      // No eyebrow, title, description or actions here. App's <Section> already
+      // opens this region with its own heading, so a Card header repeated it;
+      // and because that header disappeared, the `actions` slot left the source
+      // badge stranded on its own line, right-aligned, above a hairline that
+      // separated it from nothing. The badge now sits inline with the status
+      // line it actually describes.
+      // `data-testid` is the panel's stable identity for tests, which used to
+      // anchor on the heading that has now moved up a level.
+      data-testid="worker-app"
       aria-busy={isBusy}
       // No border, no fill, no shadow: the panel is carved out of the Obsidian
       // canvas by its hairlines alone, so the spacing stays on the sections.
@@ -517,26 +516,36 @@ export default function WorkerApp({
           aria-live="polite"
           aria-atomic="true"
         >
-          <p className={sectionHeadingClass}>{statusHeading}</p>
+          {/* Label and state share one line: they describe the same thing, and
+              splitting them across a 1136px row only created a gap. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <p className={sectionHeadingClass}>{statusHeading}</p>
+            <StatusBadge
+              live={passportSourceDetails.source === 'live'}
+              label={passportSourceDetails.label}
+            />
+          </div>
           <p className={`mt-3 ${bodyCopyClass}`}>
             {statusDetail}
           </p>
           {latestEvent === null ? null : (
             <p className={`mt-2 ${bodyCopyClass}`}>
-              <span className={inlineLabelClass}>
-                {latestEvent.agent}
-              </span>
-              {': '}
+              {/* The agent name is a mono tag, not a label. At `font-medium` and
+                  body size it rendered louder than the section's own h2, which
+                  inverts the hierarchy — the newest event is the least important
+                  thing on the panel. */}
+              <span className={metaClass}>{`${latestEvent.agent}: `}</span>
               {latestEvent.message}
             </p>
           )}
         </div>
 
         {hasSession ? null : (
-          <div className="px-6 py-16 text-center" role="status">
-            <p className={sectionHeadingClass}>
-              Idle · no session open
-            </p>
+          <div className="border-t border-graphite pt-8" role="status">
+            {/* One sentence, not a second heading. This block used to open with
+                an "Idle · no session open" label directly under a status line
+                that already read "No session yet" — the same statement twice,
+                100px apart, with a centred paragraph under both. */}
             <p className={EMPTY_STATE_COPY_CLASS}>
               The transcript below is prefilled with the Kavya demo. Press Run
               pipeline to open a session — the orchestrator fills the skill

@@ -97,8 +97,13 @@ describe('WorkerApp', () => {
   it('renders an idle state with instructions when no session is open', () => {
     renderApp()
 
-    expect(screen.getByText('Idle · no session open')).toBeInTheDocument()
+    // The status line states the idle condition; the block beneath it states
+    // what to do about it. The old copy repeated "Idle · no session open" here
+    // as a second heading, so there is deliberately no such label now.
     expect(screen.getByText('No session yet')).toBeInTheDocument()
+    expect(
+      screen.getByText(/transcript below is prefilled with the Kavya demo/i),
+    ).toBeInTheDocument()
     expect(
       screen.getByRole('textbox', { name: 'Session transcript' }),
     ).toHaveValue(KAVYA_TRANSCRIPT)
@@ -147,7 +152,7 @@ describe('WorkerApp', () => {
 
     expect(screen.getByRole('button', { name: 'Starting session…' })).toBeDisabled()
     expect(
-      screen.getByRole('heading', { name: 'Worker intake & skill passport' })
+      screen.getByTestId('worker-app')
         .closest('section'),
     ).toHaveAttribute('aria-busy', 'true')
 
