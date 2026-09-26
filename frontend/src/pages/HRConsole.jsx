@@ -126,12 +126,23 @@ function DisclaimerNote({ disclaimer, scope }) {
   )
 }
 
+/**
+ * One sub-block inside the employer section.
+ *
+ * These headings are deliberately one step below the section's own h2: the
+ * employer console carries two distinct tools (the displacement radar and the
+ * shortlist rewriter), and each needs its own name, but neither is a top-level
+ * section of the page. Rendering them through `Card`'s default h2 made four
+ * h2s compete across one region, so the title is explicitly an h3 and the
+ * Card is labelled by it.
+ */
 function BlockShell({ titleId, eyebrow, title, description, className = '', children }) {
   return (
     <Card
       as="section"
       eyebrow={eyebrow}
       title={title}
+      titleAs="h3"
       titleId={titleId}
       description={description}
       // Both blocks are backed by bundled demo fixtures wired to no ATS, so the

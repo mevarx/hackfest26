@@ -33,7 +33,7 @@ const ROUTE = {
 function renderMap(properties = {}) {
   render(<RouteMap {...properties} />)
 
-  return screen.getByRole('heading', { name: 'Route map' }).closest('section')
+  return screen.getByTestId('route-map').closest('section')
 }
 
 /** Render, then resolve the panel's first route request with `route`. */
@@ -62,7 +62,7 @@ function labelledCard(label) {
  * row the paid bridge block happens to print from the same fixture.
  */
 function panelHeader() {
-  const section = screen.getByRole('heading', { name: 'Route map' }).closest('section')
+  const section = screen.getByTestId('route-map').closest('section')
   const header = section === null ? null : section.firstElementChild
 
   if (!(header instanceof HTMLElement)) {
@@ -216,7 +216,7 @@ describe('RouteMap', () => {
 
     expect(await screen.findByText('Mapping the least-hours path…')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Mapping route…' })).toBeDisabled()
-    expect(screen.getByRole('heading', { name: 'Route map' }).closest('section')).toHaveAttribute(
+    expect(screen.getByTestId('route-map').closest('section')).toHaveAttribute(
       'aria-busy',
       'true',
     )
