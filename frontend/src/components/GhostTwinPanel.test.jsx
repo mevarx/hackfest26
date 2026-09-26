@@ -7,7 +7,7 @@ import {
   within,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import GhostTwinPanel, { AUDIT_TIMEOUT_MS, AUDIT_URL } from './GhostTwinPanel.jsx'
+import GhostTwinPanel, { AUDIT_TIMEOUT_MS } from './GhostTwinPanel.jsx'
 
 const KAVYA_PROFILE = {
   career_gap: '18 months',
@@ -160,9 +160,9 @@ describe('GhostTwinPanel', () => {
     expect(screen.getByText('Synthetic fair merit')).toBeInTheDocument()
   })
 
-  it('posts Kavya fair-mode data without overriding the server threshold', async () => {
+  it('posts Kavya fair-mode data to the configured backend, overriding no threshold', async () => {
     fetchMock.mockResolvedValue(successfulResponse(FAIR_RESULT))
-    render(<GhostTwinPanel />)
+    render(<GhostTwinPanel baseUrl="https://reroute.example" />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
 
@@ -171,7 +171,8 @@ describe('GhostTwinPanel', () => {
     const [url, options] = fetchMock.mock.calls[0]
     const payload = JSON.parse(options.body)
 
-    expect(url).toBe(AUDIT_URL)
+    // The panel must follow the configured backend, not a hardcoded localhost.
+    expect(url).toBe('https://reroute.example/audit/ghost-twin')
     expect(options).toEqual({
       method: 'POST',
       headers: {
@@ -179,6 +180,7 @@ describe('GhostTwinPanel', () => {
         'Content-Type': 'application/json',
       },
       body: expect.any(String),
+      signal: expect.any(AbortSignal),
     })
     expect(payload).toEqual({
       role_id: 'quality-analyst',
@@ -386,7 +388,22 @@ describe('GhostTwinPanel', () => {
 
   it('times out a stalled request without waiting for a real delay', async () => {
     vi.useFakeTimers()
-    fetchMock.mockReturnValue(new Promise(() => {}))
+    // Mirror real `fetch`: a request that never settles is rejected when its
+    // abort signal fires, rather than hanging forever.
+    fetchMock.mockImplementation(
+      (_url, options) =>
+        new Promise((_resolve, reject) => {
+          options.signal.addEventListener(
+            'abort',
+            () => {
+              const abortError = new Error('The operation was aborted.')
+              abortError.name = 'AbortError'
+              reject(abortError)
+            },
+            { once: true },
+          )
+        }),
+    )
 
     render(<GhostTwinPanel />)
     fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
@@ -399,6 +416,27 @@ describe('GhostTwinPanel', () => {
     expect(
       screen.getByRole('button', { name: 'Run Audit' }),
     ).not.toBeDisabled()
+  })
+
+  it('cancels the in-flight request on unmount instead of leaking it', async () => {
+    let observedSignal
+    fetchMock.mockImplementation((_url, options) => {
+      observedSignal = options.signal
+
+      return new Promise(() => {})
+    })
+
+    const { unmount } = render(<GhostTwinPanel />)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
+
+    await waitFor(() => expect(observedSignal).toBeDefined())
+    expect(observedSignal.aborted).toBe(false)
+
+    unmount()
+
+    // The old implementation raced a hand-rolled abort promise and left the real
+    // request running to completion.
+    expect(observedSignal.aborted).toBe(true)
   })
 
   it('labels every editable attribute control with a real form element', () => {

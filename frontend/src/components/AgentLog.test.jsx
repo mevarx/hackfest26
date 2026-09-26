@@ -56,6 +56,27 @@ describe('AgentLog', () => {
     ])
   })
 
+  it('shortens a server ISO timestamp to a clock time that fits the column', () => {
+    const log = renderLog({
+      events: [
+        {
+          agent: 'ORCHESTRATOR',
+          status: 'running',
+          message: 'Session opened for Kavya',
+          // Exactly what the orchestrator stamps on a live event.
+          timestamp: '2026-09-26T09:07:05.123456+00:00',
+        },
+      ],
+    })
+
+    const entry = within(log).getAllByRole('listitem')[0]
+    const time = within(entry).getByText('09:07:05')
+
+    // The full ISO string is 32 characters and overflowed the 3.5rem column.
+    expect(time).toBeInTheDocument()
+    expect(time).toHaveAttribute('datetime', '2026-09-26T09:07:05.123Z')
+  })
+
   it('accepts PRD events without timestamps and shows assigned arrival time', () => {
     vi.setSystemTime(new Date('2026-09-25T12:34:56.000Z'))
     const log = renderLog({

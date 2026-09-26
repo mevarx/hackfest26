@@ -395,11 +395,16 @@ describe('WorkerApp', () => {
     recognition.onresult({ results })
     recognition.onend()
 
-    await waitFor(() =>
-      expect(screen.getByRole('textbox', { name: 'Session transcript' })).toHaveValue(
-        'I wrote regression test cases for a bank.',
-      ),
-    )
+    // Speech is appended to the transcript, not substituted for it: the field is
+    // pre-filled with the demo transcript and may hold typed edits, and replacing
+    // it silently destroyed both.
+    const transcriptField = screen.getByRole('textbox', { name: 'Session transcript' })
+    await waitFor(() => {
+      const value = /** @type {HTMLTextAreaElement} */ (transcriptField).value
+
+      expect(value).toContain('I wrote regression test cases for a bank.')
+      expect(value.startsWith('Hi, I am Kavya.')).toBe(true)
+    })
     expect(
       screen.getByRole('button', { name: 'Start voice input' }),
     ).toBeInTheDocument()

@@ -83,13 +83,27 @@ describe('deriveEventSource', () => {
 })
 
 describe('getReconnectDelay', () => {
-  it('backs off exponentially up to the cap', () => {
-    expect(getReconnectDelay(0)).toBe(500)
-    expect(getReconnectDelay(1)).toBe(1000)
-    expect(getReconnectDelay(2)).toBe(2000)
-    expect(getReconnectDelay(3)).toBe(4000)
-    expect(getReconnectDelay(4)).toBe(RECONNECT_MAX_DELAY_MS)
-    expect(getReconnectDelay(12)).toBe(RECONNECT_MAX_DELAY_MS)
+  it('backs off exponentially up to the cap, with jitter around each step', () => {
+    // Midpoint of the jitter window is the un-jittered backoff, so the curve is
+    // still verifiable while the spread is real.
+    const mid = () => 0.5
+
+    expect(getReconnectDelay(0, mid)).toBe(500)
+    expect(getReconnectDelay(1, mid)).toBe(1000)
+    expect(getReconnectDelay(2, mid)).toBe(2000)
+    expect(getReconnectDelay(3, mid)).toBe(4000)
+    expect(getReconnectDelay(4, mid)).toBe(RECONNECT_MAX_DELAY_MS)
+    expect(getReconnectDelay(12, mid)).toBe(RECONNECT_MAX_DELAY_MS)
+  })
+
+  it('spreads retries so many clients do not reconnect in lockstep', () => {
+    const delays = [0, 0.25, 0.5, 0.75, 1].map((value) => getReconnectDelay(3, () => value))
+
+    expect(new Set(delays).size).toBeGreaterThan(1)
+    for (const delay of delays) {
+      expect(delay).toBeGreaterThan(0)
+      expect(delay).toBeLessThanOrEqual(RECONNECT_MAX_DELAY_MS)
+    }
   })
 })
 
@@ -98,11 +112,15 @@ describe('useSessionStream', () => {
     FakeWebSocket.instances = []
     vi.stubGlobal('WebSocket', FakeWebSocket)
     vi.useFakeTimers()
+    // Pin the reconnect jitter to its midpoint so the backoff schedule is
+    // exactly the un-jittered curve and the timer assertions stay deterministic.
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
   })
 
   afterEach(() => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('accumulates events in order, deduplicates them, and tracks the max sequence', () => {

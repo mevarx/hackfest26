@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { DEFAULT_BACKEND_BASE_URL, runGhostTwin } from '../api.js'
+import { runGhostTwin } from '../api.js'
+import { isAbortError } from '../lib/guards.js'
 
 export const AUDIT_TIMEOUT_MS = 10_000
-export const AUDIT_URL = 'http://127.0.0.1:8000/audit/ghost-twin'
 
 const ROLE_ID = 'quality-analyst'
 const CANDIDATE_PROFILE = {
@@ -168,11 +168,11 @@ function getRequestErrorMessage(requestError, timedOut) {
     return 'Audit request timed out. Try again.'
   }
 
-  if (requestError instanceof Error) {
-    if (requestError.name === 'AbortError') {
-      return 'Audit request was cancelled. Try again.'
-    }
+  if (isAbortError(requestError)) {
+    return 'Audit request was cancelled. Try again.'
+  }
 
+  if (requestError instanceof Error) {
     if (requestError instanceof SyntaxError) {
       return 'The audit service returned malformed JSON. Try again.'
     }
@@ -183,22 +183,6 @@ function getRequestErrorMessage(requestError, timedOut) {
   }
 
   return 'Unable to reach the audit service. Try again.'
-}
-
-function waitForAbort(signal) {
-  return new Promise((_, reject) => {
-    const handleAbort = () => {
-      const abortError = new Error('aborted')
-      abortError.name = 'AbortError'
-      reject(abortError)
-    }
-
-    if (signal.aborted) {
-      handleAbort()
-    } else {
-      signal.addEventListener('abort', handleAbort, { once: true })
-    }
-  })
 }
 
 function toProfileNumber(raw) {
@@ -222,7 +206,7 @@ function getEditedFields(form) {
   return EDITABLE_FIELDS.filter((field) => form[field] !== INITIAL_FORM[field])
 }
 
-export default function GhostTwinPanel() {
+export default function GhostTwinPanel({ baseUrl = '' }) {
   const [simulateLegacyAts, setSimulateLegacyAts] = useState(false)
   const [form, setForm] = useState({ ...INITIAL_FORM })
   const [audit, setAudit] = useState(EMPTY_AUDIT)
@@ -257,9 +241,12 @@ export default function GhostTwinPanel() {
       return
     }
 
+    // Cancel any request still in flight so a second run cannot be raced by the
+    // first one's response, and so unmounting actually stops the HTTP call.
+    activeRequestRef.current.abort()
+
     const controller = new AbortController()
     let timedOut = false
-    let timeoutId
 
     activeRequestRef.current = controller
     setIsLoading(true)
@@ -267,23 +254,20 @@ export default function GhostTwinPanel() {
     setHasAudit(false)
     setError('')
 
-    timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       timedOut = true
       controller.abort()
     }, AUDIT_TIMEOUT_MS)
 
     try {
-      const response = await Promise.race([
-        runGhostTwin(
-          {
-            role_id: ROLE_ID,
-            candidate_profile: toCandidateProfile(form),
-            simulate_legacy_ats: simulateLegacyAts,
-          },
-          { baseUrl: DEFAULT_BACKEND_BASE_URL },
-        ),
-        waitForAbort(controller.signal),
-      ])
+      const response = await runGhostTwin(
+        {
+          role_id: ROLE_ID,
+          candidate_profile: toCandidateProfile(form),
+          simulate_legacy_ats: simulateLegacyAts,
+        },
+        { baseUrl, signal: controller.signal },
+      )
 
       const nextAudit = await readAuditResult(response)
 

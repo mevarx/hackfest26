@@ -83,13 +83,14 @@ describe('HRConsole', () => {
     render(<HRConsole />)
 
     await waitFor(() =>
-      expect(radarMock).toHaveBeenCalledWith({
-        role: 'qa-analyst',
-        city: 'Chennai',
-      }),
+      expect(radarMock).toHaveBeenCalledWith(
+        { role: 'qa-analyst', city: 'Chennai' },
+        { baseUrl: '', signal: expect.any(AbortSignal) },
+      ),
     )
     expect(rewriteMock).toHaveBeenCalledWith(
       'post-chennai-qa-analyst-118',
+      { baseUrl: '', signal: expect.any(AbortSignal) },
     )
 
     expect(await screen.findByTestId('radar-exposure')).toHaveTextContent('low')
@@ -187,10 +188,10 @@ describe('HRConsole', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Check exposure' }))
 
     await waitFor(() =>
-      expect(radarMock).toHaveBeenLastCalledWith({
-        role: 'support-operations-lead',
-        city: 'Bengaluru',
-      }),
+      expect(radarMock).toHaveBeenLastCalledWith(
+        { role: 'support-operations-lead', city: 'Bengaluru' },
+        { baseUrl: '', signal: expect.any(AbortSignal) },
+      ),
     )
   })
 
@@ -327,6 +328,7 @@ describe('HRConsole', () => {
     await waitFor(() =>
       expect(rewriteMock).toHaveBeenLastCalledWith(
         'post-chennai-data-quality-311',
+        { baseUrl: '', signal: expect.any(AbortSignal) },
       ),
     )
 

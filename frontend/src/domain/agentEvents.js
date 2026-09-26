@@ -1,19 +1,25 @@
+import { isRecord } from '../lib/guards.js'
+
 const VALID_AGENT_STATUSES = new Set([
   'running',
   'done',
   'waiting_consent',
 ])
 const VALID_STREAM_SOURCES = new Set(['live', 'simulated'])
+/**
+ * A wall-clock time that is already display-ready: `HH:MM` or `HH:MM:SS`.
+ *
+ * The live backend sends full ISO-8601 strings, but the bundled demo fixtures
+ * send a bare clock time. Both must survive normalization without being
+ * reinterpreted as a date.
+ */
+const CLOCK_TIME_PATTERN = /^\d{2}:\d{2}(:\d{2})?$/
 const VALID_EVENT_VALIDATIONS = new Set([
   'valid',
   'unknown_status',
   'invalid',
 ])
 let nextGeneratedEventId = 0
-
-function isRecord(value) {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 function isNormalizedAgentEvent(event) {
   if (!isRecord(event)) {
@@ -76,12 +82,48 @@ function getReceivedAt(value) {
   return date.toISOString()
 }
 
+/**
+ * Render a wall-clock time for the log's narrow timestamp column.
+ *
+ * The backend stamps live events with a full ISO-8601 string
+ * (`2026-09-26T09:00:00.123456+00:00`). Echoing that verbatim overflowed the
+ * column by roughly 5x, so an ISO input is reduced to `HH:MM:SS` in UTC. An
+ * already-formatted clock time is passed through unchanged, and anything
+ * unparseable falls back to the receipt time.
+ */
 function getDisplayTimestamp(timestamp, receivedAt) {
   if (typeof timestamp === 'string' && timestamp.trim()) {
-    return timestamp
+    if (CLOCK_TIME_PATTERN.test(timestamp)) {
+      return timestamp
+    }
+
+    const parsed = new Date(timestamp)
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(11, 19)
+    }
   }
 
   return receivedAt.slice(11, 19)
+}
+
+/**
+ * The event's own machine-readable time, for `<time dateTime>`.
+ *
+ * Prefers the server-stamped value and falls back to the receipt time when the
+ * event carried no parseable timestamp of its own. A pre-formatted `HH:MM:SS`
+ * carries no date, so it cannot be used here.
+ */
+function getEventTime(timestamp, receivedAt) {
+  if (typeof timestamp === 'string' && timestamp.trim() && !CLOCK_TIME_PATTERN.test(timestamp)) {
+    const parsed = new Date(timestamp)
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString()
+    }
+  }
+
+  return receivedAt
 }
 
 export function normalizeAgentEvent(
@@ -134,6 +176,7 @@ export function normalizeAgentEvent(
     status,
     message: messageIsValid ? rawEvent.message : 'Invalid event received',
     timestamp: getDisplayTimestamp(rawEvent.timestamp, normalizedReceivedAt),
+    eventTime: getEventTime(rawEvent.timestamp, normalizedReceivedAt),
     receivedAt: normalizedReceivedAt,
     validation,
     data: Object.hasOwn(rawEvent, 'data') ? rawEvent.data : null,
@@ -162,3 +205,4 @@ export function getAgentStreamSource(adapter) {
 
   return 'simulated'
 }
+

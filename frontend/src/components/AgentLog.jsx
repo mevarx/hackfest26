@@ -260,7 +260,10 @@ export default function AgentLog(props) {
                 >
                   <time
                     className="pt-1 text-xs text-off-white/45"
-                    dateTime={event.receivedAt}
+                    // The machine-readable value must be the event's own time, not
+                    // the moment this browser happened to receive it.
+                    dateTime={event.eventTime ?? event.receivedAt}
+                    title={event.eventTime ?? event.receivedAt}
                   >
                     {event.timestamp}
                   </time>

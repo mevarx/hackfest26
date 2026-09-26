@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getSession, scoreWorkSample } from '../api.js'
+import { isAbortError } from '../lib/guards.js'
 
 const KAVYA_PERSONA = 'Kavya'
 
@@ -63,6 +64,26 @@ function getErrorMessage(error) {
   }
 
   return 'The ReRoute service could not be reached. Try again.'
+}
+
+/**
+ * Whether a failed session request means "stop asking".
+ *
+ * 404 and 410 are permanent: the session is gone, so retrying on the poll
+ * interval would hammer the API forever. Everything else (5xx, transport
+ * failures) may succeed on the next tick.
+ *
+ * The status is read structurally rather than with `instanceof ApiError`, so the
+ * check keeps working when the class crosses a module or bundle boundary.
+ */
+function isTerminalSessionError(error) {
+  if (typeof error !== 'object' || error === null) {
+    return false
+  }
+
+  const { status } = /** @type {{ status?: unknown }} */ (error)
+
+  return status === 404 || status === 410
 }
 
 function formatConfidence(confidence) {
@@ -137,6 +158,7 @@ function SourceBadge({ source }) {
 }
 
 export default function WorkerApp({
+  baseUrl = '',
   sessionId,
   onSessionStart,
   events = EMPTY_EVENTS,
@@ -218,11 +240,13 @@ export default function WorkerApp({
     }
 
     try {
-      applySession(await getSession(activeSessionId))
+      applySession(await getSession(activeSessionId, { baseUrl }))
     } catch (requestError) {
-      setSessionError(getErrorMessage(requestError))
+      if (!isAbortError(requestError)) {
+        setSessionError(getErrorMessage(requestError))
+      }
     }
-  }, [activeSessionId, applySession])
+  }, [activeSessionId, applySession, baseUrl])
 
   useEffect(() => {
     if (!activeSessionId || passport !== null) {
@@ -231,23 +255,36 @@ export default function WorkerApp({
 
     let cancelled = false
     let timerId
+    const controller = new AbortController()
 
     const poll = async () => {
+      // `return` inside a try/catch still runs `finally`, so the reschedule is
+      // driven by this flag rather than by a finally block.
+      let keepPolling = true
+
       try {
-        const next = await getSession(activeSessionId)
+        const next = await getSession(activeSessionId, {
+          baseUrl,
+          signal: controller.signal,
+        })
 
         if (!cancelled) {
           applySession(next)
           setSessionError('')
         }
       } catch (requestError) {
-        if (!cancelled) {
-          setSessionError(getErrorMessage(requestError))
+        if (cancelled || isAbortError(requestError)) {
+          return
         }
-      } finally {
-        if (!cancelled) {
-          timerId = setTimeout(poll, PASSPORT_POLL_INTERVAL_MS)
-        }
+
+        setSessionError(getErrorMessage(requestError))
+        // A session that is gone will never come back, so stop polling instead of
+        // re-requesting it every 1.5s for the life of the page.
+        keepPolling = !isTerminalSessionError(requestError)
+      }
+
+      if (!cancelled && keepPolling) {
+        timerId = setTimeout(poll, PASSPORT_POLL_INTERVAL_MS)
       }
     }
 
@@ -256,8 +293,9 @@ export default function WorkerApp({
     return () => {
       cancelled = true
       clearTimeout(timerId)
+      controller.abort()
     }
-  }, [activeSessionId, applySession, passport])
+  }, [activeSessionId, applySession, baseUrl, passport])
 
   function handleTranscriptChange(event) {
     setTranscript(event.target.value)
@@ -301,7 +339,10 @@ export default function WorkerApp({
         .trim()
 
       if (spoken !== '') {
-        setTranscript(spoken)
+        // Append rather than replace: the transcript is usually pre-filled with a
+        // demo and may hold typed edits, and consecutive voice sessions each add
+        // to it.
+        setTranscript((current) => (current.trim() === '' ? spoken : `${current.trim()} ${spoken}`))
       }
     }
     recognition.onerror = (event) => {
@@ -318,6 +359,9 @@ export default function WorkerApp({
       recognition.start()
     } catch (startError) {
       setVoiceError(getErrorMessage(startError))
+      // Record it before returning, so unmount cleanup stops this instance
+      // rather than a stale one from an earlier voice session.
+      recognitionRef.current = null
       return
     }
 
@@ -357,11 +401,14 @@ export default function WorkerApp({
 
     try {
       setWorkSampleResult(
-        await scoreWorkSample({
-          skill_id: activeSkill,
-          submission: submission.trim(),
-          session_id: activeSessionId,
-        }),
+        await scoreWorkSample(
+          {
+            skill_id: activeSkill,
+            submission: submission.trim(),
+            session_id: activeSessionId,
+          },
+          { baseUrl },
+        ),
       )
     } catch (requestError) {
       setWorkSampleError(getErrorMessage(requestError))
@@ -657,14 +704,16 @@ export default function WorkerApp({
                   </select>
                 </div>
                 <div>
-                  <label
-                    htmlFor="worker-sample-score"
+                  {/* Not a <label htmlFor>: the score is an output, not a form
+                      control, so it is associated with aria-labelledby instead. */}
+                  <p
+                    id="worker-sample-score"
                     className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-off-white/50"
                   >
                     Work sample score
-                  </label>
+                  </p>
                   <p
-                    id="worker-sample-score"
+                    aria-labelledby="worker-sample-score"
                     className="mt-2 rounded-lg border border-white/10 bg-navy px-3 py-2.5 font-mono text-sm text-off-white/70"
                   >
                     {sample === null ? 'No score yet' : `${sample.score} out of 100`}

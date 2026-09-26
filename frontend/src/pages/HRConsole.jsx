@@ -557,7 +557,7 @@ function RewriteBlock({
   )
 }
 
-export default function HRConsole() {
+export default function HRConsole({ baseUrl = '' }) {
   const [role, setRole] = useState(DEFAULT_RADAR_ROLE)
   const [city, setCity] = useState(DEFAULT_RADAR_CITY)
   const [jobPostId, setJobPostId] = useState(DEFAULT_JOB_POST_ID)
@@ -567,111 +567,85 @@ export default function HRConsole() {
   const [rewrite, setRewrite] = useState(EMPTY_RESULT)
   const [rewriteError, setRewriteError] = useState('')
   const [isRewriteLoading, setIsRewriteLoading] = useState(true)
-  const mountedRef = useRef(true)
+
+  // Each panel keeps the in-flight request so a newer submit cancels the older
+  // one. Without this, two quick submits can resolve out of order and the stale
+  // response wins. React StrictMode remounts these effects in development, so
+  // this is also what stops the mount fetch from being issued twice.
+  const radarRequestRef = useRef(/** @type {AbortController | null} */ (null))
+  const rewriteRequestRef = useRef(/** @type {AbortController | null} */ (null))
+
+  useEffect(
+    () => () => {
+      radarRequestRef.current?.abort()
+      rewriteRequestRef.current?.abort()
+    },
+    [],
+  )
 
   useEffect(() => {
-    mountedRef.current = true
-
-    return () => {
-      mountedRef.current = false
-    }
+    void loadRadar(DEFAULT_RADAR_ROLE, DEFAULT_RADAR_CITY)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount fetch only
   }, [])
 
   useEffect(() => {
-    let cancelled = false
-
-    getDisplacementRadar({
-      role: DEFAULT_RADAR_ROLE,
-      city: DEFAULT_RADAR_CITY,
-    })
-      .then((response) => {
-        if (!cancelled) {
-          setRadar(response)
-        }
-      })
-      .catch((requestError) => {
-        if (!cancelled) {
-          setRadarError(readRadarError(requestError))
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsRadarLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-
-    rewriteEmployerFilter(DEFAULT_JOB_POST_ID)
-      .then((response) => {
-        if (!cancelled) {
-          setRewrite(response)
-        }
-      })
-      .catch((requestError) => {
-        if (!cancelled) {
-          setRewriteError(readRewriteError(requestError))
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsRewriteLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
+    void loadRewrite(DEFAULT_JOB_POST_ID)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount fetch only
   }, [])
 
   async function loadRadar(nextRole, nextCity) {
+    radarRequestRef.current?.abort()
+
+    const controller = new AbortController()
+    radarRequestRef.current = controller
     setIsRadarLoading(true)
     setRadarError('')
     setRadar(EMPTY_RESULT)
 
     try {
-      const response = await getDisplacementRadar({
-        role: nextRole,
-        city: nextCity,
-      })
+      const response = await getDisplacementRadar(
+        { role: nextRole, city: nextCity },
+        { baseUrl, signal: controller.signal },
+      )
 
-      if (mountedRef.current) {
+      if (radarRequestRef.current === controller) {
         setRadar(response)
       }
     } catch (requestError) {
-      if (mountedRef.current) {
+      if (radarRequestRef.current === controller) {
         setRadarError(readRadarError(requestError))
       }
     } finally {
-      if (mountedRef.current) {
+      if (radarRequestRef.current === controller) {
         setIsRadarLoading(false)
       }
     }
   }
 
   async function loadRewrite(nextJobPostId) {
+    rewriteRequestRef.current?.abort()
+
+    const controller = new AbortController()
+    rewriteRequestRef.current = controller
     setIsRewriteLoading(true)
     setRewriteError('')
     setRewrite(EMPTY_RESULT)
 
     try {
-      const response = await rewriteEmployerFilter(nextJobPostId)
+      const response = await rewriteEmployerFilter(nextJobPostId, {
+        baseUrl,
+        signal: controller.signal,
+      })
 
-      if (mountedRef.current) {
+      if (rewriteRequestRef.current === controller) {
         setRewrite(response)
       }
     } catch (requestError) {
-      if (mountedRef.current) {
+      if (rewriteRequestRef.current === controller) {
         setRewriteError(readRewriteError(requestError))
       }
     } finally {
-      if (mountedRef.current) {
+      if (rewriteRequestRef.current === controller) {
         setIsRewriteLoading(false)
       }
     }
@@ -679,26 +653,28 @@ export default function HRConsole() {
 
   function handleRadarSubmit(event) {
     event.preventDefault()
-    loadRadar(role.trim() || DEFAULT_RADAR_ROLE, city.trim() || DEFAULT_RADAR_CITY)
+    void loadRadar(role.trim() || DEFAULT_RADAR_ROLE, city.trim() || DEFAULT_RADAR_CITY)
   }
 
   function handleRewriteSubmit(event) {
     event.preventDefault()
-    loadRewrite(jobPostId)
+    void loadRewrite(jobPostId)
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
+    <div className="space-y-6">
       <header>
         <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber">
           Employer readiness · Phase 4C
         </p>
-        <h1 className="mt-3 font-serif text-4xl leading-[1.02] tracking-[-0.03em] text-navy sm:text-5xl">
+        {/* An h2, not a second h1: this panel renders inside App's page column,
+            which already owns the document's only h1. */}
+        <h2 className="mt-3 font-serif text-3xl leading-[1.05] tracking-[-0.03em] text-navy sm:text-4xl">
           Rewrite the filter,
           <span className="block italic text-navy/55">
             not the shortlist.
           </span>
-        </h1>
+        </h2>
         <p className="mt-5 max-w-2xl text-base leading-7 text-navy/65">
           What an employer&rsquo;s own job post does to their shortlist, and the
           evidence-led wording ReRoute swaps in once the audit flags the post.

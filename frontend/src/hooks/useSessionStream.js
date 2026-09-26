@@ -1,10 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { normalizeAgentEvent } from '../domain/agentEvents.js'
+import { isRecord } from '../lib/guards.js'
 import { createSessionSocket, getWebSocketUrl } from '../lib/sessionSocket.js'
+
+const logger = console
+
 
 export const RECONNECT_BASE_DELAY_MS = 500
 export const RECONNECT_MAX_DELAY_MS = 8000
 export const SESSION_NOT_FOUND_CLOSE_CODE = 4404
+const RECONNECT_JITTER_RATIO = 0.4
+/**
+ * A TCP connection that is black-holed (server down behind a firewall) fires
+ * neither `onopen` nor `onerror` nor `onclose`, so without a deadline the stream
+ * would sit in `connecting` forever and never retry.
+ */
+const CONNECT_TIMEOUT_MS = 10_000
 
 const IDLE_STATUS = 'idle'
 const CONNECTING_STATUS = 'connecting'
@@ -15,10 +26,6 @@ const EMPTY_EVENTS = Array.from({ length: 0 })
 const NOOP_SOCKET_HANDLE = {
   send: (_message) => false,
   close: (_code, _reason) => false,
-}
-
-function isRecord(value) {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function isSessionNotFound(event) {
@@ -74,13 +81,23 @@ export function deriveEventSource(events) {
   return 'local'
 }
 
-export function getReconnectDelay(attempts) {
+/**
+ * Exponential backoff for reconnect attempts, with jitter.
+ *
+ * The jitter matters: without it every open tab (and every laptop running the
+ * demo) reconnects in lockstep, which is a textbook thundering herd against the
+ * backend. The spread is proportional to the delay, capped so the backoff curve
+ * is preserved.
+ */
+export function getReconnectDelay(attempts, random = Math.random) {
   const step = Number.isFinite(attempts) ? Math.max(0, Math.floor(attempts)) : 0
-
-  return Math.min(
+  const base = Math.min(
     RECONNECT_BASE_DELAY_MS * 2 ** step,
     RECONNECT_MAX_DELAY_MS,
   )
+  const spread = base * RECONNECT_JITTER_RATIO
+
+  return Math.round(base - spread / 2 + random() * spread)
 }
 
 export function useSessionStream(options) {
@@ -125,6 +142,7 @@ export function useSessionStream(options) {
     let events = EMPTY_EVENTS
     let lastEventId = 0
     let reconnectTimer = 0
+    let connectTimer = 0
     let socketHandle = NOOP_SOCKET_HANDLE
 
     function publish(nextStatus) {
@@ -210,12 +228,23 @@ export function useSessionStream(options) {
 
       if (nextStatus === OPEN_STATUS) {
         attempts = 0
+        clearConnectTimeout()
         publish(OPEN_STATUS)
         return
       }
 
       if (nextStatus === ERROR_STATUS) {
-        publish(ERROR_STATUS)
+        // A session the server does not have will never appear, so this is the
+        // one genuinely terminal case. Every other error -- a failed
+        // constructor, an `onerror` with no `onclose` -- is transient and must
+        // retry, otherwise the stream dies permanently on a transient blip.
+        if (isSessionNotFound(event)) {
+          clearConnectTimeout()
+          publish(ERROR_STATUS)
+          return
+        }
+
+        scheduleReconnect()
         return
       }
 
@@ -224,11 +253,19 @@ export function useSessionStream(options) {
       }
 
       if (isSessionNotFound(event)) {
+        clearConnectTimeout()
         publish(ERROR_STATUS)
         return
       }
 
       scheduleReconnect()
+    }
+
+    function clearConnectTimeout() {
+      if (connectTimer) {
+        clearTimeout(connectTimer)
+        connectTimer = 0
+      }
     }
 
     function connect() {
@@ -248,9 +285,18 @@ export function useSessionStream(options) {
       })
       socketHandleRef.current = socketHandle
 
-      if (disposed) {
+      clearConnectTimeout()
+      connectTimer = setTimeout(() => {
+        connectTimer = 0
+
+        if (disposed || socketHandleRef.current !== socketHandle) {
+          return
+        }
+
+        logger.debug('session stream connect timed out; scheduling a reconnect')
         socketHandle.close()
-      }
+        scheduleReconnect()
+      }, CONNECT_TIMEOUT_MS)
     }
 
     connect()
@@ -262,6 +308,8 @@ export function useSessionStream(options) {
         clearTimeout(reconnectTimer)
         reconnectTimer = 0
       }
+
+      clearConnectTimeout()
 
       if (socketHandleRef.current === socketHandle) {
         socketHandleRef.current = NOOP_SOCKET_HANDLE
@@ -292,3 +340,4 @@ export function useSessionStream(options) {
     reconnectNow,
   }
 }
+

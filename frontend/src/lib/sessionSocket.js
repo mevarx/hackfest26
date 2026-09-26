@@ -1,12 +1,10 @@
+import { isRecord } from './guards.js'
+
 const SOCKET_OPEN_READY_STATE = 1
 const SOCKET_CLOSED_READY_STATE = 3
 const NORMAL_CLOSURE_CODE = 1000
 
 function noop() {}
-
-function isRecord(value) {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 function isPositiveSequence(value) {
   if (typeof value === 'number') {
@@ -250,3 +248,4 @@ export function createSessionSocket(options) {
 
   return { send, close }
 }
+
