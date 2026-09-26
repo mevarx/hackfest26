@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getRoute } from '../api.js'
 import { isAbortError } from '../lib/guards.js'
+import {
+  dataLabelClass,
+  sectionHeadingClass,
+  toneHeadingClass,
+} from '../styles/classes.js'
+import Badge from '../components/Badge.jsx'
+import Button from '../components/Button.jsx'
+import Card from '../components/Card.jsx'
+import Field from '../components/Field.jsx'
+import NumberInput from '../components/NumberInput.jsx'
+import Select from '../components/Select.jsx'
+import TextInput from '../components/TextInput.jsx'
 
 const DEFAULT_FROM_SKILL = 'Manual testing'
 const DEFAULT_TARGET_ROLE = 'qa-analyst'
@@ -37,23 +49,18 @@ const TARGET_ROLE_OPTIONS = [
 
 const EMPTY_LEGS = []
 
+/** @type {Record<string, { source: 'live' | 'simulated' | 'local' | 'pending', detail: string }>} */
 const SOURCE_DETAILS = {
   live: {
-    label: 'Live',
-    className: 'border-teal/45 bg-teal/10 text-teal',
-    dotClassName: 'bg-teal',
+    source: 'live',
     detail: 'Answered by SAP HANA Cloud',
   },
   simulated: {
-    label: 'Simulated',
-    className: 'border-amber/45 bg-amber/10 text-amber',
-    dotClassName: 'bg-amber',
+    source: 'simulated',
     detail: 'Bundled skills-graph fixture, no SAP HANA call',
   },
   pending: {
-    label: 'Source pending',
-    className: 'border-white/20 bg-white/5 text-off-white/60',
-    dotClassName: 'bg-off-white/40',
+    source: 'pending',
     detail: 'No route has been returned yet',
   },
 }
@@ -310,201 +317,144 @@ export default function RouteMap({
   const sourceDetails = getSourceDetails(route?.source)
 
   return (
-    <section
-      className="overflow-hidden rounded-2xl border border-white/10 bg-navy text-off-white shadow-2xl shadow-navy/20"
+    <Card
+      as="section"
+      variant="dark"
+      eyebrow="Stage 02 · Learning pathway"
+      title="Route map"
+      titleId="route-map-title"
+      description="The cheapest chain of skills from where Kavya is today to the target role, priced in hours."
+      actions={<Badge source={sourceDetails.source} />}
       aria-labelledby="route-map-title"
       aria-busy={isLoading}
+      padding="lg"
     >
-      <div className="flex flex-col gap-4 border-b border-white/10 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber">
-            Stage 02 · Learning pathway
-          </p>
-          <h2 id="route-map-title" className="mt-1 font-serif text-2xl text-off-white">
-            Route map
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-off-white/60">
-            The cheapest chain of skills from where Kavya is today to the target
-            role, priced in hours.
-          </p>
-        </div>
-        <span
-          className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] ${sourceDetails.className}`}
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${sourceDetails.dotClassName}`}
-            aria-hidden="true"
-          />
-          {sourceDetails.label} route
-        </span>
-      </div>
-
-      <div className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
-        <form
-          className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"
-          onSubmit={handleSubmit}
-        >
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-off-white/45">
-            Plan a different route
-          </p>
+      <div className="space-y-4">
+        <Card as="form" variant="dark" padding="lg" onSubmit={handleSubmit}>
+          <p className={sectionHeadingClass}>Plan a different route</p>
 
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            <div>
-              <label
-                htmlFor="route-from-skill"
-                className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-off-white/50"
-              >
-                From skill
-              </label>
-              <input
+            <Field id="route-from-skill" label="From skill">
+              <TextInput
                 id="route-from-skill"
                 list="route-skill-options"
                 value={draft.fromSkill}
                 onChange={handleFromSkillChange}
-                className="mt-2 w-full rounded-lg border border-white/20 bg-navy px-3 py-2.5 text-sm text-off-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
               />
               <datalist id="route-skill-options">
                 {SKILL_OPTIONS.map((skill) => (
                   <option key={skill} value={skill} />
                 ))}
               </datalist>
-            </div>
+            </Field>
 
-            <div>
-              <label
-                htmlFor="route-target-role"
-                className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-off-white/50"
-              >
-                Target role
-              </label>
-              <select
+            <Field id="route-target-role" label="Target role">
+              <Select
                 id="route-target-role"
                 value={draft.targetRole}
                 onChange={handleTargetRoleChange}
-                className="mt-2 w-full rounded-lg border border-white/20 bg-navy px-3 py-2.5 text-sm text-off-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
               >
                 {TARGET_ROLE_OPTIONS.map((role) => (
                   <option key={role} value={role}>
                     {role}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
 
-            <div>
-              <label
-                htmlFor="route-hours-per-week"
-                className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-off-white/50"
-              >
-                Hours per week
-              </label>
-              <input
+            <Field id="route-hours-per-week" label="Hours per week">
+              <NumberInput
                 id="route-hours-per-week"
-                type="number"
-                min={1}
-                max={40}
+                min={MIN_HOURS_PER_WEEK}
+                max={MAX_HOURS_PER_WEEK}
                 value={draft.hoursPerWeek}
                 onChange={handleHoursPerWeekChange}
-                className="mt-2 w-full rounded-lg border border-white/20 bg-navy px-3 py-2.5 font-mono text-sm text-off-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+                className="font-mono"
               />
-            </div>
+            </Field>
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
             disabled={isLoading || !canQuery}
             aria-busy={isLoading}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber px-5 py-3 text-sm font-bold uppercase tracking-[0.14em] text-navy transition hover:bg-amber/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            className="mt-4 w-full sm:w-auto"
           >
             {isLoading ? 'Mapping route…' : 'Build route'}
-          </button>
-        </form>
+          </Button>
+        </Card>
 
         {error === '' ? null : (
-          <div
-            className="rounded-xl border border-red/50 bg-red/10 p-5"
-            role="alert"
-          >
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-red-300">
-              Route unavailable
-            </p>
-            <p className="mt-2 text-sm leading-6 text-off-white/75">{error}</p>
-            <p className="mt-2 text-xs leading-5 text-off-white/50">
+          <Card variant="dark" tone="red" role="alert" padding="lg">
+            <p className={toneHeadingClass.red}>Route unavailable</p>
+            <p className="mt-2 text-sm leading-6 text-offwhite/70">{error}</p>
+            <p className="mt-2 text-xs leading-5 text-offwhite/50">
               {sourceDetails.detail}. Ask for the route again once the skills graph
               answers.
             </p>
-          </div>
+          </Card>
         )}
 
         {isLoading ? (
-          <div
-            className="rounded-xl border border-amber/30 bg-amber/10 p-5"
+          <Card
+            variant="dark"
+            tone="amber"
             role="status"
             aria-live="polite"
+            padding="lg"
           >
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber">
-              Mapping the least-hours path…
-            </p>
-            <p className="mt-2 text-sm leading-6 text-off-white/70">
+            <p className={toneHeadingClass.amber}>Mapping the least-hours path…</p>
+            <p className="mt-2 text-sm leading-6 text-offwhite/70">
               Walking the skills graph from {draft.fromSkill} to{' '}
               {draft.targetRole} at {draft.hoursPerWeek} hours a week.
             </p>
-          </div>
+          </Card>
         ) : route === null ? (
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-off-white/50">
-              No route yet
-            </p>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-off-white/65">
+          <Card variant="dark" emptyState padding="lg">
+            <p className={sectionHeadingClass}>No route yet</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-offwhite/70">
               Build a route to see the skill-by-skill metro line, the hours on
               each hop and the paid bridge at the end.
             </p>
-          </div>
+          </Card>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/45">
-                  Route from
-                </p>
-                <p className="mt-1 text-sm font-semibold text-off-white">
+              <Card variant="dark" surface="raised" padding="sm">
+                <p className={dataLabelClass}>Route from</p>
+                <p className="mt-1 text-sm font-semibold text-offwhite">
                   {route.from_skill ?? '—'}
                 </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/45">
-                  Route to
-                </p>
-                <p className="mt-1 text-sm font-semibold text-off-white">
+              </Card>
+              <Card variant="dark" surface="raised" padding="sm">
+                <p className={dataLabelClass}>Route to</p>
+                <p className="mt-1 text-sm font-semibold text-offwhite">
                   {route.target_role ?? '—'}
                 </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/45">
-                  Total hours
-                </p>
+              </Card>
+              <Card variant="dark" surface="raised" padding="sm">
+                <p className={dataLabelClass}>Total hours</p>
                 <p className="mt-1 font-mono text-xl text-amber">
                   {formatHours(route.total_hours)}
                 </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/45">
+              </Card>
+              <Card variant="dark" surface="raised" padding="sm">
+                <p className={dataLabelClass}>
                   Weeks at {formatHours(route.hours_per_week)}h per week
                 </p>
-                <p className="mt-1 font-mono text-xl text-off-white">
+                <p className="mt-1 font-mono text-xl text-offwhite">
                   {formatWeeks(route.weeks)}
                 </p>
-              </div>
+              </Card>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <Card variant="dark" padding="lg">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-off-white/45">
+                <p className={sectionHeadingClass}>
                   Metro line · {stations.length} stations
                 </p>
-                <p className="text-xs text-off-white/45">
-                  {sourceDetails.detail}
-                </p>
+                <p className="text-xs text-offwhite/40">{sourceDetails.detail}</p>
               </div>
 
               <p className="sr-only">
@@ -535,12 +485,12 @@ export default function RouteMap({
                         {isLast ? null : (
                           <span
                             aria-hidden="true"
-                            className="absolute left-1/2 top-1/2 hidden h-0.5 w-full -translate-y-1/2 rounded-full bg-amber/60 sm:block"
+                            className="absolute left-1/2 top-1/2 hidden h-0.5 w-full -translate-y-1/2 rounded-pill bg-amber/60 sm:block"
                           />
                         )}
                         <span
                           aria-hidden="true"
-                          className={`relative z-10 h-4 w-4 shrink-0 rounded-full border-2 bg-navy sm:h-5 sm:w-5 ${
+                          className={`relative z-10 h-4 w-4 shrink-0 rounded-pill border-2 bg-navy sm:h-5 sm:w-5 ${
                             station.isTarget ? 'border-teal bg-teal' : 'border-amber'
                           }`}
                         />
@@ -548,8 +498,8 @@ export default function RouteMap({
 
                       <div className="mt-3 min-w-0 sm:mt-0">
                         <p
-                          className={`text-sm font-bold uppercase tracking-[0.1em] ${
-                            station.isTarget ? 'text-teal' : 'text-off-white'
+                          className={`text-sm font-bold uppercase tracking-[0.12em] ${
+                            station.isTarget ? 'text-teal' : 'text-offwhite'
                           }`}
                         >
                           {station.skill}
@@ -566,18 +516,16 @@ export default function RouteMap({
               </ol>
 
               {stations.length === 0 ? (
-                <p className="mt-4 text-sm leading-6 text-off-white/60">
+                <p className="mt-4 text-sm leading-6 text-offwhite/50">
                   The server returned a route with no stations to draw.
                 </p>
               ) : null}
-            </div>
+            </Card>
 
-            <div className="rounded-2xl border border-teal/30 bg-teal/10 p-5">
-              <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-teal">
-                Paid bridge
-              </p>
+            <Card variant="dark" tone="teal" padding="lg">
+              <p className={toneHeadingClass.teal}>Paid bridge</p>
               {bridgeEntries.length === 0 ? (
-                <p className="mt-2 text-sm leading-6 text-off-white/70">
+                <p className="mt-2 text-sm leading-6 text-offwhite/70">
                   No paid bridge attached to this route. The server returned no
                   bridge block.
                 </p>
@@ -586,23 +534,20 @@ export default function RouteMap({
                   {bridgeEntries.map(([label, value]) => (
                     <div
                       key={label}
-                      className="flex items-baseline justify-between gap-4 border-b border-white/10 pb-1.5"
+                      className="flex items-baseline justify-between gap-4 border-b border-rule pb-1.5"
                     >
-                      <dt className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-off-white/50">
-                        {label}
-                      </dt>
-                      <dd className="text-right font-mono text-sm text-off-white">
+                      <dt className={dataLabelClass}>{label}</dt>
+                      <dd className="text-right font-mono text-sm text-offwhite">
                         {value}
                       </dd>
                     </div>
                   ))}
                 </dl>
               )}
-            </div>
+            </Card>
           </>
         )}
       </div>
-    </section>
+    </Card>
   )
 }
-

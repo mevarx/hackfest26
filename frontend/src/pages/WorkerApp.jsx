@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getSession, scoreWorkSample } from '../api.js'
 import { isAbortError } from '../lib/guards.js'
+import {
+  controlFieldHintClass,
+  controlFieldLabelClass,
+  dataLabelClass,
+  sectionHeadingClass,
+} from '../styles/classes.js'
+import Badge from '../components/Badge.jsx'
+import Button from '../components/Button.jsx'
+import Card from '../components/Card.jsx'
+import Field from '../components/Field.jsx'
+import Select from '../components/Select.jsx'
+import Textarea from '../components/Textarea.jsx'
 
 const KAVYA_PERSONA = 'Kavya'
 
@@ -17,29 +29,19 @@ const EMPTY_EVENTS = []
 const EMPTY_SKILLS = []
 const EMPTY_CREDENTIALS = []
 
+/** @type {Record<string, { label: string, source: 'live' | 'simulated' | 'local' | 'pending' }>} */
 const SOURCE_DETAILS = {
-  live: {
-    label: 'Live source',
-    className: 'border-teal/45 bg-teal/10 text-teal',
-    dotClassName: 'bg-teal',
-  },
-  simulated: {
-    label: 'Simulated source',
-    className: 'border-amber/45 bg-amber/10 text-amber',
-    dotClassName: 'bg-amber',
-  },
+  live: { label: 'Live', source: 'live' },
+  simulated: { label: 'Simulated', source: 'simulated' },
+  pending: { label: 'Source pending', source: 'pending' },
 }
 
+/** @type {Record<string, { label: string, status: 'running' | 'done' | 'waiting' | 'idle' }>} */
 const EVENT_STATUS_DETAILS = {
-  running: { label: 'Running', symbol: '↻' },
-  done: { label: 'Done', symbol: '✓' },
-  waiting_consent: { label: 'Waiting for consent', symbol: '◇' },
-}
-
-const SOURCE_PENDING = {
-  label: 'Source pending',
-  className: 'border-white/20 bg-white/5 text-off-white/60',
-  dotClassName: 'bg-off-white/40',
+  running: { label: 'Running', status: 'running' },
+  done: { label: 'Done', status: 'done' },
+  waiting_consent: { label: 'Waiting for consent', status: 'waiting' },
+  unknown: { label: 'Unknown status', status: 'waiting' },
 }
 
 function getSourceDetails(source) {
@@ -51,11 +53,11 @@ function getSourceDetails(source) {
     return SOURCE_DETAILS.simulated
   }
 
-  return SOURCE_PENDING
+  return SOURCE_DETAILS.pending
 }
 
 function getEventStatusDetails(status) {
-  return EVENT_STATUS_DETAILS[status] ?? { label: 'Unknown status', symbol: '!' }
+  return EVENT_STATUS_DETAILS[status] ?? EVENT_STATUS_DETAILS.unknown
 }
 
 function getErrorMessage(error) {
@@ -141,22 +143,6 @@ function getSpeechRecognitionConstructor() {
   return null
 }
 
-function SourceBadge({ source }) {
-  const details = getSourceDetails(source)
-
-  return (
-    <span
-      className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] ${details.className}`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${details.dotClassName}`}
-        aria-hidden="true"
-      />
-      <span>{details.label}</span>
-    </span>
-  )
-}
-
 export default function WorkerApp({
   baseUrl = '',
   sessionId,
@@ -196,6 +182,7 @@ export default function WorkerApp({
   const passportSource = passport === null ? null : (passport.source ?? null)
   const sessionStatus = sessionPayload?.status ?? null
   const sample = optionalValue(workSampleResult)
+  const sampleSource = getSourceDetails(sample?.source)
   const latestEvent = events.length === 0 ? null : events[events.length - 1]
   const hasSession = activeSessionId !== null && activeSessionId !== ''
 
@@ -429,57 +416,46 @@ export default function WorkerApp({
     : 'Press Run pipeline to open a session for Kavya. The seven agents fill the skill passport in the background.'
 
   return (
-    <section
-      className="overflow-hidden rounded-2xl border border-white/10 bg-navy text-off-white shadow-2xl shadow-navy/20"
+    <Card
+      as="section"
+      variant="dark"
+      eyebrow="Stage 01 · Skills discovery"
+      title="Worker intake & skill passport"
+      titleId="worker-app-title"
+      description="Speak or paste what Kavya actually did, then let the pipeline recover durable skills instead of keywords."
+      actions={<Badge source={passportSource ?? 'pending'} />}
       aria-labelledby="worker-app-title"
       aria-busy={isBusy}
+      padding="lg"
     >
-      <div className="flex flex-col gap-4 border-b border-white/10 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber">
-            Stage 01 · Skills discovery
-          </p>
-          <h2 id="worker-app-title" className="mt-1 font-serif text-2xl text-off-white">
-            Worker intake &amp; skill passport
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-off-white/60">
-            Speak or paste what Kavya actually did, then let the pipeline recover
-            durable skills instead of keywords.
-          </p>
-        </div>
-        <SourceBadge source={passportSource} />
-      </div>
-
-      <div className="space-y-6 px-5 py-5 sm:px-6 sm:py-6">
-        <div
-          className="rounded-xl border border-white/10 bg-white/[0.04] p-4"
+      <div className="space-y-4">
+        <Card
+          variant="dark"
+          surface="raised"
+          padding="md"
           role="status"
           aria-live="polite"
           aria-atomic="true"
         >
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-off-white/45">
-            {statusHeading}
-          </p>
-          <p className="mt-1.5 text-sm leading-6 text-off-white/75">
+          <p className={sectionHeadingClass}>{statusHeading}</p>
+          <p className="mt-1.5 text-sm leading-6 text-offwhite/70">
             {statusDetail}
           </p>
           {latestEvent === null ? null : (
-            <p className="mt-2 text-xs leading-5 text-off-white/50">
-              <span className="font-bold uppercase tracking-[0.14em] text-amber">
+            <p className="mt-2 text-xs leading-5 text-offwhite/50">
+              <span className="font-bold uppercase tracking-[0.12em] text-amber">
                 {latestEvent.agent}
               </span>
               {': '}
               {latestEvent.message}
             </p>
           )}
-        </div>
+        </Card>
 
         {hasSession ? null : (
-          <div className="rounded-2xl border border-dashed border-amber/40 bg-amber/10 p-5">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber">
-              Idle · no session open
-            </p>
-            <ol className="mt-3 space-y-2 text-sm leading-6 text-off-white/75">
+          <Card variant="dark" emptyState padding="lg" role="status">
+            <p className={sectionHeadingClass}>Idle · no session open</p>
+            <ol className="mt-3 list-none space-y-2 text-sm leading-6 text-offwhite/70">
               <li>1. The transcript below is prefilled with the Kavya demo.</li>
               <li>2. Press Run pipeline to open a session for Kavya.</li>
               <li>
@@ -487,55 +463,63 @@ export default function WorkerApp({
                 the passport appears a moment later.
               </li>
             </ol>
-          </div>
+          </Card>
         )}
 
-        <form
-          className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+        <Card
+          as="form"
+          variant="dark"
+          padding="lg"
           onSubmit={(event) => {
             event.preventDefault()
             handleRunPipeline()
           }}
         >
-          <label
-            htmlFor="worker-transcript"
-            className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-off-white/50"
+          <Card
+            variant="dark"
+            surface="raised"
+            padding="lg"
+            className="border-l-2 border-l-amber"
           >
-            Session transcript
-          </label>
-          <p id="worker-transcript-hint" className="mt-2 text-sm leading-6 text-off-white/60">
-            Plain speech, the way Kavya would say it. No CV formatting needed.
-          </p>
-          <textarea
-            id="worker-transcript"
-            value={transcript}
-            onChange={handleTranscriptChange}
-            rows={8}
-            aria-describedby="worker-transcript-hint"
-            className="mt-3 w-full rounded-xl border border-white/15 bg-navy px-4 py-3 text-sm leading-6 text-off-white placeholder:text-off-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
-          />
+            <Field id="worker-transcript" label="Session transcript">
+              <p id="worker-transcript-hint" className={controlFieldHintClass}>
+                Plain speech, the way Kavya would say it. No CV formatting
+                needed.
+              </p>
+              <Textarea
+                id="worker-transcript"
+                rows={8}
+                value={transcript}
+                onChange={handleTranscriptChange}
+                aria-describedby="worker-transcript-hint"
+                className="mt-3"
+              />
+            </Field>
+          </Card>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <button
+            <Button
               type="submit"
+              variant="primary"
               disabled={isBusy || transcript.trim() === ''}
               aria-busy={isBusy}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber px-5 py-3 text-sm font-bold uppercase tracking-[0.14em] text-navy transition hover:bg-amber/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              className="w-full sm:w-auto"
             >
               {isBusy ? 'Starting session…' : 'Run pipeline'}
-            </button>
+            </Button>
 
             {speechSupported ? (
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={isListening ? handleVoiceStop : handleVoiceStart}
                 aria-pressed={isListening}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-5 py-3 text-sm font-bold uppercase tracking-[0.14em] text-off-white transition hover:border-teal/60 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 {isListening ? 'Stop voice input' : 'Start voice input'}
-              </button>
+              </Button>
             ) : (
-              <p className="text-xs leading-5 text-off-white/50 sm:w-full">
+              <p className="text-xs leading-5 text-offwhite/50 sm:w-full">
                 Voice input is unavailable in this browser. Paste or type the
                 transcript instead.
               </p>
@@ -543,37 +527,35 @@ export default function WorkerApp({
           </div>
 
           {voiceError === '' ? null : (
-            <p className="mt-3 text-sm leading-6 text-red-300" role="alert">
+            <p className="mt-3 text-sm leading-6 text-red" role="alert">
               {voiceError}
             </p>
           )}
 
           {sessionError === '' ? null : (
-            <p className="mt-3 text-sm leading-6 text-red-300" role="alert">
+            <p className="mt-3 text-sm leading-6 text-red" role="alert">
               {sessionError}
             </p>
           )}
-        </form>
+        </Card>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+        <Card variant="dark" padding="lg">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-off-white/45">
-                Skill passport
-              </p>
-              <h3 className="mt-1 font-serif text-xl text-off-white">
+              <p className={sectionHeadingClass}>Skill passport</p>
+              <h3 className="mt-1 font-serif text-xl text-offwhite">
                 {passport === null ? 'Passport pending' : passport.owner}
               </h3>
             </div>
             {passport === null ? null : (
-              <p className="font-mono text-xs text-off-white/45">
+              <p className="font-mono text-xs text-offwhite/40">
                 {passport.passport_id}
               </p>
             )}
           </div>
 
           {passport === null ? (
-            <p className="mt-3 text-sm leading-6 text-off-white/60">
+            <p className="mt-3 text-sm leading-6 text-offwhite/50">
               {isStreaming
                 ? 'The skills agent is still reading the transcript. The passport lands here as soon as the orchestrator writes it.'
                 : hasSession
@@ -590,177 +572,161 @@ export default function WorkerApp({
                   const confidenceLabel = formatConfidence(skill.confidence)
 
                   return (
-                    <li
-                      key={skill.name}
-                      className="rounded-xl border border-white/10 bg-white/[0.04] p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-bold uppercase tracking-[0.12em] text-off-white">
-                          {skill.name}
-                        </p>
-                        <span
-                          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-[0.12em] ${
-                            skill.verified
-                              ? 'border-teal/45 bg-teal/10 text-teal'
-                              : 'border-amber/45 bg-amber/10 text-amber'
-                          }`}
-                        >
-                          <span aria-hidden="true">{skill.verified ? '✓' : '○'}</span>
-                          <span>{skill.verified ? 'Verified' : 'Unverified'}</span>
-                        </span>
-                      </div>
-                      <div className="mt-3 flex items-center gap-3">
-                        <div
-                          role="progressbar"
-                          aria-label={`${skill.name} confidence`}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-valuenow={toPercent(skill.confidence)}
-                          aria-valuetext={`Confidence ${confidenceLabel}`}
-                          className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"
-                        >
-                          <div
-                            className="h-full rounded-full bg-amber"
-                            style={{ width: `${toPercent(skill.confidence)}%` }}
+                    <li key={skill.name}>
+                      <Card variant="dark" surface="raised" padding="md">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-bold uppercase tracking-[0.12em] text-offwhite">
+                            {skill.name}
+                          </p>
+                          <Badge
+                            status={skill.verified ? 'done' : 'idle'}
+                            label={skill.verified ? 'Verified' : 'Unverified'}
                           />
                         </div>
-                        <span className="font-mono text-xs text-off-white/70">
-                          {confidenceLabel}
-                        </span>
-                      </div>
-                      <p className="mt-1.5 text-[0.62rem] uppercase tracking-[0.14em] text-off-white/40">
-                        Confidence
-                      </p>
+                        <div className="mt-3 flex items-center gap-3">
+                          <div
+                            role="progressbar"
+                            aria-label={`${skill.name} confidence`}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={toPercent(skill.confidence)}
+                            aria-valuetext={`Confidence ${confidenceLabel}`}
+                            className="h-1.5 flex-1 overflow-hidden rounded-pill bg-navy"
+                          >
+                            <div
+                              className="h-full rounded-pill bg-amber"
+                              style={{
+                                width: `${toPercent(skill.confidence)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="font-mono text-xs text-offwhite/70">
+                            {confidenceLabel}
+                          </span>
+                        </div>
+                        <p className={`mt-1.5 ${dataLabelClass}`}>
+                          Confidence
+                        </p>
+                      </Card>
                     </li>
                   )
                 })}
               </ul>
 
-              <p className="mt-5 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-off-white/45">
-                Credentials
-              </p>
+              <p className={`mt-5 ${sectionHeadingClass}`}>Credentials</p>
               {credentials.length === 0 ? (
-                <p className="mt-1.5 text-sm leading-6 text-off-white/60">
+                <p className="mt-1.5 text-sm leading-6 text-offwhite/50">
                   No credentials yet. Score a work sample below to earn one.
                 </p>
               ) : (
-                <ul aria-label="Issued credentials" className="mt-2 flex flex-wrap gap-2">
+                <ul
+                  aria-label="Issued credentials"
+                  className="mt-2 flex flex-wrap gap-2"
+                >
                   {credentials.map((credential) => (
-                    <li
-                      key={credential}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-teal/45 bg-teal/10 px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-teal"
-                    >
-                      <span aria-hidden="true">✓</span>
-                      <span>{credential}</span>
+                    <li key={credential}>
+                      <Badge status="done" label={credential} />
                     </li>
                   ))}
                 </ul>
               )}
             </>
           )}
-        </div>
+        </Card>
 
-        <form
-          className="rounded-2xl border border-amber/30 bg-amber/10 p-5"
+        <Card
+          as="form"
+          variant="dark"
+          tone="amber"
+          padding="lg"
           onSubmit={handleWorkSampleSubmit}
         >
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-amber">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-amber">
             Proof · work sample
           </p>
-          <h3 className="mt-1 font-serif text-xl text-off-white">
+          <h3 className="mt-1 font-serif text-xl">
             Turn a claim into a credential
           </h3>
-          <p className="mt-2 text-sm leading-6 text-off-white/65">
+          <p className="mt-2 text-sm leading-6 text-offwhite/70">
             Pick one skill from the passport and paste the evidence. The server
             scores it and decides whether a credential is issued.
           </p>
 
           {skills.length === 0 ? (
-            <p className="mt-4 text-sm leading-6 text-off-white/60">
+            <p className="mt-4 text-sm leading-6 text-offwhite/50">
               A skill is needed before a work sample can be scored. The passport
               has not landed yet.
             </p>
           ) : (
             <>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="worker-sample-skill"
-                    className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-off-white/50"
-                  >
-                    Skill to prove
-                  </label>
-                  <select
+                <Field id="worker-sample-skill" label="Skill to prove">
+                  <Select
                     id="worker-sample-skill"
                     value={activeSkill}
                     onChange={handleSkillChange}
-                    className="mt-2 w-full rounded-lg border border-white/20 bg-navy px-3 py-2.5 text-sm text-off-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
                   >
                     {skillNames.map((name) => (
                       <option key={name} value={name}>
                         {name}
                       </option>
                     ))}
-                  </select>
-                </div>
+                  </Select>
+                </Field>
                 <div>
                   {/* Not a <label htmlFor>: the score is an output, not a form
                       control, so it is associated with aria-labelledby instead. */}
-                  <p
-                    id="worker-sample-score"
-                    className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-off-white/50"
-                  >
+                  <p id="worker-sample-score" className={controlFieldLabelClass}>
                     Work sample score
                   </p>
                   <p
                     aria-labelledby="worker-sample-score"
-                    className="mt-2 rounded-lg border border-white/10 bg-navy px-3 py-2.5 font-mono text-sm text-off-white/70"
+                    className="mt-2 flex h-control items-center rounded-control border border-rule bg-navy-raised px-3 font-mono text-sm text-offwhite/70"
                   >
-                    {sample === null ? 'No score yet' : `${sample.score} out of 100`}
+                    {sample === null
+                      ? 'No score yet'
+                      : `${sample.score} out of 100`}
                   </p>
                 </div>
               </div>
 
-              <label
-                htmlFor="worker-sample-submission"
-                className="mt-4 block text-[0.65rem] font-bold uppercase tracking-[0.16em] text-off-white/50"
-              >
-                Evidence submission
-              </label>
-              <textarea
+              <Field
                 id="worker-sample-submission"
-                value={submission}
-                onChange={handleSubmissionChange}
-                rows={4}
-                placeholder="Paste the script, collection or pipeline you built."
-                className="mt-2 w-full rounded-lg border border-white/15 bg-navy px-4 py-3 text-sm leading-6 text-off-white placeholder:text-off-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
-              />
+                label="Evidence submission"
+                className="mt-4"
+              >
+                <Textarea
+                  id="worker-sample-submission"
+                  rows={4}
+                  value={submission}
+                  onChange={handleSubmissionChange}
+                  placeholder="Paste the script, collection or pipeline you built."
+                />
+              </Field>
 
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <button
+                <Button
                   type="submit"
+                  variant="primary"
                   disabled={isScoring || submission.trim() === ''}
                   aria-busy={isScoring}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal px-5 py-3 text-sm font-bold uppercase tracking-[0.14em] text-navy transition hover:bg-teal/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                  className="w-full sm:w-auto"
                 >
                   {isScoring ? 'Scoring sample…' : 'Score work sample'}
-                </button>
+                </Button>
 
                 {sample === null ? null : (
-                  <span
-                    className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] ${getSourceDetails(sample.source).className}`}
-                  >
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${getSourceDetails(sample.source).dotClassName}`}
-                      aria-hidden="true"
-                    />
-                    {getSourceDetails(sample.source).label} score
-                  </span>
+                  <Badge
+                    source={sampleSource.source}
+                    role="img"
+                    aria-label={`Work sample source: ${sampleSource.label}`}
+                    title={`Work sample source: ${sampleSource.label}`}
+                  />
                 )}
               </div>
 
               {sample === null ? null : (
-                <p className="mt-3 text-sm leading-6 text-off-white/75">
+                <p className="mt-3 text-sm leading-6 text-offwhite/70">
                   {sample.credential_issued
                     ? 'Credential issued and recorded on the passport.'
                     : 'No credential issued. The score is below the server threshold.'}
@@ -768,19 +734,17 @@ export default function WorkerApp({
               )}
 
               {workSampleError === '' ? null : (
-                <p className="mt-3 text-sm leading-6 text-red-300" role="alert">
+                <p className="mt-3 text-sm leading-6 text-red" role="alert">
                   {workSampleError}
                 </p>
               )}
             </>
           )}
-        </form>
+        </Card>
 
         {events.length === 0 ? null : (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-            <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-off-white/45">
-              Pipeline agents
-            </p>
+          <Card variant="dark" padding="lg">
+            <p className={sectionHeadingClass}>Pipeline agents</p>
             <ul
               aria-label="Pipeline agent events"
               className="mt-3 space-y-1.5"
@@ -791,28 +755,23 @@ export default function WorkerApp({
                 return (
                   <li
                     key={event.eventId ?? `${event.agent}-${index}`}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-off-white/70"
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-offwhite/70"
                   >
-                    <span className="font-mono text-xs text-off-white/40">
+                    <span className="font-mono text-xs text-offwhite/40">
                       {String(index + 1).padStart(2, '0')}
                     </span>
-                    <span className="font-bold uppercase tracking-[0.12em] text-off-white/90">
+                    <span className="font-bold uppercase tracking-[0.12em] text-offwhite">
                       {event.agent}
                     </span>
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.12em] ${getSourceDetails(event.source).className}`}
-                    >
-                      <span aria-hidden="true">{status.symbol}</span>
-                      <span>{status.label}</span>
-                    </span>
+                    <Badge status={status.status} label={status.label} />
                     <span className="leading-6">{event.message}</span>
                   </li>
                 )
               })}
             </ul>
-          </div>
+          </Card>
         )}
       </div>
-    </section>
+    </Card>
   )
 }

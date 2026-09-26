@@ -202,7 +202,7 @@ describe('WorkerApp', () => {
     vi.useRealTimers()
   })
 
-  it('labels verified and unverified claims with text and an icon, never colour alone', async () => {
+  it('labels verified and unverified claims with text and a marker, never colour alone', async () => {
     getSessionMock.mockResolvedValue(SESSION_WITH_PASSPORT)
     renderApp({ sessionId: 'session-1' })
 
@@ -215,14 +215,12 @@ describe('WorkerApp', () => {
       throw new Error('Verification badge is missing')
     }
 
-    expect(within(verifiedBadge).getByText('✓')).toHaveAttribute(
-      'aria-hidden',
-      'true',
-    )
-    expect(within(unverifiedBadge).getByText('○')).toHaveAttribute(
-      'aria-hidden',
-      'true',
-    )
+    expect(
+      verifiedBadge.querySelector('[data-badge-indicator]'),
+    ).toHaveAttribute('aria-hidden', 'true')
+    expect(
+      unverifiedBadge.querySelector('[data-badge-indicator]'),
+    ).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('lists the credentials and shows a simulated source badge for the passport', async () => {
@@ -234,8 +232,8 @@ describe('WorkerApp', () => {
     })
 
     expect(within(credentials).getByText('Manual testing')).toBeInTheDocument()
-    expect(screen.getByText('Simulated source')).toBeInTheDocument()
-    expect(screen.queryByText('Live source')).not.toBeInTheDocument()
+    expect(screen.getByText('SIMULATED')).toBeInTheDocument()
+    expect(screen.queryByText('LIVE')).not.toBeInTheDocument()
   })
 
   it('marks the passport as live when the server answers live', async () => {
@@ -246,8 +244,8 @@ describe('WorkerApp', () => {
     })
     renderApp({ sessionId: 'session-1' })
 
-    expect(await screen.findByText('Live source')).toBeInTheDocument()
-    expect(screen.queryByText('Simulated source')).not.toBeInTheDocument()
+    expect(await screen.findByText('LIVE')).toBeInTheDocument()
+    expect(screen.queryByText('SIMULATED')).not.toBeInTheDocument()
   })
 
   it('keeps the pending passport state while the session has no passport yet', async () => {
@@ -260,7 +258,7 @@ describe('WorkerApp', () => {
         'The skills agent is still reading the transcript. The passport lands here as soon as the orchestrator writes it.',
       ),
     ).toBeInTheDocument()
-    expect(screen.getByText('Source pending')).toBeInTheDocument()
+    expect(screen.getByText('SOURCE PENDING')).toBeInTheDocument()
     expect(
       screen.getByText(
         'A skill is needed before a work sample can be scored. The passport has not landed yet.',
@@ -294,7 +292,7 @@ describe('WorkerApp', () => {
     expect(
       screen.getByText('Credential issued and recorded on the passport.'),
     ).toBeInTheDocument()
-    expect(screen.getByText('Simulated source score')).toBeInTheDocument()
+    expect(screen.getAllByText('SIMULATED')).toHaveLength(2)
   })
 
   it('reports a rejected work sample without a credential', async () => {
@@ -318,7 +316,7 @@ describe('WorkerApp', () => {
     expect(
       screen.getByText('No credential issued. The score is below the server threshold.'),
     ).toBeInTheDocument()
-    expect(screen.getByText('Live source score')).toBeInTheDocument()
+    expect(screen.getByText('LIVE')).toBeInTheDocument()
   })
 
   it('renders the ApiError message when the work sample request fails', async () => {
