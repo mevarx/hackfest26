@@ -1,5 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { getDisplacementRadar, rewriteEmployerFilter } from '../api.js'
+import {
+  controlFieldHintClass,
+  dataLabelClass,
+  metaRowClass,
+  sectionHeadingClass,
+  toneHeadingClass,
+} from '../styles/classes.js'
+import Badge from '../components/Badge.jsx'
+import Button from '../components/Button.jsx'
+import Card from '../components/Card.jsx'
+import Field from '../components/Field.jsx'
+import Select from '../components/Select.jsx'
+import TextInput from '../components/TextInput.jsx'
 
 const KNOWN_JOB_POST_IDS = [
   'post-chennai-qa-analyst-118',
@@ -21,20 +34,25 @@ const KNOWN_RADAR_ROLES = [
 const DEFAULT_JOB_POST_ID = KNOWN_JOB_POST_IDS[0]
 const DEFAULT_RADAR_ROLE = 'qa-analyst'
 const DEFAULT_RADAR_CITY = 'Chennai'
-const SIMULATED_BADGE_LABEL = 'Simulated'
-const SIMULATED_BADGE_CLASS = 'border-amber/45 bg-amber/10 text-amber'
 const EMPTY_RESULT = null
 
-function SimulatedTag({ scope }) {
-  return (
-    <span
-      className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] ${SIMULATED_BADGE_CLASS}`}
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-amber" aria-hidden="true" />
-      {SIMULATED_BADGE_LABEL}
-      <span className="sr-only"> {scope}</span>
-    </span>
-  )
+/** @type {Record<string, { cardTone: 'amber' | 'red' | 'neutral', emptyState: boolean, titleClass: string }>} */
+const STATUS_CARD_TONE = {
+  loading: {
+    cardTone: 'amber',
+    emptyState: false,
+    titleClass: toneHeadingClass.amber,
+  },
+  error: {
+    cardTone: 'red',
+    emptyState: false,
+    titleClass: toneHeadingClass.red,
+  },
+  empty: {
+    cardTone: 'neutral',
+    emptyState: true,
+    titleClass: 'text-offwhite/50',
+  },
 }
 
 function formatErrorMessage(requestError, fallback) {
@@ -79,14 +97,18 @@ function asList(value) {
     : []
 }
 
+function readStatusCardTone(tone) {
+  return STATUS_CARD_TONE[tone] ?? STATUS_CARD_TONE.loading
+}
+
 function DisclaimerNote({ disclaimer, scope }) {
   return (
-    <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-off-white/55">
+    <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-offwhite/50">
       <span aria-hidden="true" className="mt-1 text-amber">
         ▲
       </span>
       <span>
-        <strong className="text-off-white/80">{scope}: </strong>
+        <strong className="text-offwhite/70">{scope}: </strong>
         {asText(disclaimer, 'Simulated demo data, not an observed ATS connection.')}
       </span>
     </p>
@@ -95,63 +117,43 @@ function DisclaimerNote({ disclaimer, scope }) {
 
 function BlockShell({ titleId, eyebrow, title, description, children }) {
   return (
-    <section
-      className="overflow-hidden rounded-2xl border border-navy/10 bg-navy text-off-white shadow-xl shadow-navy/10"
+    <Card
+      as="section"
+      variant="dark"
+      eyebrow={eyebrow}
+      title={title}
+      titleId={titleId}
+      description={description}
+      actions={<Badge source="simulated" />}
       aria-labelledby={titleId}
+      padding="lg"
     >
-      <div className="flex flex-col gap-4 border-b border-white/10 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber">
-            {eyebrow}
-          </p>
-          <h2 id={titleId} className="mt-1 font-serif text-2xl text-off-white">
-            {title}
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-off-white/60">
-            {description}
-          </p>
-        </div>
-        <SimulatedTag scope={title} />
-      </div>
-      <div className="p-5 sm:p-6">{children}</div>
-    </section>
+      {children}
+    </Card>
   )
 }
 
 function StatusMessage({ tone, title, message, testId }) {
-  let containerClass = 'border-amber/30 bg-amber/10'
-  let titleClass = 'text-amber'
-
-  if (tone === 'error') {
-    containerClass = 'border-red/50 bg-red/10'
-    titleClass = 'text-red-300'
-  } else if (tone === 'empty') {
-    containerClass = 'border-white/10 bg-white/[0.04]'
-    titleClass = 'text-off-white/50'
-  }
+  const details = readStatusCardTone(tone)
 
   return (
-    <div
-      className={`rounded-xl border p-5 ${containerClass}`}
+    <Card
+      variant="dark"
+      tone={details.cardTone}
+      emptyState={details.emptyState}
       data-testid={testId}
       role={tone === 'error' ? 'alert' : 'status'}
+      padding="lg"
     >
-      <p className={`text-xs font-bold uppercase tracking-[0.18em] ${titleClass}`}>
+      <p
+        className={`text-xs font-bold uppercase tracking-[0.16em] ${details.titleClass}`}
+      >
         {title}
       </p>
-      <p className="mt-2 text-sm leading-6 text-off-white/75">{message}</p>
-    </div>
+      <p className="mt-2 text-sm leading-6 text-offwhite/70">{message}</p>
+    </Card>
   )
 }
-
-const SUBMIT_BUTTON_CLASS =
-  'inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber px-5 py-3 text-sm font-bold uppercase tracking-[0.14em] text-navy transition hover:bg-amber/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto'
-
-const FIELD_LABEL_CLASS =
-  'block text-[0.65rem] font-bold uppercase tracking-[0.18em] text-off-white/50'
-
-const FIELD_CONTROL_CLASS =
-  'mt-2 w-full rounded-lg border border-white/15 bg-navy px-3 py-2 font-mono text-sm text-off-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber'
 
 function RadarBlock({
   role,
@@ -170,49 +172,43 @@ function RadarBlock({
       title="Displacement radar"
       description="How exposed one role is, and whether the local demand behind it is still growing."
     >
-      <form
-        className="flex flex-col gap-4 rounded-xl border border-white/10 bg-white/[0.04] p-4 sm:flex-row sm:items-end"
+      <Card
+        as="form"
+        variant="dark"
+        surface="raised"
+        padding="lg"
         onSubmit={onSubmit}
+        className="flex flex-col gap-4 sm:flex-row sm:items-end"
       >
         <div className="flex-1">
-          <label htmlFor="radar-role" className={FIELD_LABEL_CLASS}>
-            Role id
-          </label>
-          <input
-            id="radar-role"
-            name="role"
-            list="radar-role-options"
-            value={role}
-            onChange={onRoleChange}
-            className={FIELD_CONTROL_CLASS}
-          />
+          <Field id="radar-role" label="Role id">
+            <TextInput
+              id="radar-role"
+              name="role"
+              list="radar-role-options"
+              value={role}
+              onChange={onRoleChange}
+            />
+          </Field>
           <datalist id="radar-role-options">
             {KNOWN_RADAR_ROLES.map((knownRole) => (
               <option key={knownRole} value={knownRole} />
             ))}
           </datalist>
         </div>
-        <div className="sm:w-40">
-          <label htmlFor="radar-city" className={FIELD_LABEL_CLASS}>
-            City
-          </label>
-          <input
-            id="radar-city"
-            name="city"
-            value={city}
-            onChange={onCityChange}
-            className={FIELD_CONTROL_CLASS}
-          />
-        </div>
-        <button
+        <Field id="radar-city" label="City" className="sm:w-40">
+          <TextInput id="radar-city" name="city" value={city} onChange={onCityChange} />
+        </Field>
+        <Button
           type="submit"
+          variant="primary"
           disabled={isLoading}
           aria-busy={isLoading}
-          className={SUBMIT_BUTTON_CLASS}
+          className="w-full sm:w-auto"
         >
           {isLoading ? 'Loading radar…' : 'Check exposure'}
-        </button>
-      </form>
+        </Button>
+      </Card>
 
       <div
         className="mt-4"
@@ -245,46 +241,38 @@ function RadarBlock({
         ) : (
           <div>
             <dl className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                <dt className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/45">
-                  Role
-                </dt>
-                <dd className="mt-1 font-mono text-sm text-off-white">
+              <Card variant="dark" surface="raised" padding="md">
+                <dt className={dataLabelClass}>Role</dt>
+                <dd className="mt-1 font-mono text-sm text-offwhite">
                   {asText(radar.role, role)}
                 </dd>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                <dt className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/45">
-                  City
-                </dt>
-                <dd className="mt-1 font-mono text-sm text-off-white">
+              </Card>
+              <Card variant="dark" surface="raised" padding="md">
+                <dt className={dataLabelClass}>City</dt>
+                <dd className="mt-1 font-mono text-sm text-offwhite">
                   {asText(radar.city, city)}
                 </dd>
-              </div>
-              <div className="rounded-xl border border-amber/30 bg-amber/10 p-4">
-                <dt className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/50">
-                  Displacement exposure
-                </dt>
+              </Card>
+              <Card variant="dark" tone="amber" padding="md">
+                <dt className={dataLabelClass}>Displacement exposure</dt>
                 <dd
                   className="mt-1 font-serif text-2xl text-amber"
                   data-testid="radar-exposure"
                 >
                   {asText(radar.exposure, 'unknown')}
                 </dd>
-              </div>
-              <div className="rounded-xl border border-teal/30 bg-teal/10 p-4">
-                <dt className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/50">
-                  Local demand
-                </dt>
+              </Card>
+              <Card variant="dark" tone="teal" padding="md">
+                <dt className={dataLabelClass}>Local demand</dt>
                 <dd
                   className="mt-1 font-serif text-2xl text-teal"
                   data-testid="radar-demand"
                 >
                   {asText(radar.demand, 'unknown')}
                 </dd>
-              </div>
+              </Card>
             </dl>
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-off-white/45">
+            <div className={`mt-3 ${metaRowClass}`}>
               <span>source=simulated</span>
               <span aria-hidden="true">·</span>
               <span>Demo market fixture</span>
@@ -301,20 +289,19 @@ function RadarBlock({
 }
 
 function FilterPanel({ heading, headingId, text, tone, children }) {
-  const toneClass =
-    tone === 'after' ? 'border-teal/40 bg-teal/10' : 'border-red/40 bg-red/10'
+  const cardTone = tone === 'after' ? 'teal' : 'red'
 
   return (
-    <div className={`flex flex-col rounded-xl border p-4 ${toneClass}`}>
+    <Card variant="dark" tone={cardTone} padding="lg">
       <h3
         id={headingId}
-        className="text-xs font-bold uppercase tracking-[0.18em] text-off-white/80"
+        className="text-xs font-bold uppercase tracking-[0.16em] text-offwhite/70"
       >
         {heading}
       </h3>
-      <p className="mt-3 text-sm leading-6 text-off-white/80">{text}</p>
+      <p className="mt-3 text-sm leading-6 text-offwhite/70">{text}</p>
       {children}
-    </div>
+    </Card>
   )
 }
 
@@ -337,41 +324,44 @@ function RewriteBlock({
       title="Job post filter rewrite"
       description="The restrictive phrase an employer wrote, the criteria ReRoute drops, and the wording that replaces them."
     >
-      <form
-        className="flex flex-col gap-4 rounded-xl border border-white/10 bg-white/[0.04] p-4 sm:flex-row sm:items-end"
+      <Card
+        as="form"
+        variant="dark"
+        surface="raised"
+        padding="lg"
         onSubmit={onSubmit}
+        className="flex flex-col gap-4 sm:flex-row sm:items-end"
       >
         <div className="flex-1">
-          <label htmlFor="job-post-id" className={FIELD_LABEL_CLASS}>
-            Job post id
-          </label>
-          <select
-            id="job-post-id"
-            name="job_post_id"
-            value={jobPostId}
-            onChange={onJobPostChange}
-            className={FIELD_CONTROL_CLASS}
-          >
-            {KNOWN_JOB_POST_IDS.map((knownId) => (
-              <option key={knownId} value={knownId}>
-                {knownId}
-              </option>
-            ))}
-          </select>
-          <p className="mt-2 text-xs leading-5 text-off-white/45">
+          <Field id="job-post-id" label="Job post id">
+            <Select
+              id="job-post-id"
+              name="job_post_id"
+              value={jobPostId}
+              onChange={onJobPostChange}
+            >
+              {KNOWN_JOB_POST_IDS.map((knownId) => (
+                <option key={knownId} value={knownId}>
+                  {knownId}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <p className={controlFieldHintClass}>
             The demo bundles three job posts and exposes no listing endpoint, so
             these ids are the whole catalogue.
           </p>
         </div>
-        <button
+        <Button
           type="submit"
+          variant="primary"
           disabled={isLoading}
           aria-busy={isLoading}
-          className={SUBMIT_BUTTON_CLASS}
+          className="w-full sm:w-auto"
         >
           {isLoading ? 'Rewriting…' : 'Rewrite this post'}
-        </button>
-      </form>
+        </Button>
+      </Card>
 
       <div
         className="mt-4"
@@ -403,18 +393,25 @@ function RewriteBlock({
           />
         ) : (
           <div>
-            <div className="flex flex-col gap-4 rounded-2xl border border-amber/40 bg-amber/10 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <Card
+              variant="dark"
+              tone="amber"
+              padding="lg"
+              className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            >
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber">
+                <p
+                  className={`text-xs font-bold uppercase tracking-[0.16em] ${toneHeadingClass.amber}`}
+                >
                   Hidden by this filter
                 </p>
                 <p
-                  className="mt-1 font-serif text-5xl leading-none text-off-white"
+                  className="mt-1 font-serif text-5xl leading-none text-offwhite"
                   data-testid="hidden-talent-count"
                 >
                   {hiddenTalentCount === null ? '—' : hiddenTalentCount}
                 </p>
-                <p className="mt-2 max-w-sm text-sm leading-6 text-off-white/70">
+                <p className="mt-2 max-w-sm text-sm leading-6 text-offwhite/70">
                   {noHiddenTalent
                     ? 'No candidates were hidden by this post, so there is nothing to rewrite.'
                     : 'Candidates this phrasing never reached, in the bundled demo data.'}
@@ -422,28 +419,29 @@ function RewriteBlock({
               </div>
               <dl className="sm:text-right">
                 <div>
-                  <dt className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/45">
-                    Role
-                  </dt>
-                  <dd className="mt-1 font-mono text-sm text-off-white">
+                  <dt className={dataLabelClass}>Role</dt>
+                  <dd className="mt-1 font-mono text-sm text-offwhite">
                     {asText(rewrite.role, 'unknown role')}
                   </dd>
                 </div>
                 <div className="mt-3">
-                  <dt className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/45">
-                    City
-                  </dt>
-                  <dd className="mt-1 font-mono text-sm text-off-white">
+                  <dt className={dataLabelClass}>City</dt>
+                  <dd className="mt-1 font-mono text-sm text-offwhite">
                     {asText(rewrite.city, 'unknown city')}
                   </dd>
                 </div>
               </dl>
-            </div>
+            </Card>
 
-            <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-amber/30 bg-amber/10 p-4 sm:flex-row sm:items-center">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber">
+            <Card
+              variant="dark"
+              tone="amber"
+              padding="md"
+              className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center"
+            >
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-amber">
                 Flagged
-                <span aria-hidden="true" className="px-2">
+                <span aria-hidden="true" className="mx-2">
                   →
                 </span>
                 rewritten
@@ -453,7 +451,7 @@ function RewriteBlock({
                 className="hidden h-px flex-1 bg-amber/50 sm:block"
               />
               <p
-                className="text-sm leading-6 text-off-white/75"
+                className="text-sm leading-6 text-offwhite/70"
                 data-testid="rewrite-reason"
               >
                 {asText(
@@ -461,7 +459,7 @@ function RewriteBlock({
                   'No rewrite reason supplied by the demo fixture.',
                 )}
               </p>
-            </div>
+            </Card>
 
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
               <FilterPanel
@@ -473,8 +471,10 @@ function RewriteBlock({
                   'No before text supplied.',
                 )}
               >
-                <p className="mt-3 border-t border-white/15 pt-3 text-sm leading-6 text-off-white/80">
-                  <span className="block text-[0.62rem] font-bold uppercase tracking-[0.16em] text-red-300">
+                <p className="mt-3 border-t border-rule pt-3 text-sm leading-6 text-offwhite/70">
+                  <span
+                    className={`block text-[0.65rem] font-bold uppercase tracking-[0.16em] ${toneHeadingClass.red}`}
+                  >
                     Restrictive phrase removed
                   </span>
                   <q
@@ -492,8 +492,10 @@ function RewriteBlock({
                 tone="after"
                 text={asText(rewrite.filter_text_after, 'No after text supplied.')}
               >
-                <p className="mt-3 border-t border-white/15 pt-3 text-sm leading-6 text-off-white/80">
-                  <span className="block text-[0.62rem] font-bold uppercase tracking-[0.16em] text-teal">
+                <p className="mt-3 border-t border-rule pt-3 text-sm leading-6 text-offwhite/70">
+                  <span
+                    className={`block text-[0.65rem] font-bold uppercase tracking-[0.16em] ${toneHeadingClass.teal}`}
+                  >
                     Pedigree wording gone
                   </span>
                   <span className="mt-1 block">
@@ -504,17 +506,21 @@ function RewriteBlock({
                 </p>
               </FilterPanel>
 
-              <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-off-white/50 lg:col-span-2">
+              <p
+                className={`lg:col-span-2 ${sectionHeadingClass}`}
+              >
                 Read top to bottom: the before wording is what an audit flags,
                 the after wording is what the employer posts instead.
               </p>
             </div>
 
-            <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.04] p-4">
-              <h3
-                id="removed-criteria-title"
-                className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-off-white/50"
-              >
+            <Card
+              variant="dark"
+              surface="raised"
+              padding="lg"
+              className="mt-4"
+            >
+              <h3 id="removed-criteria-title" className={sectionHeadingClass}>
                 Criteria removed ({removedCriteria.length})
               </h3>
               {removedCriteria.length > 0 ? (
@@ -525,9 +531,12 @@ function RewriteBlock({
                   {removedCriteria.map((criterion, index) => (
                     <li
                       key={`${criterion}-${index}`}
-                      className="flex items-start gap-2 rounded-lg border border-white/10 bg-navy px-3 py-2 text-sm leading-5 text-off-white/75"
+                      className="flex items-start gap-2 rounded-control border border-rule bg-navy px-3 py-2 text-sm leading-5 text-offwhite/70"
                     >
-                      <span aria-hidden="true" className="mt-0.5 text-red-300">
+                      <span
+                        aria-hidden="true"
+                        className={`mt-0.5 ${toneHeadingClass.red}`}
+                      >
                         ✕
                       </span>
                       <span>{criterion}</span>
@@ -535,13 +544,13 @@ function RewriteBlock({
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-sm leading-6 text-off-white/50">
+                <p className="mt-3 text-sm leading-6 text-offwhite/50">
                   No criteria were removed from this post.
                 </p>
               )}
-            </div>
+            </Card>
 
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-off-white/45">
+            <div className={`mt-3 ${metaRowClass}`}>
               <span>source=simulated</span>
               <span aria-hidden="true">·</span>
               <span>{asText(rewrite.job_post_id, jobPostId)}</span>
@@ -663,23 +672,23 @@ export default function HRConsole({ baseUrl = '' }) {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber">
+      <header className="border-b border-rule-light pb-6">
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-amber">
           Employer readiness · Phase 4C
         </p>
         {/* An h2, not a second h1: this panel renders inside App's page column,
             which already owns the document's only h1. */}
         <h2 className="mt-3 font-serif text-3xl leading-[1.05] tracking-[-0.03em] text-navy sm:text-4xl">
           Rewrite the filter,
-          <span className="block italic text-navy/55">
+          <span className="block italic text-navy/50">
             not the shortlist.
           </span>
         </h2>
-        <p className="mt-5 max-w-2xl text-base leading-7 text-navy/65">
+        <p className="mt-5 max-w-2xl text-base leading-7 text-navy/70">
           What an employer&rsquo;s own job post does to their shortlist, and the
           evidence-led wording ReRoute swaps in once the audit flags the post.
         </p>
-        <p className="mt-4 flex items-start gap-2 rounded-xl border border-amber/40 bg-amber/10 px-4 py-3 text-sm leading-6 text-navy/80 sm:max-w-3xl">
+        <p className="mt-4 flex items-start gap-2 rounded-card border border-amber/40 bg-amber/10 px-4 py-3 text-sm leading-6 text-navy/70 sm:max-w-3xl">
           <span aria-hidden="true" className="mt-1 text-amber">
             ▲
           </span>

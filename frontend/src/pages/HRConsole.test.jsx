@@ -107,7 +107,7 @@ describe('HRConsole', () => {
     await screen.findByTestId('radar-exposure')
     await screen.findByTestId('hidden-talent-count')
 
-    const badges = screen.getAllByText('Simulated')
+    const badges = screen.getAllByText('SIMULATED')
     expect(badges.length).toBeGreaterThanOrEqual(2)
 
     expect(screen.getAllByText('source=simulated')).toHaveLength(2)
@@ -300,7 +300,7 @@ describe('HRConsole', () => {
     )
     expect(screen.queryByTestId('radar-exposure')).not.toBeInTheDocument()
     expect(screen.queryByTestId('hidden-talent-count')).not.toBeInTheDocument()
-    expect(screen.getAllByText('Simulated')).toHaveLength(2)
+    expect(screen.getAllByText('SIMULATED')).toHaveLength(2)
   })
 
   it('offers every bundled job post id and labels the disclaimer note', async () => {
