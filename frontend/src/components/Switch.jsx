@@ -39,6 +39,8 @@ const SWITCH_DESCRIPTION_CLASS = `${controlFieldHintClass} block max-w-md`
  *   description?: string,
  *   disabled?: boolean,
  *   showState?: boolean,
+ *   stateClassName?: string,
+ *   labelClassName?: string,
  *   className?: string,
  * } & Record<string, unknown>} props
  */
@@ -50,6 +52,8 @@ export default function Switch({
   description,
   disabled = false,
   showState = true,
+  stateClassName = '',
+  labelClassName = '',
   className = '',
   ...rest
 }) {
@@ -82,9 +86,22 @@ export default function Switch({
       </span>
       <span className="min-w-0">
         <span className="flex flex-wrap items-baseline gap-x-2">
-          <span className={SWITCH_LABEL_CLASS}>{label}</span>
+          {/* The label can be hidden per-breakpoint for a tight bar, but the
+              checkbox above keeps `aria-label`, so the control's accessible name
+              never depends on this span being visible. */}
+          <span className={`${SWITCH_LABEL_CLASS} ${labelClassName}`.trim()}>
+            {label}
+          </span>
+          {/* The state word is a redundant cue — the knob's position and the
+              checkbox's own `checked` already say it — so a caller in a tight
+              layout can hide it per-breakpoint without the switch losing its
+              accessible name or state. */}
           {showState ? (
-            <span className={SWITCH_STATE_CLASS}>{checked ? 'On' : 'Off'}</span>
+            <span
+              className={`${SWITCH_STATE_CLASS} ${stateClassName}`.trim()}
+            >
+              {checked ? 'On' : 'Off'}
+            </span>
           ) : null}
         </span>
         {description === undefined ? null : (
