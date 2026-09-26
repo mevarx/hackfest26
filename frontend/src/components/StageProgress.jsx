@@ -1,42 +1,22 @@
 const STATUS_DETAILS = {
   complete: {
-    nodeClass: 'border-teal bg-teal text-navy',
-    connectorClass: 'bg-teal/50',
-    labelClass: 'text-teal',
+    nodeClass: 'bg-neutral-900',
+    connectorClass: 'bg-neutral-900/20',
+    labelClass: 'text-gray-400',
   },
   active: {
-    nodeClass: 'border-amber bg-amber text-navy',
-    connectorClass: 'bg-amber/50',
-    labelClass: 'text-amber',
+    nodeClass: 'bg-[#F5A623]',
+    connectorClass: 'bg-gray-200',
+    labelClass: 'text-black',
   },
   upcoming: {
-    nodeClass: 'border-slate bg-navy text-slate',
-    connectorClass: 'bg-slate/30',
-    labelClass: 'text-offwhite/70',
+    nodeClass: 'border border-gray-400 bg-transparent',
+    connectorClass: 'bg-gray-200',
+    labelClass: 'text-gray-400',
   },
 }
 
 const DEFAULT_STATUS = 'upcoming'
-
-function CheckIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      viewBox="0 0 20 20"
-      fill="none"
-      className="h-3 w-3"
-    >
-      <path
-        d="M4.5 10.5 8.5 14.5 15.5 6"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
 
 /**
  * @param {{
@@ -59,7 +39,6 @@ export default function StageProgress({ stages = [], className = '' }) {
       {stages.map((stage, index) => {
         const status = STATUS_DETAILS[stage.status] ?? STATUS_DETAILS[DEFAULT_STATUS]
         const isLast = index === stages.length - 1
-        const number = stage.number ?? String(index + 1).padStart(2, '0')
 
         return (
           <li
@@ -70,14 +49,12 @@ export default function StageProgress({ stages = [], className = '' }) {
             <div className="flex items-center">
               <span
                 aria-hidden="true"
-                className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${status.nodeClass}`}
-              >
-                {stage.status === 'complete' ? <CheckIcon /> : null}
-              </span>
+                className={`h-2 w-2 shrink-0 rounded-full ${status.nodeClass}`}
+              />
               {isLast ? null : (
                 <span
                   aria-hidden="true"
-                  className={`mx-2 hidden h-0.5 flex-1 rounded-full lg:block ${status.connectorClass}`}
+                  className={`mx-3 hidden h-px flex-1 lg:block ${status.connectorClass}`}
                 />
               )}
             </div>
@@ -85,20 +62,20 @@ export default function StageProgress({ stages = [], className = '' }) {
             {isLast ? null : (
               <span
                 aria-hidden="true"
-                className={`absolute -bottom-6 left-2 top-6 w-0.5 rounded-full lg:hidden ${status.connectorClass}`}
+                className={`absolute -bottom-6 left-[3.5px] top-4 w-px lg:hidden ${status.connectorClass}`}
               />
             )}
 
             <div className="mt-3 lg:pr-6">
-              <p className="font-mono text-[0.65rem] font-bold text-amber">
-                {number}
-              </p>
               <p
-                className={`mt-1 text-sm font-bold uppercase tracking-[0.12em] ${status.labelClass}`}
+                className={`text-xs font-medium uppercase tracking-[0.12em] ${status.labelClass}`}
               >
+                <span className="sr-only">
+                  {`Step ${index + 1} of ${stages.length}: `}
+                </span>
                 {stage.label}
               </p>
-              <p className="mt-1 text-xs leading-5 text-offwhite/50">
+              <p className="mt-1 text-xs leading-5 text-neutral-500">
                 {stage.description}
               </p>
             </div>
