@@ -2,7 +2,7 @@
 @import "./styles/tokens.css";
 
 @layer base {
-  /* Dark is the default state of the product: Obsidian is the page canvas. */
+  /* Dark is the only theme: Obsidian is the page canvas. */
   html {
     background: var(--color-obsidian);
   }
@@ -13,8 +13,8 @@
     margin: 0;
     background: var(--color-obsidian);
     color: var(--color-chalk);
-    font-family: var(--font-utility);
-    font-weight: var(--font-weight-regular);
+    font-family: var(--font-aeonik);
+    font-weight: 400;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
   }
@@ -45,8 +45,8 @@
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--color-compass-amber) 30%, transparent);
-    color: var(--color-chalk);
+    background: var(--color-chalk);
+    color: var(--color-obsidian);
   }
 }
 
@@ -67,21 +67,6 @@
   transform: none;
 }
 
-/* Status Line "running": an outlined dot breathing at a 1.5s cycle. */
-@keyframes running-dot-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-.running-dot {
-  animation: running-dot-pulse 1.5s ease-in-out infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -94,9 +79,5 @@
   .reveal {
     opacity: 1 !important;
     transform: none !important;
-  }
-
-  .running-dot {
-    animation: none !important;
   }
 }

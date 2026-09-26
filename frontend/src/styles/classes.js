@@ -1,113 +1,163 @@
-// Shared class map for ReRoute.
+// Shared class map for ReRoute — Hyperstudio Ditto.
 //
-// Every string here resolves to a token in `styles/tokens.css`, which is itself
-// transcribed from ReRoute_Style_Reference.md. Rules that hold everywhere:
+// Every string here resolves to a token in `styles/tokens.css`, which is
+// transcribed from ReRoute_Style_Reference.md. The rules that hold everywhere:
 //
-//   * weight 400 for body and every headline, 500 for labels — never 600/700
-//   * hierarchy comes from hairlines and whitespace, never from tinted panels
-//   * Compass Amber appears on exactly one element per screen
-//   * status and source are a dot plus plain inline text, never a boxed pill
+//   * weight 400 for everything except the nav wordmark (500) and 700 nowhere
+//     on display type — scale and tracking carry hierarchy, never boldness
+//   * Aeonik for all copy, Input for meta/labels/captions; two faces, no serif
+//   * sections are separated by a 1px Graphite hairline, never by a tint change
+//   * the glossy pill is the only filled surface; everything else is outlined
+//   * Compass Gold is for icon strokes only — never text, never a background
+//   * Pulse Green is the live-status dot and nothing else
 //
-// Views compose these instead of re-deriving type or colour, so a token change
+// Views compose these rather than re-deriving type or colour, so a token change
 // lands in one place.
 
 /* ── Ink ──────────────────────────────────────────────────────────────── */
 
 export const chalkClass = 'text-chalk'
-export const inkClass = 'text-ink'
 export const smokeClass = 'text-smoke'
-export const slateClass = 'text-slate'
+export const ashClass = 'text-ash'
+export const goldClass = 'text-compass-gold'
 
-/** 1px structural line. Graphite on dark surfaces, Fog on Paper. */
-export const ruleDarkClass = 'border-graphite'
-export const ruleLightClass = 'border-fog'
+/** 1px structural line — the page's primary border. */
+export const ruleClass = 'border-graphite'
 
-/** Reading measure for manifesto-style paragraphs. */
-export const measureClass = 'max-w-[40rem]'
+/** Reading measure for the hero sub-headline. */
+export const readingClass = 'max-w-[38.75rem]'
+
+/** Narrower centered measure for the manifesto block. */
+export const manifestoClass = 'max-w-[37.5rem]'
 
 /* ── Type voices ──────────────────────────────────────────────────────── */
 
-/** caption — sans 400, 13px, uppercase, tracked 0.04em. Section and field labels. */
+/** caption — Aeonik 400, 13px, loose leading. Section labels, helper copy. */
 export const captionClass =
-  'font-utility text-caption font-normal uppercase leading-caption tracking-caption'
+  'font-aeonik text-caption font-normal leading-caption'
 
-/** meta — mono 400, 12px. Timestamps, session ids, source tags, build info. */
-export const metaClass = 'font-mono text-meta font-normal leading-meta tracking-meta'
+/** meta — Input 400, 13px, -0.022em. Timestamps, ids, source and session tags. */
+export const metaClass = 'font-input text-caption font-normal tracking-meta'
 
-/** body — sans 400, 16px/1.5. */
-export const bodyClass = 'font-utility text-body font-normal leading-body'
+/** body — Aeonik 400, 16px/1.25. The reference's default reading size. */
+export const bodyClass = 'font-aeonik text-body font-normal leading-body'
 
-/** label — sans 500, 14px/1.3. Form labels, agent names, button text. */
-export const labelClass = 'font-utility text-label font-medium leading-label'
+/** heading-xs — Aeonik 400, 18px. The nav wordmark's scale, reused for card
+ *  titles that need more presence than a caption. */
+export const headingXsClass = 'font-aeonik text-heading-xs font-normal leading-heading-xs'
 
-/** heading-sm — serif 400, 23px. Panel titles and the persona name line. */
+/** subheading — Aeonik 400, 21px. The hero sub-headline. */
+export const subheadingClass =
+  'font-aeonik text-subheading font-normal leading-subheading'
+
+/** heading-sm — Aeonik 400, 23px. Panel titles, the manifesto title. */
 export const headingSmClass =
-  'font-editorial text-heading-sm font-normal leading-heading-sm'
+  'font-aeonik text-heading-sm font-normal leading-heading-sm'
 
-/** heading — serif 400, 34px. */
-export const headingClass = 'font-editorial text-heading font-normal leading-heading'
+/** heading — Aeonik 400, 34px. Section openers. */
+export const headingClass = 'font-aeonik text-heading font-normal leading-heading'
 
-/** display — serif 400, 63px. Hero headline only. */
+/** heading-lg — Aeonik 400, 44px, -0.31px. The tablet step of the display. */
+export const headingLgClass =
+  'font-aeonik text-heading-lg font-normal leading-heading-lg tracking-heading-lg'
+
+/** display — Aeonik 400, 63px, -0.69px. The hero headline only. */
 export const displayClass =
-  'font-editorial text-display font-normal leading-display tracking-display'
+  'font-aeonik text-display font-normal leading-display tracking-display'
 
 /* ── Shared composites ────────────────────────────────────────────────── */
 
-/** Section eyebrow: a caption that defers to the smoke ink. */
-export const panelEyebrowClass = `${captionClass} ${smokeClass}`
+/** Section eyebrow: a caption in muted ink. */
+export const panelEyebrowClass = `${metaClass} ${smokeClass}`
 
-/** Panel title: serif 400 at heading-sm, in whatever ink the panel carries. */
-export const panelTitleClass = `mt-2 ${headingSmClass}`
+/** Panel title: 23px Aeonik in the surface's own ink. */
+export const panelTitleClass = headingSmClass
 
-/** Panel description: one measure of body copy at 70% of the panel's ink. */
-export const panelDescriptionClass =
-  `mt-3 ${measureClass} text-left ${bodyClass} opacity-70`
+/** Panel description: one measure of body copy, muted. */
+export const panelDescriptionClass = `mt-4 ${bodyClass} ${smokeClass}`
 
 /** Small-caps label that opens a block inside a panel. */
-export const sectionHeadingClass = `${captionClass} ${smokeClass}`
+export const sectionHeadingClass = `${captionClass} ${smokeClass} uppercase`
 
 /** Label for a single data value. */
-export const dataLabelClass = `${captionClass} ${smokeClass}`
+export const dataLabelClass = `${metaClass} ${smokeClass} uppercase`
 
 /** Label set inline with the copy it describes. */
-export const inlineLabelClass = `${labelClass} ${chalkClass}`
+export const inlineLabelClass = `font-aeonik text-body font-medium ${chalkClass}`
 
 /** Monospace metadata row: source, adapter, cursor ids. */
-export const metaRowClass = `flex flex-wrap items-center gap-x-3 gap-y-1 ${metaClass} ${smokeClass}`
+export const metaRowClass = `flex flex-wrap items-center gap-x-4 gap-y-1 ${metaClass} ${smokeClass}`
 
 /** Reading-width body paragraph. */
-export const bodyCopyClass = `${measureClass} text-left ${bodyClass} ${smokeClass}`
+export const bodyCopyClass = `${bodyClass} ${smokeClass}`
+
+/* ── Structural ───────────────────────────────────────────────────────── */
+
+/** Page content column. The reference forbids breaking the 1200px width. */
+export const pageColumnClass = 'mx-auto w-full max-w-[75rem] px-6 sm:px-8'
+
+/** A full-content-width 1px Graphite rule. "The line IS the page structure." */
+export const dividerClass = 'h-px w-full bg-graphite'
+
+/** Section rhythm, 120px — the low end of the reference's 120–210px band. */
+export const sectionGapClass = 'mt-30 pt-30'
+
+/** Block border for cards and grids: Graphite on the sides and bottom, never
+ *  the top, so a cell merges with the section divider above it. */
+export const cellRuleClass = 'border-x border-b border-graphite'
 
 /* ── Form controls ────────────────────────────────────────────────────── */
 
-/** Dark-surface form control: 1px Graphite rule, 6px radius, Chalk text.
- *  Amber is the focus border and nothing else — no control carries a permanent
- *  colour, and hover only deepens the rule. */
+/** Form control: 1px Graphite rule, Carbon surface, Aeonik body text. There is
+ *  no coloured border anywhere in this system — focus is a Chalk ring, never a
+ *  hue. */
 export const controlBaseClass =
-  'w-full rounded-input border border-graphite bg-carbon text-body text-chalk placeholder:text-smoke transition-colors hover:border-smoke focus:border-compass-amber focus:outline-2 focus:outline-offset-2 focus:outline-compass-amber focus-visible:border-compass-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-compass-amber disabled:opacity-50'
+  'w-full rounded-[6px] border border-graphite bg-carbon text-body text-chalk placeholder:text-smoke transition-colors hover:border-iron focus:border-ash focus:outline-2 focus:outline-offset-2 focus:outline-ash focus-visible:border-ash focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ash disabled:opacity-50'
 
-export const controlHeightClass = 'h-control'
+export const controlHeightClass = 'h-11'
 
-/** Field label: sans 500, 14px, in the surface's own ink. */
-export const controlFieldLabelClass = `block ${labelClass} ${chalkClass}`
+/** Field label: Aeonik 14px, Chalk. */
+export const controlFieldLabelClass = 'block font-aeonik text-body text-sm font-normal text-chalk'
 
-/** Helper line under a field: one sentence, Smoke, no icon. Set at the caption
- *  size directly rather than by layering an override over `bodyClass` — two
- *  competing font-size utilities in one class list resolve by stylesheet order,
- *  not by the order they are written here. */
-export const controlFieldHintClass = `mt-2 font-utility text-caption font-normal leading-6 ${smokeClass}`
+/** Helper line under a field: 13px Smoke, one sentence, no icon. */
+export const controlFieldHintClass = `mt-2 ${captionClass} ${smokeClass}`
 
 /* ── Buttons ──────────────────────────────────────────────────────────── */
 
-/** Exactly two button styles exist in the product.
- *  `primary` is a filled Ink block with Chalk text, 6-8px radius, uppercase —
- *  one per screen. `ghost` is a transparent 1px outline in the current text
- *  colour, where hover only raises the border's opacity. There is no third. */
-export const buttonPrimaryClass =
-  'border border-ink bg-ink text-chalk hover:border-chalk hover:bg-chalk hover:text-ink'
+/** The glossy pill. This is the single filled surface in the whole system and
+ *  the only element permitted a shadow — the inset highlight is the bevel that
+ *  makes it read as premium rather than as a flat dark-mode button. */
+export const buttonGlossyClass =
+  'rounded-button bg-[linear-gradient(180deg,#ffffff_0%,#e9e9e6_100%)] text-obsidian shadow-button hover:brightness-[1.04]'
 
+/** The ghost outline. No fill to speak of, no shadow, and on hover the surface
+ *  lightens — the border colour never changes. */
 export const buttonGhostClass =
-  'border border-current/60 bg-transparent text-current hover:border-current'
+  'rounded-button border border-[#2a2a2a] bg-[rgba(255,255,255,0.03)] text-chalk hover:bg-[rgba(255,255,255,0.06)]'
 
-export const focusRingClass =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-compass-amber'
+export const buttonBaseClass =
+  'inline-flex items-center gap-2 font-aeonik text-sm font-normal uppercase leading-none tracking-button transition-[background-color,filter,border-color] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ash'
+
+/* ── Status ───────────────────────────────────────────────────────────── */
+
+/** The status badge's Pulse Green dot: 6px, solid, with the reference's
+ *  "very subtle glow". This is the only place Pulse Green is used. */
+export const pulseDotClass = 'h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green shadow-pulse'
+
+/** A plain inline status mark for text that is not a badge — a dot plus a word,
+ *  never a pill. Used where a value needs a live/done cue without earning the
+ *  badge's box. */
+export const inlineDotClass = 'h-1.5 w-1.5 shrink-0 rounded-full'
+
+/* ── Icons ────────────────────────────────────────────────────────────── */
+
+/** Icon strokes: 1.5px outlined, Compass Gold. The reference forbids any other
+ *  colour for an icon, and forbids icons on any other element type. */
+export const iconGoldClass = 'text-compass-gold'
+
+/** Icon strokes in Chalk, for the rare icon that sits on a dark field without
+ *  the gold treatment. */
+export const iconChalkClass = 'text-chalk'
+
+export const iconStrokeClass =
+  'shrink-0 fill-none stroke-current stroke-[1.5px] stroke-linecap-round stroke-linejoin-round'
