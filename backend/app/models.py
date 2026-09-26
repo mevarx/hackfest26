@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from typing import Literal, Self
 
@@ -12,10 +14,15 @@ CollegeTier = Literal["tier_1", "tier_2", "tier_3"]
 DataSource = Literal["live", "simulated", "local"]
 SessionSource = Literal["simulated", "local"]
 
+AgentName = Literal[
+    "ORCHESTRATOR", "SKILLS DISCOVERY", "MARKET INTELLIGENCE",
+    "LEARNING PATHWAY", "INCLUSIVE MATCHING", "EMPLOYER READINESS", "BIAS AUDIT",
+]
+AgentStatus = Literal["running", "done", "waiting_consent"]
+IntegrationStatus = Literal["not_implemented", "configured"]
 
 class APIModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
 
 class CareerGap(APIModel):
     months: float | None = Field(default=None, ge=0, le=600)
@@ -27,7 +34,6 @@ class CareerGap(APIModel):
             raise ValueError("career_gap must specify exactly one of months or years")
         return self
 
-
 class GhostTwinCandidateProfile(APIModel):
     career_gap: float | int | str | CareerGap
     gender: Gender
@@ -36,40 +42,33 @@ class GhostTwinCandidateProfile(APIModel):
     city: str = Field(min_length=1)
     skill_score: int = Field(default=85, ge=0, le=100, strict=True)
 
-
 class SkillClaim(APIModel):
     name: str
     confidence: float = Field(ge=0, le=1)
     verified: bool = False
 
-
 class ExtractedSkill(APIModel):
     name: str = Field(min_length=1)
     confidence: float = Field(ge=0, le=1)
 
-
 class SkillExtractionRequest(APIModel):
     transcript: str = Field(min_length=1)
     session_id: str | None = None
-
 
 class SkillExtractionResponse(APIModel):
     skills: list[ExtractedSkill]
     needs_proof: list[str]
     source: Literal["live", "simulated"]
 
-
 class WorkSampleRequest(APIModel):
     skill_id: str = Field(min_length=1)
     submission: str = Field(min_length=1)
     session_id: str | None = None
 
-
 class WorkSampleResponse(APIModel):
     score: int = Field(ge=0, le=100)
     credential_issued: bool
     source: Literal["live", "simulated"]
-
 
 class SkillPassport(APIModel):
     passport_id: str
@@ -78,11 +77,9 @@ class SkillPassport(APIModel):
     credentials: list[str]
     source: DataSource
 
-
 class RouteLeg(APIModel):
     skill: str
     hours: int = Field(ge=0)
-
 
 class Route(APIModel):
     legs: list[RouteLeg]
@@ -90,14 +87,12 @@ class Route(APIModel):
     paid_bridge: dict[str, JsonValue] | None = None
     source: DataSource
 
-
 class MatchResult(APIModel):
     role: str
     score: float
     pay_delta_pct: float
     blocked_by_guardrail: bool
     source: DataSource
-
 
 class GhostTwinVariant(APIModel):
     variant: str
@@ -107,7 +102,6 @@ class GhostTwinVariant(APIModel):
     score: int = Field(ge=0, le=100)
     delta: int
     source: Literal["local", "live"] = "local"
-
 
 class GhostTwinResult(APIModel):
     actual_score: int = Field(ge=0, le=100)
@@ -119,24 +113,20 @@ class GhostTwinResult(APIModel):
     engine: Literal["pure_python"] = "pure_python"
     status: Literal["completed"] = "completed"
 
-
 class SessionStartRequest(APIModel):
     input_type: InputType
     content: str = Field(min_length=1)
     persona: str = Field(min_length=1)
-
 
 class SessionStartResponse(APIModel):
     session_id: str
     source: SessionSource
     status: Literal["started"] = "started"
 
-
 class RouteRequest(APIModel):
     from_skill: str = Field(min_length=1)
     target_role: str = Field(min_length=1)
     hours_per_week: int = Field(default=10, ge=1, le=40)
-
 
 class RouteResponse(Route):
     from_skill: str
@@ -144,20 +134,17 @@ class RouteResponse(Route):
     hours_per_week: int
     weeks: float = Field(gt=0)
 
-
 class MatchConstraints(APIModel):
     commute_km: int = Field(default=25, ge=0, le=500)
     hours: int = Field(default=40, ge=1, le=80)
     language: str = Field(default="English", min_length=1)
     accept_pay_cut: bool = False
 
-
 class MatchRequest(APIModel):
     passport_id: str = Field(min_length=1)
     session_id: str | None = None
     constraints: MatchConstraints = Field(default_factory=MatchConstraints)
     target_role: str | None = None
-
 
 class RoleProfile(APIModel):
     role_id: str
@@ -168,7 +155,6 @@ class RoleProfile(APIModel):
     weekly_hours: int = Field(ge=1, le=80)
     annual_pay: int = Field(gt=0)
     required_skills: list[str] = Field(default_factory=list)
-
 
 class RankedMatch(APIModel):
     role: str
@@ -183,29 +169,14 @@ class RankedMatch(APIModel):
     guardrail_reason: str | None = None
     source: DataSource
 
-
 class MatchResponse(APIModel):
     passport_id: str
     matches: list[RankedMatch]
     source: DataSource
     guardrail_threshold_pct: float = 15.0
 
-
 class WageScarThreshold(APIModel):
     max_pay_cut_pct: float = Field(default=15.0, ge=0, le=100)
-
-
-AgentName = Literal[
-    "ORCHESTRATOR",
-    "SKILLS DISCOVERY",
-    "MARKET INTELLIGENCE",
-    "LEARNING PATHWAY",
-    "INCLUSIVE MATCHING",
-    "EMPLOYER READINESS",
-    "BIAS AUDIT",
-]
-AgentStatus = Literal["running", "done", "waiting_consent"]
-
 
 class AgentEvent(APIModel):
     session_id: str = Field(min_length=1)
@@ -218,7 +189,6 @@ class AgentEvent(APIModel):
     event_id: str = Field(min_length=1)
     timestamp: str = Field(min_length=1)
 
-
 class DisplacementRadarResponse(APIModel):
     role: str
     city: str
@@ -227,10 +197,8 @@ class DisplacementRadarResponse(APIModel):
     source: Literal["simulated"] = "simulated"
     disclaimer: str
 
-
 class EmployerFilterRewriteRequest(APIModel):
     job_post_id: str = Field(min_length=1)
-
 
 class EmployerFilterRewriteResponse(APIModel):
     job_post_id: str
@@ -244,7 +212,6 @@ class EmployerFilterRewriteResponse(APIModel):
     rewrite_reason: str
     source: Literal["simulated"] = "simulated"
     disclaimer: str
-
 
 class SessionState(APIModel):
     session_id: str
@@ -264,9 +231,8 @@ class SessionState(APIModel):
     skills_source: Literal["live", "simulated"] | None = None
     events: list[AgentEvent] = Field(default_factory=list)
 
-    def merged(self, **updates: object) -> "SessionState":
+    def merged(self, **updates: object) -> SessionState:
         return self.model_copy(update={"updated_at": datetime.now(UTC), **updates})
-
 
 class GhostTwinAuditRequest(APIModel):
     candidate_profile: GhostTwinCandidateProfile
@@ -274,15 +240,10 @@ class GhostTwinAuditRequest(APIModel):
     threshold: int | None = Field(default=None, ge=0)
     simulate_legacy_ats: bool = Field(default=False, strict=True)
 
-
-IntegrationStatus = Literal["not_implemented", "configured"]
-
-
 class IntegrationModeStatus(APIModel):
     mode: Literal["mock", "live"]
     source: DataSource
     integration_status: IntegrationStatus = "not_implemented"
-
 
 class HealthResponse(APIModel):
     status: Literal["ok"]
