@@ -1,3 +1,5 @@
+import { isAbortError, isRecord } from './lib/guards.js'
+
 export const DEFAULT_BACKEND_BASE_URL = 'http://127.0.0.1:8000'
 
 function normalizeApiBaseUrl(baseUrl) {
@@ -45,10 +47,6 @@ export class ApiError extends Error {
     this.detail = detail
     this.url = url
   }
-}
-
-function isRecord(value) {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function readDetailMessage(item) {
@@ -117,12 +115,18 @@ async function readErrorDetail(response) {
   return body ?? null
 }
 
-function buildGetInit(method) {
-  return { method, headers: { Accept: 'application/json' } }
+function buildGetInit(method, signal) {
+  const init = { method, headers: { Accept: 'application/json' } }
+
+  if (signal) {
+    init.signal = signal
+  }
+
+  return init
 }
 
-function buildBodyInit(method, body) {
-  return {
+function buildBodyInit(method, body, signal) {
+  const init = {
     method,
     headers: {
       Accept: 'application/json',
@@ -130,19 +134,38 @@ function buildBodyInit(method, body) {
     },
     body: JSON.stringify(body),
   }
+
+  if (signal) {
+    init.signal = signal
+  }
+
+  return init
 }
 
+/**
+ * Perform one JSON request.
+ *
+ * `options.signal` is forwarded to `fetch`, so a caller can genuinely cancel the
+ * in-flight request. An aborted request rejects with the DOMException `fetch`
+ * raises (`name === 'AbortError'`); it is deliberately not wrapped in an
+ * `ApiError`, because a cancellation is not a transport failure.
+ */
 async function requestJson(path, options) {
-  const { method = 'GET', body, baseUrl } = options ?? {}
+  const { method = 'GET', body, baseUrl, signal } = options ?? {}
 
   const url = getApiUrl(path, baseUrl)
-  const requestInit = body === undefined ? buildGetInit(method) : buildBodyInit(method, body)
+  const requestInit =
+    body === undefined ? buildGetInit(method, signal) : buildBodyInit(method, body, signal)
 
   let response
 
   try {
     response = await fetch(url, requestInit)
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error
+    }
+
     throw new ApiError(
       `ReRoute could not reach the backend at ${url || 'the same origin'}.`,
       { status: 0, detail: null, url },
@@ -182,46 +205,50 @@ function withQuery(path, entries) {
 }
 
 export function startSession(payload, options) {
-  const { baseUrl } = options ?? {}
+  const { baseUrl, signal } = options ?? {}
 
   return requestJson('/session/start', {
     method: 'POST',
     body: payload,
     baseUrl,
+    signal,
   })
 }
 
 export function getSession(id, options) {
-  const { baseUrl } = options ?? {}
+  const { baseUrl, signal } = options ?? {}
 
   return requestJson(`/session/${encodeURIComponent(String(id ?? ''))}`, {
     baseUrl,
+    signal,
   })
 }
 
 export function extractSkills(payload, options) {
-  const { baseUrl } = options ?? {}
+  const { baseUrl, signal } = options ?? {}
 
   return requestJson('/skills/extract', {
     method: 'POST',
     body: payload,
     baseUrl,
+    signal,
   })
 }
 
 export function scoreWorkSample(payload, options) {
-  const { baseUrl } = options ?? {}
+  const { baseUrl, signal } = options ?? {}
 
   return requestJson('/skills/work-sample', {
     method: 'POST',
     body: payload,
     baseUrl,
+    signal,
   })
 }
 
 export function getRoute(routeOptions, options) {
   const { fromSkill, targetRole, hoursPerWeek } = routeOptions ?? {}
-  const { baseUrl } = options ?? {}
+  const { baseUrl, signal } = options ?? {}
 
   return requestJson(
     withQuery('/route', [
@@ -229,45 +256,48 @@ export function getRoute(routeOptions, options) {
       ['target_role', targetRole],
       ['hours_per_week', hoursPerWeek],
     ]),
-    { baseUrl },
+    { baseUrl, signal },
   )
 }
 
 export function runMatch(payload, options) {
-  const { baseUrl } = options ?? {}
+  const { baseUrl, signal } = options ?? {}
 
-  return requestJson('/match', { method: 'POST', body: payload, baseUrl })
+  return requestJson('/match', { method: 'POST', body: payload, baseUrl, signal })
 }
 
 export function runGhostTwin(payload, options) {
-  const { baseUrl } = options ?? {}
+  const { baseUrl, signal } = options ?? {}
 
   return requestJson('/audit/ghost-twin', {
     method: 'POST',
     body: payload,
     baseUrl,
+    signal,
   })
 }
 
 export function getDisplacementRadar(radarOptions, options) {
   const { role, city } = radarOptions ?? {}
-  const { baseUrl } = options ?? {}
+  const { baseUrl, signal } = options ?? {}
 
   return requestJson(
     withQuery('/market/displacement-radar', [
       ['role', role],
       ['city', city],
     ]),
-    { baseUrl },
+    { baseUrl, signal },
   )
 }
 
 export function rewriteEmployerFilter(jobPostId, options) {
-  const { baseUrl } = options ?? {}
+  const { baseUrl, signal } = options ?? {}
 
   return requestJson('/employer/rewrite-filter', {
     method: 'POST',
     body: { job_post_id: String(jobPostId ?? '') },
     baseUrl,
+    signal,
   })
 }
+

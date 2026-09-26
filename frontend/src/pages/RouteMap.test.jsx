@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const getRouteMock = vi.fn()
 
 vi.mock('../api.js', () => ({
-  getRoute: (query) => getRouteMock(query),
+  getRoute: (...args) => getRouteMock(...args),
 }))
 
 const { default: RouteMap } = await import('./RouteMap.jsx')
@@ -31,20 +31,19 @@ const ROUTE = {
 }
 
 function renderMap(properties = {}) {
-  render(
-    <RouteMap
-      route={null}
-      source={undefined}
-      error=""
-      onFetch={undefined}
-      onFromSkillChange={undefined}
-      onTargetRoleChange={undefined}
-      onHoursPerWeekChange={undefined}
-      {...properties}
-    />,
-  )
+  render(<RouteMap {...properties} />)
 
   return screen.getByRole('heading', { name: 'Route map' }).closest('section')
+}
+
+/** Render, then resolve the panel's first route request with `route`. */
+async function renderMapWithRoute(route) {
+  getRouteMock.mockResolvedValue(route)
+  const section = renderMap()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
+
+  return section
 }
 
 function labelledCard(label) {
@@ -62,10 +61,10 @@ describe('RouteMap', () => {
     getRouteMock.mockReset()
   })
 
-  it('renders every leg in order with its hours and ends at the target role', () => {
-    renderMap({ route: ROUTE })
+  it('renders every leg in order with its hours and ends at the target role', async () => {
+    await renderMapWithRoute(ROUTE)
 
-    const stations = screen.getByRole('list', {
+    const stations = await screen.findByRole('list', {
       name: 'Route stations from Manual testing to qa-analyst',
     })
     const items = within(stations).getAllByRole('listitem')
@@ -79,8 +78,9 @@ describe('RouteMap', () => {
     ])
   })
 
-  it('summarises the total hours, weeks and weekly capacity with labels', () => {
-    renderMap({ route: ROUTE })
+  it('summarises the total hours, weeks and weekly capacity with labels', async () => {
+    await renderMapWithRoute(ROUTE)
+    await screen.findByText(/Route sequence:/)
 
     expect(within(labelledCard('Total hours')).getByText('110')).toBeInTheDocument()
     expect(within(labelledCard('Weeks at 10h per week')).getByText('11')).toBeInTheDocument()
@@ -92,20 +92,20 @@ describe('RouteMap', () => {
     ).toBeInTheDocument()
   })
 
-  it('exposes a text alternative that describes the station sequence in order', () => {
-    renderMap({ route: ROUTE })
+  it('exposes a text alternative that describes the station sequence in order', async () => {
+    await renderMapWithRoute(ROUTE)
 
-    const summary = screen.getByText(/Route sequence:/)
+    const summary = await screen.findByText(/Route sequence:/)
 
     expect(summary).toHaveTextContent(
       'Route sequence: Manual testing (0 hours), then Regression testing (30 hours), then Test automation (80 hours), then qa-analyst (target role).',
     )
   })
 
-  it('renders the paid bridge defensively when the server returns no bridge', () => {
-    renderMap({ route: { ...ROUTE, paid_bridge: null } })
+  it('renders the paid bridge defensively when the server returns no bridge', async () => {
+    await renderMapWithRoute({ ...ROUTE, paid_bridge: null })
 
-    expect(screen.getByText('Paid bridge')).toBeInTheDocument()
+    expect(await screen.findByText('Paid bridge')).toBeInTheDocument()
     expect(
       screen.getByText(
         'No paid bridge attached to this route. The server returned no bridge block.',
@@ -113,15 +113,13 @@ describe('RouteMap', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders every paid bridge key the fixture happens to send', () => {
-    renderMap({
-      route: {
-        ...ROUTE,
-        paid_bridge: { role: 'sdet', openings: 12, wait_weeks: null },
-      },
+  it('renders every paid bridge key the fixture happens to send', async () => {
+    await renderMapWithRoute({
+      ...ROUTE,
+      paid_bridge: { role: 'sdet', openings: 12, wait_weeks: null },
     })
 
-    const bridge = screen.getByText('Paid bridge').closest('div')
+    const bridge = (await screen.findByText('Paid bridge')).closest('div')
 
     if (bridge === null) {
       throw new Error('Paid bridge block is missing')
@@ -135,52 +133,48 @@ describe('RouteMap', () => {
     expect(within(bridge).getByText('Not supplied')).toBeInTheDocument()
   })
 
-  it('shows a simulated source badge and switches it for a live route', () => {
-    const { rerender } = render(
-      <RouteMap
-        route={ROUTE}
-        source="simulated"
-        error=""
-        onFetch={vi.fn()}
-        onFromSkillChange={vi.fn()}
-        onTargetRoleChange={vi.fn()}
-        onHoursPerWeekChange={vi.fn()}
-      />,
-    )
+  it('labels the route source from the response and switches it for a live route', async () => {
+    const { unmount } = render(<RouteMap />)
 
-    expect(screen.getByText('Simulated route')).toBeInTheDocument()
+    expect(screen.getByText('Source pending route')).toBeInTheDocument()
 
-    rerender(
-      <RouteMap
-        route={ROUTE}
-        source="live"
-        error=""
-        onFetch={vi.fn()}
-        onFromSkillChange={vi.fn()}
-        onTargetRoleChange={vi.fn()}
-        onHoursPerWeekChange={vi.fn()}
-      />,
-    )
+    getRouteMock.mockResolvedValue(ROUTE)
+    fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
+    expect(await screen.findByText('Simulated route')).toBeInTheDocument()
+    unmount()
 
-    expect(screen.getByText('Live route')).toBeInTheDocument()
+    getRouteMock.mockResolvedValue({ ...ROUTE, source: 'live' })
+    render(<RouteMap />)
+    fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
+
+    expect(await screen.findByText('Live route')).toBeInTheDocument()
     expect(screen.queryByText('Simulated route')).not.toBeInTheDocument()
   })
 
-  it('keeps the live and simulated distinction visible while loading', () => {
-    renderMap({ isLoading: true, source: 'live' })
+  it('keeps the live and simulated distinction visible while loading', async () => {
+    let settle = () => {}
+    getRouteMock.mockReturnValue(
+      new Promise((resolve) => {
+        settle = () => resolve(ROUTE)
+      }),
+    )
+    const section = renderMap({ baseUrl: '' })
 
-    expect(screen.getByText('Live route')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
+
+    expect(await screen.findByText('Mapping the least-hours path…')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Mapping route…' })).toBeDisabled()
-    expect(
-      screen.getByText('Mapping the least-hours path…'),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('heading', { name: 'Route map' }).closest('section'),
-    ).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('heading', { name: 'Route map' }).closest('section')).toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
+
+    settle()
+    await waitFor(() => expect(section).toHaveAttribute('aria-busy', 'false'))
   })
 
-  it('renders an empty state with a call to action when no route is returned', () => {
-    renderMap({ onFetch: vi.fn() })
+  it('renders an empty state with a call to action before any route is requested', () => {
+    renderMap()
 
     expect(screen.getByText('No route yet')).toBeInTheDocument()
     expect(
@@ -191,29 +185,27 @@ describe('RouteMap', () => {
     expect(screen.getByRole('button', { name: 'Build route' })).toBeEnabled()
   })
 
-  it('renders the error message the server returned', () => {
-    renderMap({
-      onFetch: vi.fn(),
-      error:
-        "unknown from_skill 'Excel macros'; valid options: Manual testing, QA analytics",
-    })
+  it('surfaces a server error message and stays retryable', async () => {
+    getRouteMock.mockRejectedValue(
+      new Error("unknown target_role; valid options: qa-analyst, sdet"),
+    )
+    renderMap()
 
-    const alert = screen.getByRole('alert')
+    fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
+
+    const alert = await screen.findByRole('alert')
 
     expect(alert).toHaveTextContent(
-      "unknown from_skill 'Excel macros'; valid options: Manual testing, QA analytics",
+      'unknown target_role; valid options: qa-analyst, sdet',
     )
     expect(
       screen.getByRole('button', { name: 'Build route' }),
     ).toBeEnabled()
   })
 
-  it('re-fetches with the new values when the form is changed and submitted', () => {
-    const onFetch = vi.fn()
-    const onFromSkillChange = vi.fn()
-    const onTargetRoleChange = vi.fn()
-    const onHoursPerWeekChange = vi.fn()
-    renderMap({ onFetch, onFromSkillChange, onTargetRoleChange, onHoursPerWeekChange })
+  it('re-fetches with the new values when the form is changed and submitted', async () => {
+    getRouteMock.mockResolvedValue(ROUTE)
+    renderMap()
 
     fireEvent.change(screen.getByRole('combobox', { name: 'From skill' }), {
       target: { value: 'Regression testing' },
@@ -225,21 +217,80 @@ describe('RouteMap', () => {
       target: { value: '15' },
     })
 
-    expect(onFromSkillChange).toHaveBeenCalledWith('Regression testing')
-    expect(onTargetRoleChange).toHaveBeenCalledWith('sdet')
-    expect(onHoursPerWeekChange).toHaveBeenCalledWith(15)
+    fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
+
+    await waitFor(() => expect(getRouteMock).toHaveBeenCalledTimes(1))
+    expect(getRouteMock).toHaveBeenCalledWith(
+      { fromSkill: 'Regression testing', targetRole: 'sdet', hoursPerWeek: 15 },
+      { baseUrl: '', signal: expect.any(AbortSignal) },
+    )
+  })
+
+  it('aborts the previous request so a slow first submit cannot overwrite a fast second', async () => {
+    const signals = []
+    let resolveFirst
+    getRouteMock.mockImplementation((_query, options) => {
+      signals.push(options.signal)
+
+      if (signals.length === 1) {
+        return new Promise((resolve) => {
+          resolveFirst = () => resolve(ROUTE)
+        })
+      }
+
+      return Promise.resolve({ ...ROUTE, target_role: 'sdet' })
+    })
+    renderMap()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
+    await waitFor(() => expect(getRouteMock).toHaveBeenCalledTimes(1))
+    expect(signals[0].aborted).toBe(false)
+
+    resolveFirst()
+    await waitFor(() => expect(signals[0].aborted).toBe(false))
 
     fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
 
-    expect(onFetch).toHaveBeenCalledTimes(1)
-    expect(onFetch).toHaveBeenCalledWith({
-      fromSkill: 'Regression testing',
-      targetRole: 'sdet',
-      hoursPerWeek: 15,
-    })
+    await waitFor(() => expect(getRouteMock).toHaveBeenCalledTimes(2))
+    expect(
+      await screen.findByText(
+        'Route sequence: Manual testing (0 hours), then Regression testing (30 hours), then Test automation (80 hours), then sdet (target role).',
+      ),
+    ).toBeInTheDocument()
   })
 
-  it('fetches on demand with getRoute when no onFetch handler is supplied', async () => {
+  it('cancels the in-flight request on unmount', async () => {
+    let observedSignal
+    getRouteMock.mockImplementation((_query, options) => {
+      observedSignal = options.signal
+
+      return new Promise(() => {})
+    })
+    const { unmount } = render(<RouteMap />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
+    await waitFor(() => expect(observedSignal).toBeDefined())
+
+    unmount()
+
+    expect(observedSignal.aborted).toBe(true)
+  })
+
+  it('refuses to submit when the weekly hours fall outside the API bounds', () => {
+    renderMap()
+
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Hours per week' }), {
+      target: { value: '' },
+    })
+
+    expect(screen.getByRole('button', { name: 'Build route' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
+
+    expect(getRouteMock).not.toHaveBeenCalled()
+  })
+
+  it('does not request anything until the form is submitted', async () => {
     getRouteMock.mockResolvedValue(ROUTE)
     renderMap()
 
@@ -247,11 +298,7 @@ describe('RouteMap', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
 
-    expect(getRouteMock).toHaveBeenCalledWith({
-      fromSkill: 'Manual testing',
-      targetRole: 'qa-analyst',
-      hoursPerWeek: 10,
-    })
+    await waitFor(() => expect(getRouteMock).toHaveBeenCalledTimes(1))
 
     expect(
       await screen.findByRole('list', {
@@ -261,7 +308,7 @@ describe('RouteMap', () => {
     expect(screen.getByText('Simulated route')).toBeInTheDocument()
   })
 
-  it('renders the ApiError message from the internal fetch and stays retryable', async () => {
+  it('renders a rejected request as an alert and stays retryable', async () => {
     getRouteMock.mockRejectedValue(
       new Error('unknown target_role; valid options: qa-analyst, sdet'),
     )
@@ -279,7 +326,7 @@ describe('RouteMap', () => {
   })
 
   it('offers the target roles the backend accepts and labels the hours input', () => {
-    renderMap({ onFetch: vi.fn() })
+    renderMap()
 
     const roleSelect = screen.getByRole('combobox', { name: 'Target role' })
     const options = within(roleSelect)

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import GhostTwinPanel from './components/GhostTwinPanel.jsx'
 import AgentLog from './components/AgentLog.jsx'
 import { useDemoMode } from './context/DemoModeContext.jsx'
-import { getRoute, startSession } from './api.js'
+import { startSession } from './api.js'
 import { useSessionStream } from './hooks/useSessionStream.js'
 import { useAgentStream } from './hooks/useAgentStream.js'
 import HRConsole from './pages/HRConsole.jsx'
@@ -16,49 +16,40 @@ const DEMO_STAGES = [
   ['04', 'Audit', 'Challenge every score'],
 ]
 
-const LIVE_TRANSPORT = 'live'
-const FALLBACK_TRANSPORT = 'simulated'
-const FALLBACK_EVENTS = []
-
 export default function App() {
   const { demoMode, toggleDemoMode, backendBaseUrl } = useDemoMode()
   const [sessionId, setSessionId] = useState(null)
   const [startError, setStartError] = useState('')
   const [isStarting, setIsStarting] = useState(false)
-  
+
   const fallback = useAgentStream()
   const stream = useSessionStream({
     sessionId,
     enabled: Boolean(sessionId) && !demoMode,
     baseUrl: backendBaseUrl,
   })
-  
+
   const usingLiveTransport = !demoMode && Boolean(sessionId)
   const events = usingLiveTransport ? stream.events : fallback.events
   const streamSource = usingLiveTransport ? stream.source : fallback.source
-  const displaySource = streamSource === LIVE_TRANSPORT ? LIVE_TRANSPORT : FALLBACK_TRANSPORT
 
-  const noop = useCallback(() => {}, [])
-
-  const handleRouteFetch = useCallback(
-    (query) => getRoute(query, { baseUrl: backendBaseUrl }),
+  const handleSessionStart = useCallback(
+    async (payload) => {
+      setIsStarting(true)
+      setStartError('')
+      try {
+        const started = await startSession(payload, { baseUrl: backendBaseUrl })
+        setSessionId(started.session_id)
+      } catch (requestError) {
+        setStartError(
+          requestError instanceof Error ? requestError.message : 'Could not start the session.',
+        )
+      } finally {
+        setIsStarting(false)
+      }
+    },
     [backendBaseUrl],
   )
-
-  const handleSessionStart = useCallback(async (payload) => {
-    setIsStarting(true)
-    setStartError('')
-    try {
-      const started = await startSession(payload, { baseUrl: backendBaseUrl })
-      setSessionId(started.session_id)
-    } catch (requestError) {
-      setStartError(
-        requestError instanceof Error ? requestError.message : 'Could not start the session.',
-      )
-    } finally {
-      setIsStarting(false)
-    }
-  }, [backendBaseUrl])
 
   return (
     <div className="min-h-dvh bg-off-white text-navy">
@@ -118,39 +109,32 @@ export default function App() {
 
             <div className="mt-8 space-y-6">
               <WorkerApp
+                baseUrl={backendBaseUrl}
                 sessionId={sessionId}
                 onSessionStart={handleSessionStart}
-                events={usingLiveTransport ? stream.events : FALLBACK_EVENTS}
+                events={events}
                 isStreaming={isStarting || (usingLiveTransport && stream.status === 'connecting')}
               />
               {startError ? (
                 <p role="alert" className="rounded-xl border border-red/40 bg-red/10 px-4 py-3 text-sm text-red">{startError}</p>
               ) : null}
-              <RouteMap
-                route={null}
-                source={null}
-                error={null}
-                onFetch={handleRouteFetch}
-                onFromSkillChange={noop}
-                onTargetRoleChange={noop}
-                onHoursPerWeekChange={noop}
-              />
+              <RouteMap baseUrl={backendBaseUrl} />
             </div>
           </section>
 
           <div className="lg:sticky lg:top-8 space-y-6">
             <AgentLog
               events={events}
-              source={displaySource}
+              source={streamSource}
               status={usingLiveTransport ? stream.status : null}
               lastEventId={usingLiveTransport ? stream.lastEventId : 0}
               reconnectAttempts={usingLiveTransport ? stream.reconnectAttempts : 0}
               onReconnect={usingLiveTransport ? stream.reconnectNow : undefined}
             />
-            
-            <GhostTwinPanel />
-            
-            <HRConsole />
+
+            <GhostTwinPanel baseUrl={backendBaseUrl} />
+
+            <HRConsole baseUrl={backendBaseUrl} />
             
             <div className="flex items-start gap-3 px-1 text-xs leading-5 text-navy/50">
               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal" aria-hidden="true" />

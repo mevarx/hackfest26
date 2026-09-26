@@ -1,9 +1,14 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getRoute } from '../api.js'
+import { isAbortError } from '../lib/guards.js'
 
 const DEFAULT_FROM_SKILL = 'Manual testing'
 const DEFAULT_TARGET_ROLE = 'qa-analyst'
 const DEFAULT_HOURS_PER_WEEK = 10
+// Must mirror the API's RouteRequest bounds, or the panel submits values the
+// server rejects with a 422.
+const MIN_HOURS_PER_WEEK = 1
+const MAX_HOURS_PER_WEEK = 40
 
 const SKILL_OPTIONS = [
   'Manual testing',
@@ -65,10 +70,6 @@ function getSourceDetails(source) {
   return SOURCE_DETAILS.pending
 }
 
-function optionalValue(value) {
-  return value ?? null
-}
-
 function getErrorMessage(error) {
   if (error instanceof Error && error.message) {
     return error.message
@@ -114,6 +115,27 @@ function formatBridgeValue(value) {
 
   return String(value)
 }
+
+/**
+ * @typedef {object} RouteLeg
+ * @property {string} [skill]
+ * @property {number} [hours]
+ *
+ * @typedef {object} RouteResponse
+ * @property {RouteLeg[]} [legs]
+ * @property {Record<string, unknown> | null} [paid_bridge]
+ * @property {string} [source]
+ * @property {string} [from_skill]
+ * @property {string} [target_role]
+ * @property {number} [total_hours]
+ * @property {number} [hours_per_week]
+ * @property {number} [weeks]
+ *
+ * @typedef {object} DraftState
+ * @property {string} fromSkill
+ * @property {string} targetRole
+ * @property {number | ''} hoursPerWeek
+ */
 
 function getBridgeEntries(paidBridge) {
   if (
@@ -170,113 +192,109 @@ function getStationSummary(stations) {
     .join(', then ')
 }
 
+/**
+ * Stage 02 panel: solve the least-hours skill pathway on demand.
+ *
+ * The panel owns its request. An earlier version also accepted `route`/`source`/
+ * `error`/`onFetch` props for a parent-controlled mode, but the only caller never
+ * fed results back through them, so the map rendered "No route yet" forever and a
+ * failed request surfaced as an unhandled promise rejection. There is now one
+ * path: submit, await, render.
+ */
 export default function RouteMap({
-  route,
-  source,
-  isLoading = false,
-  error,
-  onFetch,
-  fromSkill = DEFAULT_FROM_SKILL,
-  targetRole = DEFAULT_TARGET_ROLE,
-  hoursPerWeek = DEFAULT_HOURS_PER_WEEK,
-  onFromSkillChange,
-  onTargetRoleChange,
-  onHoursPerWeekChange,
+  baseUrl = '',
+  initialFromSkill = DEFAULT_FROM_SKILL,
+  initialTargetRole = DEFAULT_TARGET_ROLE,
+  initialHoursPerWeek = DEFAULT_HOURS_PER_WEEK,
 }) {
-  const queryKey = `${fromSkill}|${targetRole}|${hoursPerWeek}`
-  const [draft, setDraft] = useState({
-    fromSkill,
-    targetRole,
-    hoursPerWeek,
-  })
-  const [appliedQueryKey, setAppliedQueryKey] = useState(queryKey)
-  const [internalRoute, setInternalRoute] = useState(null)
-  const [internalSource, setInternalSource] = useState('simulated')
-  const [internalLoading, setInternalLoading] = useState(false)
-  const [internalError, setInternalError] = useState('')
+  // `hoursPerWeek` is `number | ''`: an emptied number input must stay empty
+  // rather than silently becoming 0, which the API rejects.
+  const [draft, setDraft] = useState(/** @type {DraftState} */ ({
+    fromSkill: initialFromSkill,
+    targetRole: initialTargetRole,
+    hoursPerWeek: initialHoursPerWeek,
+  }))
+  const [route, setRoute] = useState(/** @type {RouteResponse | null} */ (null))
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const activeRequestRef = useRef(/** @type {AbortController | null} */ (null))
 
-  if (appliedQueryKey !== queryKey) {
-    setAppliedQueryKey(queryKey)
-    setDraft({
-      fromSkill,
-      targetRole,
-      hoursPerWeek,
-    })
-  }
-
-  const isExternallyControlled = typeof onFetch === 'function'
-  const payload = optionalValue(route)
-  const displayRoute = payload ?? optionalValue(internalRoute)
-  const displaySource =
-    optionalValue(source) ??
-    optionalValue(displayRoute)?.source ??
-    internalSource
-  const displayLoading = isLoading || internalLoading
-  const requestedError = optionalValue(error) ?? ''
-  const displayError = requestedError === '' ? internalError : requestedError
-  const stations = getStations(displayRoute)
-  const bridgeEntries = getBridgeEntries(
-    displayRoute === null ? null : displayRoute.paid_bridge,
+  useEffect(
+    () => () => {
+      activeRequestRef.current?.abort()
+    },
+    [],
   )
-  const sourceDetails = getSourceDetails(displaySource)
+
   const canQuery =
-    draft.fromSkill.trim() !== '' && draft.targetRole.trim() !== ''
+    draft.fromSkill.trim() !== '' &&
+    draft.targetRole.trim() !== '' &&
+    typeof draft.hoursPerWeek === 'number' &&
+    draft.hoursPerWeek >= MIN_HOURS_PER_WEEK &&
+    draft.hoursPerWeek <= MAX_HOURS_PER_WEEK
 
   const runQuery = useCallback(
     async (query) => {
-      if (isExternallyControlled) {
-        onFetch(query)
-        return
-      }
+      // Cancel any route still in flight, so two quick submits cannot resolve out
+      // of order and let the stale route win.
+      activeRequestRef.current?.abort()
 
-      setInternalLoading(true)
-      setInternalError('')
+      const controller = new AbortController()
+      activeRequestRef.current = controller
+      setIsLoading(true)
+      setError('')
 
       try {
-        const response = await getRoute(query)
-        setInternalRoute(response)
-        setInternalSource(response?.source ?? 'simulated')
+        const response = await getRoute(query, {
+          baseUrl,
+          signal: controller.signal,
+        })
+
+        if (activeRequestRef.current === controller) {
+          setRoute(response ?? null)
+        }
       } catch (requestError) {
-        setInternalError(getErrorMessage(requestError))
+        if (activeRequestRef.current === controller && !isAbortError(requestError)) {
+          setError(getErrorMessage(requestError))
+        }
       } finally {
-        setInternalLoading(false)
+        if (activeRequestRef.current === controller) {
+          setIsLoading(false)
+        }
       }
     },
-    [isExternallyControlled, onFetch],
+    [baseUrl],
   )
 
   function handleFromSkillChange(event) {
     const value = event.target.value
     setDraft((current) => ({ ...current, fromSkill: value }))
-
-    if (typeof onFromSkillChange === 'function') {
-      onFromSkillChange(value)
-    }
   }
 
   function handleTargetRoleChange(event) {
     const value = event.target.value
     setDraft((current) => ({ ...current, targetRole: value }))
-
-    if (typeof onTargetRoleChange === 'function') {
-      onTargetRoleChange(value)
-    }
   }
 
   function handleHoursPerWeekChange(event) {
-    const parsed = Number(event.target.value)
-    const value = Number.isFinite(parsed) ? parsed : 0
-    setDraft((current) => ({ ...current, hoursPerWeek: value }))
-
-    if (typeof onHoursPerWeekChange === 'function') {
-      onHoursPerWeekChange(value)
+    // An empty field must stay empty. Coercing it to 0 submits hours_per_week=0,
+    // which the API rejects with a 422, so the panel could only ever show an error.
+    const raw = event.target.value
+    if (raw.trim() === '') {
+      setDraft((current) => ({ ...current, hoursPerWeek: '' }))
+      return
     }
+    const parsed = Number(raw)
+    setDraft((current) => ({
+      ...current,
+      hoursPerWeek: Number.isFinite(parsed) ? parsed : '',
+    }))
   }
 
   function handleSubmit(event) {
     event.preventDefault()
 
-    if (displayLoading || !canQuery) {
+    if (isLoading || !canQuery) {
       return
     }
 
@@ -287,11 +305,15 @@ export default function RouteMap({
     })
   }
 
+  const stations = getStations(route)
+  const bridgeEntries = getBridgeEntries(route === null ? null : route.paid_bridge)
+  const sourceDetails = getSourceDetails(route?.source)
+
   return (
     <section
       className="overflow-hidden rounded-2xl border border-white/10 bg-navy text-off-white shadow-2xl shadow-navy/20"
       aria-labelledby="route-map-title"
-      aria-busy={displayLoading}
+      aria-busy={isLoading}
     >
       <div className="flex flex-col gap-4 border-b border-white/10 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <div>
@@ -390,15 +412,15 @@ export default function RouteMap({
 
           <button
             type="submit"
-            disabled={displayLoading || !canQuery}
-            aria-busy={displayLoading}
+            disabled={isLoading || !canQuery}
+            aria-busy={isLoading}
             className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber px-5 py-3 text-sm font-bold uppercase tracking-[0.14em] text-navy transition hover:bg-amber/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
-            {displayLoading ? 'Mapping route…' : 'Build route'}
+            {isLoading ? 'Mapping route…' : 'Build route'}
           </button>
         </form>
 
-        {displayError === '' ? null : (
+        {error === '' ? null : (
           <div
             className="rounded-xl border border-red/50 bg-red/10 p-5"
             role="alert"
@@ -406,7 +428,7 @@ export default function RouteMap({
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-red-300">
               Route unavailable
             </p>
-            <p className="mt-2 text-sm leading-6 text-off-white/75">{displayError}</p>
+            <p className="mt-2 text-sm leading-6 text-off-white/75">{error}</p>
             <p className="mt-2 text-xs leading-5 text-off-white/50">
               {sourceDetails.detail}. Ask for the route again once the skills graph
               answers.
@@ -414,7 +436,7 @@ export default function RouteMap({
           </div>
         )}
 
-        {displayLoading ? (
+        {isLoading ? (
           <div
             className="rounded-xl border border-amber/30 bg-amber/10 p-5"
             role="status"
@@ -428,7 +450,7 @@ export default function RouteMap({
               {draft.targetRole} at {draft.hoursPerWeek} hours a week.
             </p>
           </div>
-        ) : displayRoute === null ? (
+        ) : route === null ? (
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-off-white/50">
               No route yet
@@ -446,7 +468,7 @@ export default function RouteMap({
                   Route from
                 </p>
                 <p className="mt-1 text-sm font-semibold text-off-white">
-                  {displayRoute.from_skill ?? '—'}
+                  {route.from_skill ?? '—'}
                 </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
@@ -454,7 +476,7 @@ export default function RouteMap({
                   Route to
                 </p>
                 <p className="mt-1 text-sm font-semibold text-off-white">
-                  {displayRoute.target_role ?? '—'}
+                  {route.target_role ?? '—'}
                 </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
@@ -462,15 +484,15 @@ export default function RouteMap({
                   Total hours
                 </p>
                 <p className="mt-1 font-mono text-xl text-amber">
-                  {formatHours(displayRoute.total_hours)}
+                  {formatHours(route.total_hours)}
                 </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                 <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-off-white/45">
-                  Weeks at {formatHours(displayRoute.hours_per_week)}h per week
+                  Weeks at {formatHours(route.hours_per_week)}h per week
                 </p>
                 <p className="mt-1 font-mono text-xl text-off-white">
-                  {formatWeeks(displayRoute.weeks)}
+                  {formatWeeks(route.weeks)}
                 </p>
               </div>
             </div>
@@ -490,7 +512,7 @@ export default function RouteMap({
               </p>
 
               <ol
-                aria-label={`Route stations from ${displayRoute.from_skill ?? 'start'} to ${displayRoute.target_role ?? 'target'}`}
+                aria-label={`Route stations from ${route.from_skill ?? 'start'} to ${route.target_role ?? 'target'}`}
                 className="mt-4 flex flex-col sm:flex-row sm:items-start"
               >
                 {stations.map((station, index) => {
@@ -583,3 +605,4 @@ export default function RouteMap({
     </section>
   )
 }
+
