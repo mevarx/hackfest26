@@ -16,7 +16,7 @@ import {
   smokeClass,
 } from '../styles/classes.js'
 import Button from './Button.jsx'
-import Card from './Card.jsx'
+import Card, { BLEED_BLOCK_CLASS } from './Card.jsx'
 import Field from './Field.jsx'
 import NumberInput from './NumberInput.jsx'
 import Select from './Select.jsx'
@@ -337,33 +337,48 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
   return (
     <Card
       as="section"
-      eyebrow="Bias audit · Kavya"
-      title="Ghost Twin audit"
-      titleId="ghost-twin-title"
-      description="Compare a candidate with counterfactual twins before making a fair role match."
-      actions={<StatusBadge label={sourceBadge.label} live={sourceBadge.live} />}
-      aria-labelledby="ghost-twin-title"
+      // The section heading lives in App's <Section>; repeating it here gave
+      // the page two competing h2s for the same region. Only the source badge
+      // is a Card concern. `data-testid` is the panel's stable identity for
+      // tests, which used to anchor on the heading that has now moved up a
+      // level — a heading is a label, not a handle.
+      data-testid="ghost-twin-panel"
       aria-busy={isLoading}
-      padding="xl"
+      // This is the one bordered panel on the page, so it bleeds: the padding
+      // moves onto each block and every interior hairline runs edge to edge
+      // instead of stopping 48px short of the panel border.
+      bleed
       // Carbon is the reference's deepest surface level and this is the one panel
       // that earns it: a value step off Obsidian plus a Card Slate hairline. No
       // shadow — elevation here is the value shift and the border alone.
       className="rounded-card border border-card-slate bg-carbon"
     >
-      <div className={`flex flex-col gap-4 border-t ${ruleClass} pt-8 sm:flex-row sm:items-baseline sm:justify-between`}>
+      {/* In bleed mode the Card no longer wraps children in a padded box, so
+          the vertical rhythm that padding used to provide is stated here. The
+          inline padding lives on each block instead, which is what lets their
+          `border-t` rules span the panel's full interior. */}
+      <div className="flex flex-col gap-8 py-8 sm:py-12">
+      <div className={`${BLEED_BLOCK_CLASS} flex flex-col gap-4 border-t ${ruleClass} pt-8 sm:flex-row sm:items-baseline sm:justify-between`}>
         <div>
           <p className={sectionHeadingClass}>Candidate</p>
           <p className={`mt-2 ${headingSmClass} ${chalkClass}`}>
             Kavya · {form.age} · {form.city}
           </p>
         </div>
+        {/* The source badge describes the twins this panel compares, so it sits
+            beside the role context they are compared against. It used to be the
+            Card's `actions` slot, which orphaned it on its own line above a
+            hairline that separated it from nothing. */}
         <div className="sm:text-right">
           <p className={sectionHeadingClass}>Role context</p>
           <p className={`mt-2 ${metaClass} ${smokeClass}`}>{ROLE_ID}</p>
+          <div className="mt-3 sm:flex sm:justify-end">
+            <StatusBadge label={sourceBadge.label} live={sourceBadge.live} />
+          </div>
         </div>
       </div>
 
-      <div className={`mt-8 flex flex-col items-start gap-4 border-t ${ruleClass} pt-8 sm:flex-row sm:items-center sm:justify-between`}>
+      <div className={`${BLEED_BLOCK_CLASS} mt-8 flex flex-col items-start gap-4 border-t ${ruleClass} pt-8 sm:flex-row sm:items-center sm:justify-between`}>
         {/* The nav bar's minimal switch: Graphite outline off, Chalk outline on,
             state carried by the knob's position. A toggle is never a status
             light, so no Pulse Green here either. */}
@@ -389,7 +404,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
       <fieldset
         aria-label="Edit the candidate profile"
         disabled={isLoading}
-        className={`mt-8 border-t ${ruleClass} pt-8`}
+        className={`${BLEED_BLOCK_CLASS} mt-8 border-t ${ruleClass} pt-8`}
       >
         <p className={sectionHeadingClass}>Edit the candidate profile</p>
         <p
@@ -489,7 +504,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
           </Field>
         </div>
 
-        <div className={`mt-8 flex flex-col items-start gap-4 border-t ${ruleClass} pt-6 sm:flex-row sm:items-center sm:justify-between`}>
+        <div className={`${BLEED_BLOCK_CLASS} mt-8 flex flex-col items-start gap-4 border-t ${ruleClass} pt-6 sm:flex-row sm:items-center sm:justify-between`}>
           <p className={bodyCopyClass} data-testid="edit-summary">
             {hasPendingEdits
               ? `Edited: ${editedFields
@@ -510,7 +525,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
         </div>
       </fieldset>
 
-      <div className={`mt-8 border-t ${ruleClass} pt-8 ${metaRowClass}`} aria-live="polite">
+      <div className={`${BLEED_BLOCK_CLASS} mt-8 border-t ${ruleClass} pt-8 ${metaRowClass}`} aria-live="polite">
         <span>{hasAudit ? `Source=${source}` : 'Source=pending'}</span>
         <span aria-hidden="true">·</span>
         <span>{scoringMode}</span>
@@ -552,25 +567,25 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
       ) : (
         <div className="mt-12 space-y-16">
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-            <div className={`border-t ${ruleClass} pt-4`}>
+            <div className={`${BLEED_BLOCK_CLASS} border-t ${ruleClass} pt-4`}>
               <p className={dataLabelClass}>Actual score</p>
               <p className={`mt-1 ${metaClass} ${chalkClass}`}>
                 {formatScore(audit.actual_score)}
               </p>
             </div>
-            <div className={`border-t ${ruleClass} pt-4`}>
+            <div className={`${BLEED_BLOCK_CLASS} border-t ${ruleClass} pt-4`}>
               <p className={dataLabelClass}>Max delta</p>
               <p className={`mt-1 ${metaClass} ${chalkClass}`}>
                 {formatScore(audit.max_delta)}
               </p>
             </div>
-            <div className={`border-t ${ruleClass} pt-4`}>
+            <div className={`${BLEED_BLOCK_CLASS} border-t ${ruleClass} pt-4`}>
               <p className={dataLabelClass}>Threshold</p>
               <p className={`mt-1 ${metaClass} ${chalkClass}`}>
                 {formatScore(audit.threshold)}
               </p>
             </div>
-            <div className={`border-t ${ruleClass} pt-4`}>
+            <div className={`${BLEED_BLOCK_CLASS} border-t ${ruleClass} pt-4`}>
               <p className={dataLabelClass}>Source</p>
               <p className={`mt-1 ${metaClass} ${smokeClass}`}>
                 {audit.source}
@@ -582,7 +597,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
             role="region"
             tabIndex={0}
             aria-label="Scrollable Ghost Twin results table"
-            className={`w-full overflow-x-auto border-t ${ruleClass} ${FOCUS_RING_CLASS}`}
+            className={`${BLEED_BLOCK_CLASS} w-full overflow-x-auto border-t ${ruleClass} ${FOCUS_RING_CLASS}`}
           >
             <table className="w-full min-w-[38rem] text-left">
               <caption className="sr-only">
@@ -670,7 +685,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
 
           {isPass || isFlagged ? (
             <div
-              className={`flex flex-col gap-4 border-t ${ruleClass} pt-8 sm:flex-row sm:items-start sm:justify-between`}
+              className={`${BLEED_BLOCK_CLASS} flex flex-col gap-4 border-t ${ruleClass} pt-8 sm:flex-row sm:items-start sm:justify-between`}
               role="status"
               aria-live="polite"
             >
@@ -696,6 +711,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
           ) : null}
         </div>
       )}
+      </div>
     </Card>
   )
 }
