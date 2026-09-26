@@ -1,15 +1,23 @@
-// Shared class map for ReRoute — Hyperstudio Ditto.
+// Shared class map for ReRoute.
 //
 // Every string here resolves to a token in `styles/tokens.css`, which is
 // transcribed from ReRoute_Style_Reference.md. The rules that hold everywhere:
 //
-//   * weight 400 for everything except the nav wordmark (500) and 700 nowhere
-//     on display type — scale and tracking carry hierarchy, never boldness
-//   * Aeonik for all copy, Input for meta/labels/captions; two faces, no serif
+//   * weight 400 for everything except the nav wordmark and inline data labels
+//     (500); 700 nowhere — scale and tracking carry hierarchy, never boldness
+//   * Inter for all copy, JetBrains Mono for meta/labels/captions; two faces
 //   * sections are separated by a 1px Graphite hairline, never by a tint change
 //   * the glossy pill is the only filled surface; everything else is outlined
 //   * Compass Gold is for icon strokes only — never text, never a background
 //   * Pulse Green is the live-status dot and nothing else
+//
+// Two rules that are about *rhythm* rather than about ink, and that the
+// earlier version of this file did not hold to:
+//
+//   * one size carries exactly one line-height, so two runs of the same size
+//     are always the same height
+//   * vertical space is quoted from the spacing scale below, never from an
+//     arbitrary pixel value chosen at the call site
 //
 // Views compose these rather than re-deriving type or colour, so a token change
 // lands in one place.
@@ -18,8 +26,6 @@
 
 export const chalkClass = 'text-chalk'
 export const smokeClass = 'text-smoke'
-export const ashClass = 'text-ash'
-export const goldClass = 'text-compass-gold'
 
 /** 1px structural line — the page's primary border. */
 export const ruleClass = 'border-graphite'
@@ -30,54 +36,90 @@ export const readingClass = 'max-w-[38.75rem]'
 /** Narrower centered measure for the manifesto block. */
 export const manifestoClass = 'max-w-[37.5rem]'
 
+/* ── Vertical rhythm ──────────────────────────────────────────────────────
+ *
+ * A short named scale rather than a pile of one-off `mt-*` values at the call
+ * sites. Every gap on the page is one of these, which is what lets the eye
+ * read the page as a stack of the same few intervals instead of a pile of
+ * unrelated numbers. The values are 4px-grid multiples.
+ */
+
+/** Ties a label to the thing it names. */
+export const gapLabelClass = 'mt-2'
+
+/** Ties a heading to the copy that introduces it. */
+export const gapHeadingClass = 'mt-3'
+
+/** Separates two blocks of the same kind — a paragraph from a paragraph. */
+export const gapBlockClass = 'mt-4'
+
+/** Separates a run of content from a new group inside a panel. */
+export const gapGroupClass = 'mt-8'
+
+/** Separates two sibling groups in a panel. The panel's own sections. */
+export const gapPanelClass = 'mt-16'
+
+/** A section's air above its hairline and below it. */
+export const gapSectionClass = 'mt-28 pt-28'
+
+/** Reading measure + type together, for the hero sub-headline. */
+export const measureClass = 'max-w-[38.75rem]'
+
 /* ── Type voices ──────────────────────────────────────────────────────── */
 
-/** caption — Aeonik 400, 13px, loose leading. Section labels, helper copy. */
-export const captionClass =
-  'font-aeonik text-caption font-normal leading-caption'
+/** caption — Inter 400, 13px. Section labels, helper copy, small annotations. */
+export const captionClass = 'font-aeonik text-caption font-normal leading-caption'
 
-/** meta — Input 400, 13px, -0.022em. Timestamps, ids, source and session tags. */
-export const metaClass = 'font-input text-caption font-normal tracking-meta'
+/** meta — JetBrains Mono 400, 13px, -0.022em. Timestamps, ids, source and
+ *  session tags. Mono is what makes these read as machine output rather than
+ *  as prose, so the distinction between the two voices is load-bearing. */
+export const metaClass = 'font-input text-caption font-normal leading-caption tracking-meta'
 
-/** body — Aeonik 400, 16px/1.25. The reference's default reading size. */
+/** body — Inter 400, 16px. The reference's default reading size. */
 export const bodyClass = 'font-aeonik text-body font-normal leading-body'
 
-/** heading-xs — Aeonik 400, 18px. The nav wordmark's scale, reused for card
+/** heading-xs — Inter 400, 18px. The nav wordmark's scale, reused for card
  *  titles that need more presence than a caption. */
 export const headingXsClass = 'font-aeonik text-heading-xs font-normal leading-heading-xs'
 
-/** subheading — Aeonik 400, 21px. The hero sub-headline. */
-export const subheadingClass =
-  'font-aeonik text-subheading font-normal leading-subheading'
+/** subheading — Inter 400, 21px. The hero sub-headline. */
+export const subheadingClass = 'font-aeonik text-subheading font-normal leading-subheading'
 
-/** heading-sm — Aeonik 400, 23px. Panel titles, the manifesto title. */
-export const headingSmClass =
-  'font-aeonik text-heading-sm font-normal leading-heading-sm'
+/** heading-sm — Inter 400, 23px. Panel titles, the manifesto title. */
+export const headingSmClass = 'font-aeonik text-heading-sm font-normal leading-heading-sm'
 
-/** heading — Aeonik 400, 34px. Section openers. */
+/** heading — Inter 400, 34px. Section openers. */
 export const headingClass = 'font-aeonik text-heading font-normal leading-heading'
 
-/** heading-lg — Aeonik 400, 44px, -0.31px. The tablet step of the display. */
-export const headingLgClass =
-  'font-aeonik text-heading-lg font-normal leading-heading-lg tracking-heading-lg'
+/** display — Inter 400, 63px, -0.69px. The hero headline only.
+ *  Note that this carries a *size*, so a caller that also sets a responsive
+ *  size (e.g. `text-8 lg:text-display`) will see the token's `text-display`
+ *  win below `lg`, because both land in the same cascade layer and the token is
+ *  emitted later. Prefer `type-display` (below) when a responsive size is
+ *  needed. */
+export const displayClass = 'font-aeonik text-display font-normal leading-display tracking-display'
 
-/** display — Aeonik 400, 63px, -0.69px. The hero headline only. */
-export const displayClass =
-  'font-aeonik text-display font-normal leading-display tracking-display'
+/** display without a size — the same voice, no size claim. Paired with a
+ *  responsive size at the call site, which is the only way to step the hero
+ *  headline 32 → 44 → 63px without the token's own size overriding it.
+ *  `leading-display` is 1.05, which clips ascenders and descenders at the small
+ *  steps, so the base step pairs this with `leading-tight` and the token takes
+ *  over only at `lg`, where the 63px size it was tuned for actually applies. */
+export const typeDisplayClass = 'font-aeonik font-normal leading-tight lg:leading-display tracking-display'
 
 /* ── Shared composites ────────────────────────────────────────────────── */
 
-/** Section eyebrow: a caption in muted ink. */
+/** Section eyebrow: a mono caption in muted ink. */
 export const panelEyebrowClass = `${metaClass} ${smokeClass}`
 
-/** Panel title: 23px Aeonik in the surface's own ink. */
+/** Panel title: 23px Inter in the surface's own ink. */
 export const panelTitleClass = headingSmClass
 
 /** Panel description: one measure of body copy, muted. */
-export const panelDescriptionClass = `mt-4 ${bodyClass} ${smokeClass}`
+export const panelDescriptionClass = `mt-3 ${bodyClass} ${smokeClass} ${measureClass}`
 
 /** Small-caps label that opens a block inside a panel. */
-export const sectionHeadingClass = `${captionClass} ${smokeClass} uppercase`
+export const sectionHeadingClass = `${metaClass} ${smokeClass} uppercase`
 
 /** Label for a single data value. */
 export const dataLabelClass = `${metaClass} ${smokeClass} uppercase`
@@ -89,7 +131,7 @@ export const inlineLabelClass = `font-aeonik text-body font-medium ${chalkClass}
 export const metaRowClass = `flex flex-wrap items-center gap-x-4 gap-y-1 ${metaClass} ${smokeClass}`
 
 /** Reading-width body paragraph. */
-export const bodyCopyClass = `${bodyClass} ${smokeClass}`
+export const bodyCopyClass = `${bodyClass} ${smokeClass} ${measureClass}`
 
 /* ── Structural ───────────────────────────────────────────────────────── */
 
@@ -99,25 +141,28 @@ export const pageColumnClass = 'mx-auto w-full max-w-[75rem] px-6 sm:px-8'
 /** A full-content-width 1px Graphite rule. "The line IS the page structure." */
 export const dividerClass = 'h-px w-full bg-graphite'
 
-/** Section rhythm, 120px — the low end of the reference's 120–210px band. */
-export const sectionGapClass = 'mt-30 pt-30'
-
 /** Block border for cards and grids: Graphite on the sides and bottom, never
  *  the top, so a cell merges with the section divider above it. */
 export const cellRuleClass = 'border-x border-b border-graphite'
 
 /* ── Form controls ────────────────────────────────────────────────────── */
 
-/** Form control: 1px Graphite rule, Carbon surface, Aeonik body text. There is
- *  no coloured border anywhere in this system — focus is a Chalk ring, never a
- *  hue. */
+/** Form control: 1px Graphite rule, Carbon surface, Inter body text. There is
+ *  no coloured border anywhere in this system — focus is an Ash ring, never a
+ *  hue. The focus ring is applied through :focus-visible only, so a mouse click
+ *  does not leave a ring behind but a keyboard tab does. */
 export const controlBaseClass =
-  'w-full rounded-[6px] border border-graphite bg-carbon text-body text-chalk placeholder:text-smoke transition-colors hover:border-iron focus:border-ash focus:outline-2 focus:outline-offset-2 focus:outline-ash focus-visible:border-ash focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ash disabled:opacity-50'
+  'w-full rounded-[6px] border border-graphite bg-carbon px-3 text-body leading-body text-chalk placeholder:text-smoke transition-colors hover:border-iron focus:border-ash focus-visible:border-ash focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ash disabled:opacity-50'
 
+/** Every control is exactly 44px tall. One height for every field on the page
+ *  is what makes a form read as a form; a select that is 40px next to a text
+ *  input at 44px reads as two different systems. */
 export const controlHeightClass = 'h-11'
 
-/** Field label: Aeonik 14px, Chalk. */
-export const controlFieldLabelClass = 'block font-aeonik text-body text-sm font-normal text-chalk'
+/** Field label: Inter 14px, Chalk. One step below the 16px control it names,
+ *  which is what makes the label read as subordinate to the field rather than
+ *  as a second heading. */
+export const controlFieldLabelClass = 'block font-aeonik text-sm font-normal leading-body text-chalk'
 
 /** Helper line under a field: 13px Smoke, one sentence, no icon. */
 export const controlFieldHintClass = `mt-2 ${captionClass} ${smokeClass}`
@@ -135,8 +180,12 @@ export const buttonGlossyClass =
 export const buttonGhostClass =
   'rounded-button border border-[#2a2a2a] bg-[rgba(255,255,255,0.03)] text-chalk hover:bg-[rgba(255,255,255,0.06)]'
 
+/** Every button is 44px tall, matching every form control, so a button sitting
+ *  inline with a field lines up with it. */
+export const buttonHeightClass = 'h-11'
+
 export const buttonBaseClass =
-  'inline-flex items-center gap-2 font-aeonik text-sm font-normal uppercase leading-none tracking-button transition-[background-color,filter,border-color] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ash'
+  'inline-flex shrink-0 items-center gap-2 whitespace-nowrap font-aeonik text-sm font-normal uppercase leading-none tracking-button transition-[background-color,filter,border-color,color] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ash'
 
 /* ── Status ───────────────────────────────────────────────────────────── */
 
