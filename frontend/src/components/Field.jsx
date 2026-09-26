@@ -1,9 +1,9 @@
 import { controlFieldHintClass, controlFieldLabelClass } from '../styles/classes.js'
 
 /**
- * Label above, control, then one sentence of helper copy below in Slate/Smoke.
- * The hint is a subordinate footnote to the control, not a second label
- * wedged between the label and the thing it describes — no icon, ever.
+ * Label above, control, then one sentence of helper copy below in Smoke. The
+ * hint is a subordinate footnote to the control, not a second label wedged
+ * between the label and the thing it describes — no icon, ever.
  *
  * @param {{
  *   id?: string,

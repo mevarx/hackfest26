@@ -3,7 +3,8 @@ import { controlBaseClass, controlHeightClass, smokeClass } from '../styles/clas
 // `appearance-none` retires the native arrow outright rather than letting the
 // platform wedge its own geometry and colour into the field. The chevron is
 // drawn in Smoke so it reads as a quiet affordance, stepping up to full Chalk
-// only while the pointer is over the control.
+// only while the pointer is over the control — a control affordance inheriting
+// the control's own ink, never Compass Gold.
 const SELECT_WRAPPER_CLASS = 'group/select relative block'
 const SELECT_CLASS = [
   controlBaseClass,

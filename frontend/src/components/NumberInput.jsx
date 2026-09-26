@@ -1,16 +1,15 @@
 import { controlBaseClass, controlHeightClass, smokeClass } from '../styles/classes.js'
 
 // index.css already strips the native number spinner; this draws a replacement
-// in Smoke so the stepper belongs to the field's own type. Hover deepens to
-// Chalk and tints the hit area with the Graphite hairline value — a surface
-// step, not a colour. Amber stays reserved for focus, which these grips cannot
-// reach (they are `tabIndex={-1}` and mouse-driven), so the ring here is only
-// ever seen after a programmatic focus.
+// in Smoke so the stepper belongs to the field's own ink — a control affordance
+// inheriting the control's colour, never Compass Gold. Hover deepens to Chalk
+// and tints the hit area with the Graphite hairline value: a surface step, not a
+// colour. The focus ring is the system's Ash ring, never a hue.
 const STEPPER_ROW_CLASS = 'absolute right-1 top-1 flex flex-col gap-0.5'
 const STEPPER_BUTTON_CLASS = [
-  'grid h-4 w-6 place-items-center rounded-tag transition-colors',
+  'grid h-4 w-6 place-items-center rounded-[4px] transition-colors',
   'hover:bg-graphite hover:text-chalk',
-  'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-compass-amber',
+  'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ash',
   smokeClass,
 ].join(' ')
 

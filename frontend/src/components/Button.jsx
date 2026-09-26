@@ -1,48 +1,84 @@
 import {
+  buttonBaseClass,
   buttonGhostClass,
-  buttonPrimaryClass,
-  focusRingClass,
+  buttonGlossyClass,
 } from '../styles/classes.js'
 
-// Two buttons exist, and only two. `primary` is the single filled action a
-// screen is allowed; `ghost` is everything else. There is no third style and no
-// accent variant — Compass Amber is not a button colour in this system, it is
-// the focus ring and the current-stage dot.
+// Two buttons exist, and only two. `glossy` is the primary action; `ghost` is
+// everything else. There is no third style, no alias and no accent variant —
+// Compass Gold is an icon-stroke colour, never a button colour, and the fill on
+// `glossy` is the single filled surface the style reference permits.
+//
+// Radius: the reference's prose calls the primary a "full pill", but the CSS
+// block it ships alongside gives `border-radius: 14px` and the radius table
+// calls buttons "rounded rect, NOT full pill". The literal CSS wins, so both
+// variants use the shared `rounded-button` token (14px); the badge is the only
+// 9999px pill in the system.
+//
+// The ghost block in the reference asks for 12px while `buttonGhostClass` shares
+// the same 14px button token. 14px is inside the reference's stated 12–14px
+// button band, so the shared token stands rather than reintroducing a
+// duplicate radius at the call site.
 const VARIANT_CLASS = {
-  // Solid Ink block, Chalk label, 6px radius (12px from the base). A page-local
-  // primary action, not the top-level CTA — pills are reserved for the nav bar.
-  primary: `${buttonPrimaryClass} py-3 px-6`,
-  // No fill at rest *or* on hover. The 1px rule simply resolves from 60% to
-  // full opacity, so the control never gains a second surface.
+  glossy: `${buttonGlossyClass} py-2.5 pl-2.5 pr-5`,
+  // Asymmetric on purpose: the reference's `10px 20px 10px 10px` pulls the
+  // leading edge in so the 24px logomark circle sits flush inside the pill. A
+  // caller with no icon inherits the same padding — that is the spec, not a
+  // bug to be tidied away.
   ghost: `${buttonGhostClass} py-2.5 px-5`,
 }
 
-const BUTTON_BASE_CLASS = [
-  'inline-flex items-center justify-center gap-2',
-  'rounded-input font-utility text-label font-medium uppercase leading-none',
-  'tracking-caption transition-colors',
-  'disabled:pointer-events-none disabled:opacity-50',
-  focusRingClass,
-].join(' ')
+// `buttonBaseClass` already carries the Aeonik 400 14px/1 uppercase voice, the
+// 0.02em tracking, the 8px gap, the Ash focus ring and the disabled state, so
+// nothing here re-states the type.
 
 /**
+ * The two reference buttons.
+ *
+ * `arrow` is the reference's trailing glyph slot: "↗" for a forward action, "↓"
+ * for a reveal/scroll action. It is decorative, so it is hidden from assistive
+ * tech and the button keeps announcing its label alone.
+ *
+ * The icon-avatar circle (24px, dark fill, light glyph — the "R" logomark on the
+ * nav pill and the hero CTA) is not a prop: callers pass their own element as the
+ * first child, so the button draws no artwork of its own and the 8px base gap
+ * does the spacing.
+ *
  * @param {{
- *   variant?: 'primary' | 'ghost',
+ *   variant?: 'glossy' | 'ghost',
  *   type?: 'button' | 'submit' | 'reset',
+ *   arrow?: string,
  *   className?: string,
  *   disabled?: boolean,
  *   children?: import('react').ReactNode,
  * } & Record<string, unknown>} props
  */
 export default function Button({
-  variant = 'primary',
+  variant = 'glossy',
   type = 'button',
+  arrow,
   className = '',
+  children,
   ...rest
 }) {
-  const classes = [BUTTON_BASE_CLASS, VARIANT_CLASS[variant] ?? VARIANT_CLASS.primary, className]
+  const classes = [
+    buttonBaseClass,
+    VARIANT_CLASS[variant] ?? VARIANT_CLASS.glossy,
+    className,
+  ]
     .filter(Boolean)
     .join(' ')
 
-  return <button {...rest} type={type} className={classes} />
+  return (
+    <button {...rest} type={type} className={classes}>
+      {children}
+      {arrow === undefined ? null : (
+        <span aria-hidden="true" className="leading-none">
+          {arrow}
+        </span>
+      )}
+    </button>
+  )
 }
+
+export { Button }

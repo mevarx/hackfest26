@@ -1,32 +1,33 @@
 import {
-  captionClass,
   controlFieldHintClass,
-  labelClass,
+  controlFieldLabelClass,
+  metaClass,
   smokeClass,
 } from '../styles/classes.js'
 
 // The switch is a checkbox, not a status light, so it gets no colour at all.
 // Off is a Graphite outline, on is a Chalk outline — the state is legible from
-// the knob's position and ink alone, which is why the same control works in
-// the nav bar and inside the Ghost Twin panel without a themed variant.
-// Amber appears only on focus-visible; it is never the track.
+// the knob's position and ink alone, which is why the same control works in the
+// nav bar and inside the Ghost Twin panel without a themed variant. The
+// reference has no gold or green track, so the track never fills; the only hue
+// anywhere near it is the Ash focus ring, which is a grey.
 const TRACK_OFF_CLASS = 'border-graphite bg-transparent'
 const TRACK_ON_CLASS = 'border-chalk bg-transparent'
 const KNOB_OFF_CLASS = 'translate-x-0 bg-smoke'
 const KNOB_ON_CLASS = 'translate-x-6 bg-chalk'
 
 const TRACK_CLASS = [
-  'relative mt-0.5 h-6 w-11 shrink-0 rounded-pill border transition-colors',
+  'relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors',
   'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2',
-  'peer-focus-visible:outline-compass-amber',
+  'peer-focus-visible:outline-ash',
   'peer-disabled:opacity-60',
 ].join(' ')
 // 16px knob in a 44px track at 2px inset, translated 24px — it lands flush
 // against the right inset, which is what makes the pill read as a track.
 const KNOB_CLASS = 'absolute left-0.5 top-0.5 h-4 w-4 rounded-full transition-transform'
 
-const SWITCH_LABEL_CLASS = `${labelClass} uppercase`
-const SWITCH_STATE_CLASS = `${captionClass} ${smokeClass}`
+const SWITCH_LABEL_CLASS = `${controlFieldLabelClass} uppercase`
+const SWITCH_STATE_CLASS = `${metaClass} ${smokeClass}`
 const SWITCH_DESCRIPTION_CLASS = `${controlFieldHintClass} block max-w-md`
 
 /**
@@ -56,8 +57,8 @@ export default function Switch({
   const trackClass = checked ? TRACK_ON_CLASS : TRACK_OFF_CLASS
   const knobClass = checked ? KNOB_ON_CLASS : KNOB_OFF_CLASS
   const classes = [
-    'flex cursor-pointer items-start gap-3 rounded-input',
-    'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-compass-amber',
+    'flex cursor-pointer items-start gap-3',
+    'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ash',
     'has-disabled:cursor-not-allowed',
     className,
   ]
@@ -95,3 +96,5 @@ export default function Switch({
     </label>
   )
 }
+
+export { Switch }
