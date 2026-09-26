@@ -1,16 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
 import { getDisplacementRadar, rewriteEmployerFilter } from '../api.js'
 import {
+  bodyClass,
+  bodyCopyClass,
+  captionClass,
+  chalkClass,
   controlFieldHintClass,
   dataLabelClass,
+  headingClass,
+  headingSmClass,
+  metaClass,
   metaRowClass,
+  ruleDarkClass,
   sectionHeadingClass,
+  smokeClass,
 } from '../styles/classes.js'
-import Badge from '../components/Badge.jsx'
 import Button from '../components/Button.jsx'
 import Card from '../components/Card.jsx'
 import Field from '../components/Field.jsx'
 import Select from '../components/Select.jsx'
+import SourceTag from '../components/SourceTag.jsx'
 import TextInput from '../components/TextInput.jsx'
 
 const KNOWN_JOB_POST_IDS = [
@@ -37,19 +46,26 @@ const EMPTY_RESULT = null
 
 /** @type {Record<string, { emptyState: boolean, titleClass: string }>} */
 const STATUS_CARD_DETAILS = {
+  // A quiet state recedes into Smoke; a failure is the one status here worth
+  // reading at full ink. Neither gets a box, a border, or a colour of its own.
   loading: {
     emptyState: false,
-    titleClass: 'text-[#8A8A8A]',
+    titleClass: smokeClass,
   },
   error: {
     emptyState: false,
-    titleClass: 'text-[#0A0A0A]',
+    titleClass: chalkClass,
   },
   empty: {
     emptyState: true,
-    titleClass: 'text-[#8A8A8A]',
+    titleClass: smokeClass,
   },
 }
+
+// An aside the reader must not skip: a hairline above it, 13px Smoke below.
+// The system has no icon for "read this first", so the rule and the type carry
+// it — one paragraph, no glyph, no tinted panel.
+const NOTE_CLASS = `max-w-[40rem] border-t ${ruleDarkClass} pt-6 text-left font-utility text-caption font-normal leading-6 ${smokeClass}`
 
 function formatErrorMessage(requestError, fallback) {
   if (requestError instanceof Error && requestError.message) {
@@ -99,14 +115,11 @@ function readStatusDetails(status) {
 
 function DisclaimerNote({ disclaimer, scope }) {
   return (
-    <p className="mt-8 flex max-w-[40rem] items-start gap-2 border-t border-[#E4E4E4] pt-6 text-left text-xs leading-5 text-[#8A8A8A]">
-      <span aria-hidden="true">
-        ▲
-      </span>
-      <span>
-        <strong className="text-[#4A4A4A]">{scope}: </strong>
-        {asText(disclaimer, 'Simulated demo data, not an observed ATS connection.')}
-      </span>
+    <p className={`mt-8 ${NOTE_CLASS}`}>
+      {/* Weight 500 at the note's own size marks the scope word. A bold run or a
+          second colour would be a heavier signal than an aside warrants. */}
+      <span className="font-medium">{scope}: </span>
+      {asText(disclaimer, 'Simulated demo data, not an observed ATS connection.')}
     </p>
   )
 }
@@ -115,12 +128,12 @@ function BlockShell({ titleId, eyebrow, title, description, className = '', chil
   return (
     <Card
       as="section"
-      variant="light"
+      variant="dark"
       eyebrow={eyebrow}
       title={title}
       titleId={titleId}
       description={description}
-      actions={<Badge source="simulated" />}
+      actions={<SourceTag source="simulated" />}
       aria-labelledby={titleId}
       padding="none"
       className={className}
@@ -135,16 +148,12 @@ function StatusMessage({ tone, title, message, testId }) {
 
   return (
     <div
-      className={`border-t border-[#E4E4E4] ${details.emptyState ? 'px-6 py-16' : 'pt-8'}`}
+      className={`border-t ${ruleDarkClass} ${details.emptyState ? 'px-6 py-16' : 'pt-8'}`}
       data-testid={testId}
       role={tone === 'error' ? 'alert' : 'status'}
     >
-      <p
-        className={`text-[0.65rem] font-bold uppercase tracking-[0.22em] ${details.titleClass}`}
-      >
-        {title}
-      </p>
-      <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+      <p className={`${captionClass} ${details.titleClass}`}>{title}</p>
+      <p className={`mt-3 max-w-[40rem] text-left ${bodyClass} ${smokeClass}`}>
         {message}
       </p>
     </div>
@@ -171,7 +180,7 @@ function RadarBlock({
       className={className}
     >
       <form
-        className="flex flex-col items-start gap-8 border-t border-[#E4E4E4] pt-8 sm:flex-row sm:items-end"
+        className={`flex flex-col items-start gap-8 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-end`}
         onSubmit={onSubmit}
       >
         <div className="flex-1">
@@ -234,37 +243,39 @@ function RadarBlock({
         ) : (
           <div>
             <dl className="grid gap-8 sm:grid-cols-2">
-              <div className="border-t border-[#E4E4E4] pt-4">
+              <div className={`border-t ${ruleDarkClass} pt-4`}>
                 <dt className={dataLabelClass}>Role</dt>
-                <dd className="mt-2 font-mono text-sm text-[#0A0A0A]">
+                <dd className={`mt-2 ${metaClass} ${chalkClass}`}>
                   {asText(radar.role, role)}
                 </dd>
               </div>
-              <div className="border-t border-[#E4E4E4] pt-4">
+              <div className={`border-t ${ruleDarkClass} pt-4`}>
                 <dt className={dataLabelClass}>City</dt>
-                <dd className="mt-2 font-mono text-sm text-[#0A0A0A]">
+                <dd className={`mt-2 ${metaClass} ${chalkClass}`}>
                   {asText(radar.city, city)}
                 </dd>
               </div>
-              <div className="border-t border-[#E4E4E4] pt-4">
+              <div className={`border-t ${ruleDarkClass} pt-4`}>
                 <dt className={dataLabelClass}>Displacement exposure</dt>
                 <dd
-                  className="mt-2 font-serif text-2xl leading-none text-[#0A0A0A]"
+                  className={`mt-2 ${headingSmClass} ${chalkClass}`}
                   data-testid="radar-exposure"
                 >
                   {asText(radar.exposure, 'unknown')}
                 </dd>
               </div>
-              <div className="border-t border-[#E4E4E4] pt-4">
+              <div className={`border-t ${ruleDarkClass} pt-4`}>
                 <dt className={dataLabelClass}>Local demand</dt>
                 <dd
-                  className="mt-2 font-serif text-2xl leading-none text-[#0A0A0A]"
+                  className={`mt-2 ${headingSmClass} ${chalkClass}`}
                   data-testid="radar-demand"
                 >
                   {asText(radar.demand, 'unknown')}
                 </dd>
               </div>
             </dl>
+            {/* Meta row, not a pill: the source reads as a Source Tag would —
+                plain mono Smoke with a "·" separator and no box. */}
             <div className={`mt-8 ${metaRowClass}`}>
               <span>source=simulated</span>
               <span aria-hidden="true">·</span>
@@ -283,14 +294,11 @@ function RadarBlock({
 
 function FilterPanel({ heading, headingId, text, children }) {
   return (
-    <div className="border-t border-[#E4E4E4] pt-6">
-      <h3
-        id={headingId}
-        className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#4A4A4A]"
-      >
+    <div className={`border-t ${ruleDarkClass} pt-6`}>
+      <h3 id={headingId} className={sectionHeadingClass}>
         {heading}
       </h3>
-      <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">{text}</p>
+      <p className={`mt-3 ${bodyCopyClass}`}>{text}</p>
       {children}
     </div>
   )
@@ -318,7 +326,7 @@ function RewriteBlock({
       className={className}
     >
       <form
-        className="flex flex-col items-start gap-8 border-t border-[#E4E4E4] pt-8 sm:flex-row sm:items-end"
+        className={`flex flex-col items-start gap-8 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-end`}
         onSubmit={onSubmit}
       >
         <div className="flex-1">
@@ -381,18 +389,18 @@ function RewriteBlock({
           />
         ) : (
           <div>
-            <div className="flex flex-col gap-6 border-t border-[#E4E4E4] pt-8 sm:flex-row sm:items-start sm:justify-between">
+            <div className={`flex flex-col gap-6 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-start sm:justify-between`}>
               <div>
-                <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
-                  Hidden by this filter
-                </p>
+                <p className={sectionHeadingClass}>Hidden by this filter</p>
+                {/* The block's one hero figure, at the heading size. It stays a
+                    number the reader has to parse, not display typography. */}
                 <p
-                  className="mt-3 font-serif text-5xl leading-none tracking-[-0.03em] text-[#0A0A0A]"
+                  className={`mt-3 ${headingClass} ${chalkClass}`}
                   data-testid="hidden-talent-count"
                 >
                   {hiddenTalentCount === null ? '—' : hiddenTalentCount}
                 </p>
-                <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+                <p className={`mt-4 ${bodyCopyClass}`}>
                   {noHiddenTalent
                     ? 'No candidates were hidden by this post, so there is nothing to rewrite.'
                     : 'Candidates this phrasing never reached, in the bundled demo data.'}
@@ -401,33 +409,29 @@ function RewriteBlock({
               <dl className="sm:text-right">
                 <div>
                   <dt className={dataLabelClass}>Role</dt>
-                  <dd className="mt-2 font-mono text-sm text-[#0A0A0A]">
+                  <dd className={`mt-2 ${metaClass} ${chalkClass}`}>
                     {asText(rewrite.role, 'unknown role')}
                   </dd>
                 </div>
                 <div className="mt-4">
                   <dt className={dataLabelClass}>City</dt>
-                  <dd className="mt-2 font-mono text-sm text-[#0A0A0A]">
+                  <dd className={`mt-2 ${metaClass} ${chalkClass}`}>
                     {asText(rewrite.city, 'unknown city')}
                   </dd>
                 </div>
               </dl>
             </div>
 
-            <div className="mt-12 flex flex-col gap-3 border-t border-[#E4E4E4] pt-8 sm:flex-row sm:items-center">
-              <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#4A4A4A]">
-                Flagged
-                <span aria-hidden="true" className="mx-2">
-                  →
-                </span>
-                rewritten
-              </p>
+            <div className={`mt-12 flex flex-col gap-3 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-center`}>
+              {/* The words and the hairline do the work an arrow used to: the
+                  "·" is the same separator the meta rows use. */}
+              <p className={sectionHeadingClass}>Flagged · rewritten</p>
               <span
                 aria-hidden="true"
-                className="hidden h-px flex-1 bg-[#E4E4E4] sm:block"
+                className={`hidden h-px flex-1 bg-graphite sm:block`}
               />
               <p
-                className="max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]"
+                className={`${bodyCopyClass}`}
                 data-testid="rewrite-reason"
               >
                 {asText(
@@ -446,12 +450,12 @@ function RewriteBlock({
                   'No before text supplied.',
                 )}
               >
-                <p className="mt-4 border-t border-[#E4E4E4] pt-4 text-sm leading-6 text-[#4A4A4A]">
-                  <span className="block text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#4A4A4A]">
+                <p className={`mt-4 border-t ${ruleDarkClass} pt-4`}>
+                  <span className={`block ${dataLabelClass}`}>
                     Restrictive phrase removed
                   </span>
                   <q
-                    className="mt-2 block font-serif text-lg leading-snug text-[#0A0A0A]"
+                    className={`mt-2 block text-left italic ${headingSmClass} ${chalkClass}`}
                     data-testid="restrictive-phrase"
                   >
                     {asText(rewrite.restrictive_phrase, 'no phrase reported')}
@@ -464,11 +468,11 @@ function RewriteBlock({
                 headingId="filter-text-after"
                 text={asText(rewrite.filter_text_after, 'No after text supplied.')}
               >
-                <p className="mt-4 border-t border-[#E4E4E4] pt-4 text-sm leading-6 text-[#4A4A4A]">
-                  <span className="block text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#4A4A4A]">
+                <p className={`mt-4 border-t ${ruleDarkClass} pt-4`}>
+                  <span className={`block ${dataLabelClass}`}>
                     Pedigree wording gone
                   </span>
-                  <span className="mt-2 block max-w-[40rem] text-left">
+                  <span className={`mt-2 block ${bodyCopyClass}`}>
                     {noHiddenTalent
                       ? 'The post was already free of restrictive criteria.'
                       : 'The restrictive phrase and its sibling criteria are gone, replaced by evidence every applicant can show.'}
@@ -484,7 +488,7 @@ function RewriteBlock({
               </p>
             </div>
 
-            <div className="mt-12 border-t border-[#E4E4E4] pt-8">
+            <div className={`mt-12 border-t ${ruleDarkClass} pt-8`}>
               <h3 id="removed-criteria-title" className={sectionHeadingClass}>
                 Criteria removed ({removedCriteria.length})
               </h3>
@@ -493,23 +497,19 @@ function RewriteBlock({
                   aria-labelledby="removed-criteria-title"
                   className="mt-4 grid gap-3 sm:grid-cols-2"
                 >
+                  {/* A hairline-separated list, nothing more: the words already
+                      say what was dropped, so there is no marker glyph. */}
                   {removedCriteria.map((criterion, index) => (
                     <li
                       key={`${criterion}-${index}`}
-                      className="flex items-start gap-3 border-t border-[#E4E4E4] pt-3 text-sm leading-5 text-[#4A4A4A]"
+                      className={`border-t ${ruleDarkClass} pt-3 text-left ${bodyClass} ${smokeClass}`}
                     >
-                      <span
-                        aria-hidden="true"
-                        className="mt-0.5 font-mono text-xs text-[#8A8A8A]"
-                      >
-                        ✕
-                      </span>
-                      <span>{criterion}</span>
+                      {criterion}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+                <p className={`mt-3 ${bodyCopyClass}`}>
                   No criteria were removed from this post.
                 </p>
               )}
@@ -638,30 +638,25 @@ export default function HRConsole({ baseUrl = '' }) {
   return (
     <div>
       <header className="pb-12">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[#8A8A8A]">
-          Employer readiness · Phase 4C
-        </p>
+        <p className={sectionHeadingClass}>Employer readiness · Phase 4C</p>
         {/* An h2, not a second h1: this panel renders inside App's page column,
-            which already owns the document's only h1. */}
-        <h2 className="mt-4 max-w-2xl font-serif text-3xl leading-[1.05] tracking-[-0.03em] text-[#0A0A0A] sm:text-4xl">
+            which already owns the document's only h1. Serif at the heading size;
+            the second line is the same size, italic and one step quieter, which
+            is what makes "not the shortlist" read as the aside it is. */}
+        <h2 className={`mt-4 max-w-2xl ${headingClass} ${chalkClass}`}>
           Rewrite the filter,
-          <span className="block italic text-[#4A4A4A]">
+          <span className={`block italic ${smokeClass}`}>
             not the shortlist.
           </span>
         </h2>
-        <p className="mt-6 max-w-[40rem] text-left text-base leading-7 text-[#4A4A4A]">
+        <p className={`mt-6 ${bodyCopyClass}`}>
           What an employer&rsquo;s own job post does to their shortlist, and the
           evidence-led wording ReRoute swaps in once the audit flags the post.
         </p>
-        <p className="mt-8 flex max-w-[40rem] items-start gap-2 border-t border-[#E4E4E4] pt-6 text-left text-sm leading-6 text-[#8A8A8A]">
-          <span aria-hidden="true">
-            ▲
-          </span>
-          <span>
-            Every number on this page is simulated. Both endpoints serve bundled
-            demo fixtures and are wired to no applicant tracking system, job board
-            or SAP service, so nothing here should be read as observed hiring data.
-          </span>
+        <p className={`mt-8 ${NOTE_CLASS}`}>
+          Every number on this page is simulated. Both endpoints serve bundled
+          demo fixtures and are wired to no applicant tracking system, job board
+          or SAP service, so nothing here should be read as observed hiring data.
         </p>
       </header>
 
@@ -672,7 +667,7 @@ export default function HRConsole({ baseUrl = '' }) {
           radar={radar}
           error={radarError}
           isLoading={isRadarLoading}
-          className="mt-24 border-t border-[#E4E4E4] pt-24"
+          className={`mt-24 border-t ${ruleDarkClass} pt-24`}
           onRoleChange={(event) => setRole(event.target.value)}
           onCityChange={(event) => setCity(event.target.value)}
           onSubmit={handleRadarSubmit}
@@ -683,7 +678,7 @@ export default function HRConsole({ baseUrl = '' }) {
           rewrite={rewrite}
           error={rewriteError}
           isLoading={isRewriteLoading}
-          className="mt-24 border-t border-[#E4E4E4] pt-24"
+          className={`mt-24 border-t ${ruleDarkClass} pt-24`}
           onJobPostChange={(event) => setJobPostId(event.target.value)}
           onSubmit={handleRewriteSubmit}
         />

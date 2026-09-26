@@ -1,6 +1,10 @@
 import { controlFieldHintClass, controlFieldLabelClass } from '../styles/classes.js'
 
 /**
+ * Label above, control, then one sentence of helper copy below in Slate/Smoke.
+ * The hint is a subordinate footnote to the control, not a second label
+ * wedged between the label and the thing it describes — no icon, ever.
+ *
  * @param {{
  *   id?: string,
  *   label?: string,
@@ -20,16 +24,11 @@ export default function Field({
 }) {
   return (
     <div className={className}>
-      <label
-        htmlFor={htmlFor ?? id}
-        className={controlFieldLabelClass}
-      >
+      <label htmlFor={htmlFor ?? id} className={controlFieldLabelClass}>
         {label}
       </label>
-      {hint === undefined ? null : (
-        <p className={controlFieldHintClass}>{hint}</p>
-      )}
       <div className="mt-2">{children}</div>
+      {hint === undefined ? null : <p className={controlFieldHintClass}>{hint}</p>}
     </div>
   )
 }

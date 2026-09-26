@@ -56,6 +56,22 @@ function labelledCard(label) {
   return card
 }
 
+/**
+ * The panel header. The route's source tag is the only one on screen, so scoping
+ * to the header keeps it distinguishable from the `source: 'simulated'` row the
+ * paid bridge block happens to print from the same fixture.
+ */
+function panelHeader() {
+  const section = screen.getByRole('heading', { name: 'Route map' }).closest('section')
+  const header = section === null ? null : section.firstElementChild
+
+  if (!(header instanceof HTMLElement)) {
+    throw new Error('Route map header is missing')
+  }
+
+  return header
+}
+
 describe('RouteMap', () => {
   beforeEach(() => {
     getRouteMock.mockReset()
@@ -136,19 +152,19 @@ describe('RouteMap', () => {
   it('labels the route source from the response and switches it for a live route', async () => {
     const { unmount } = render(<RouteMap />)
 
-    expect(screen.getByText('Source pending')).toBeInTheDocument()
+    expect(within(panelHeader()).getByText('source pending')).toBeInTheDocument()
 
     getRouteMock.mockResolvedValue(ROUTE)
     fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
-    expect(await screen.findByText('Simulated')).toBeInTheDocument()
+    expect(await within(panelHeader()).findByText('simulated')).toBeInTheDocument()
     unmount()
 
     getRouteMock.mockResolvedValue({ ...ROUTE, source: 'live' })
     render(<RouteMap />)
     fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
 
-    expect(await screen.findByText('Live')).toBeInTheDocument()
-    expect(screen.queryByText('Simulated')).not.toBeInTheDocument()
+    expect(await within(panelHeader()).findByText('live')).toBeInTheDocument()
+    expect(within(panelHeader()).queryByText('simulated')).not.toBeInTheDocument()
   })
 
   it('keeps the live and simulated distinction visible while loading', async () => {
@@ -305,7 +321,7 @@ describe('RouteMap', () => {
         name: 'Route stations from Manual testing to qa-analyst',
       }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Simulated')).toBeInTheDocument()
+    expect(within(panelHeader()).getByText('simulated')).toBeInTheDocument()
   })
 
   it('renders a rejected request as an alert and stays retryable', async () => {

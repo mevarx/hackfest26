@@ -111,8 +111,8 @@ describe('AgentLog', () => {
     expect(log).toHaveAttribute('aria-live', 'polite')
 
     for (const label of ['Running', 'Done', 'Waiting for consent']) {
-      const badge = screen.getByText(label).parentElement
-      const indicator = badge?.querySelector('[data-badge-indicator]')
+      const statusLine = screen.getByText(label).parentElement
+      const indicator = statusLine?.querySelector('[data-status-indicator]')
 
       expect(indicator).not.toBeNull()
       expect(indicator).toHaveAttribute('aria-hidden', 'true')
@@ -149,25 +149,25 @@ describe('AgentLog', () => {
       <AgentLog events={EVENTS} source="simulated" />,
     )
 
-    expect(header().getByText('Simulated')).toBeInTheDocument()
+    expect(header().getByText('simulated')).toBeInTheDocument()
 
     rerender(<AgentLog events={EVENTS} source="live" />)
 
-    expect(header().getByText('Live')).toBeInTheDocument()
-    expect(screen.queryByText('Simulated')).not.toBeInTheDocument()
+    expect(header().getByText('live')).toBeInTheDocument()
+    expect(screen.queryByText('simulated')).not.toBeInTheDocument()
     expect(screen.getByText('Live event adapter')).toBeInTheDocument()
   })
 
-  it('renders a three-way source badge for local, simulated, and live', () => {
+  it('renders a three-way source tag for local, simulated, and live', () => {
     const { rerender } = render(<AgentLog events={EVENTS} source="local" />)
 
-    expect(header().getByText('Local')).toBeInTheDocument()
+    expect(header().getByText('local')).toBeInTheDocument()
     expect(screen.getByText('In-browser event adapter')).toBeInTheDocument()
 
     rerender(<AgentLog events={EVENTS} source="simulated" />)
 
-    expect(header().getByText('Simulated')).toBeInTheDocument()
-    expect(screen.queryByText('Local')).not.toBeInTheDocument()
+    expect(header().getByText('simulated')).toBeInTheDocument()
+    expect(screen.queryByText('local')).not.toBeInTheDocument()
   })
 
   it('labels every line with the source of that event', () => {
@@ -181,42 +181,44 @@ describe('AgentLog', () => {
     })
     const entries = within(log).getAllByRole('listitem')
 
-    expect(entries.map((entry) => within(entry).getByText(/^(Live|Simulated|Local)$/).textContent)).toEqual([
-      'Live',
-      'Simulated',
-      'Local',
+    expect(entries.map((entry) => within(entry).getByText(/^(live|simulated|local)$/).textContent)).toEqual([
+      'live',
+      'simulated',
+      'local',
     ])
 
-    const liveBadge = within(log).getByLabelText('Event source live')
-    const simulatedBadge = within(log).getByLabelText('Event source simulated')
-    const localBadge = within(log).getByLabelText('Event source local')
+    const liveTag = within(log).getByLabelText('Event source live')
+    const simulatedTag = within(log).getByLabelText('Event source simulated')
+    const localTag = within(log).getByLabelText('Event source local')
 
-    for (const badge of [liveBadge, simulatedBadge, localBadge]) {
-      expect(badge).toHaveAttribute('role', 'img')
+    for (const tag of [liveTag, simulatedTag, localTag]) {
+      expect(tag).toHaveAttribute('role', 'img')
     }
 
     // The source mark is monochrome and structural: live is a filled dot,
     // simulated a hollow one, and local carries no dot at all.
     expect(
-      liveBadge.querySelector('[data-badge-indicator]'),
+      liveTag.querySelector('[data-source-indicator]'),
     ).toHaveClass('bg-current')
     expect(
-      simulatedBadge.querySelector('[data-badge-indicator]'),
+      simulatedTag.querySelector('[data-source-indicator]'),
     ).not.toHaveClass('bg-current')
     expect(
-      localBadge.querySelector('[data-badge-indicator]'),
+      localTag.querySelector('[data-source-indicator]'),
     ).toBeNull()
 
-    // Only the live badge is drawn in full ink; the weaker sources are muted.
-    expect(liveBadge).not.toHaveClass('text-slate')
-    expect(simulatedBadge).toHaveClass('text-slate')
-    expect(localBadge).toHaveClass('text-slate')
+    // Every source is quiet metadata — mono at the meta size in muted Smoke.
+    // No source is promoted to full ink; the dot shape alone carries the news.
+    for (const tag of [liveTag, simulatedTag, localTag]) {
+      expect(tag).toHaveClass('font-mono')
+      expect(tag).toHaveClass('text-smoke')
+    }
   })
 
   it('falls back to the stream source when an event carries none', () => {
     const log = renderLog({ source: 'local' })
 
-    expect(within(log).getAllByText('Local')).toHaveLength(EVENTS.length)
+    expect(within(log).getAllByText('local')).toHaveLength(EVENTS.length)
   })
 
   it('shows the connection indicator and a reconnect affordance', () => {

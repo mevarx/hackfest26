@@ -1,8 +1,18 @@
-import { controlBaseClass, controlHeightClass } from '../styles/classes.js'
+import { controlBaseClass, controlHeightClass, smokeClass } from '../styles/classes.js'
 
+// index.css already strips the native number spinner; this draws a replacement
+// in Smoke so the stepper belongs to the field's own type. Hover deepens to
+// Chalk and tints the hit area with the Graphite hairline value — a surface
+// step, not a colour. Amber stays reserved for focus, which these grips cannot
+// reach (they are `tabIndex={-1}` and mouse-driven), so the ring here is only
+// ever seen after a programmatic focus.
 const STEPPER_ROW_CLASS = 'absolute right-1 top-1 flex flex-col gap-0.5'
-const STEPPER_BUTTON_CLASS =
-  'grid h-4 w-6 place-items-center rounded text-[#8A8A8A] transition-colors hover:bg-[#E4E4E4] hover:text-[#0A0A0A] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#F5A623]'
+const STEPPER_BUTTON_CLASS = [
+  'grid h-4 w-6 place-items-center rounded-tag transition-colors',
+  'hover:bg-graphite hover:text-chalk',
+  'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-compass-amber',
+  smokeClass,
+].join(' ')
 
 function toNumber(value) {
   const parsed = Number(value)

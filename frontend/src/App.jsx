@@ -1,7 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
 import AgentLog from './components/AgentLog.jsx'
-import Badge from './components/Badge.jsx'
-import Card from './components/Card.jsx'
 import GhostTwinPanel from './components/GhostTwinPanel.jsx'
 import Reveal from './components/Reveal.jsx'
 import StageProgress from './components/StageProgress.jsx'
@@ -13,6 +11,21 @@ import { useAgentStream } from './hooks/useAgentStream.js'
 import HRConsole from './pages/HRConsole.jsx'
 import RouteMap from './pages/RouteMap.jsx'
 import WorkerApp from './pages/WorkerApp.jsx'
+import {
+  bodyClass,
+  bodyCopyClass,
+  captionClass,
+  chalkClass,
+  displayClass,
+  headingSmClass,
+  inkClass,
+  measureClass,
+  metaClass,
+  ruleDarkClass,
+  sectionHeadingClass,
+  slateClass,
+  smokeClass,
+} from './styles/classes.js'
 
 const DEMO_STAGES = [
   { number: '01', label: 'Understand', description: 'Recover durable skills' },
@@ -28,21 +41,25 @@ const STAGE_STATUS_LABELS = {
   settled: ['complete', 'active', 'upcoming', 'upcoming'],
 }
 
-const RULE_CLASS = 'border-[#E4E4E4]'
+/** Content column. The style reference caps the page at 1120px. */
+const PAGE_COLUMN_CLASS = 'mx-auto max-w-[70rem] px-5 sm:px-8'
 
-/** One small-caps gray label and one 1px rule. No boxed treatment. */
+/** One small-caps caption, then a 1px Graphite hairline across the full content
+ *  width — the divider the system uses instead of a background-color change.
+ *  A filled 1px box, not a border: the hairline spans the whole width with no
+ *  side edges, so a border would draw verticals where none belong. */
 function SectionDivider({ children }) {
   return (
-    <div className="flex items-center gap-5 text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
-      <span className="shrink-0">{children}</span>
-      <span className={`h-px flex-1 ${RULE_CLASS}`} aria-hidden="true" />
+    <div className="space-y-6">
+      <p className={sectionHeadingClass}>{children}</p>
+      <div className="h-px w-full bg-graphite" aria-hidden="true" />
     </div>
   )
 }
 
 /**
  * A major section: 96px of air, one hairline, 96px more. A `label` renders the
- * small-caps divider rule; without one the hairline alone separates the block.
+ * small-caps divider; without one the hairline alone separates the block.
  *
  * @param {{
  *   label?: string,
@@ -52,7 +69,7 @@ function SectionDivider({ children }) {
  */
 function SectionStack({ label, children, className = '' }) {
   return (
-    <section className={`mt-24 border-t ${RULE_CLASS} pt-24 ${className}`.trim()}>
+    <section className={`mt-24 border-t ${ruleDarkClass} pt-24 ${className}`.trim()}>
       {label === undefined ? null : (
         <Reveal>
           <SectionDivider>{label}</SectionDivider>
@@ -118,22 +135,30 @@ export default function App() {
   }, [isStreaming, sessionId])
 
   return (
-    <div className="min-h-dvh bg-[#FAFAFA] font-sans text-[#0A0A0A]">
-      <header className="border-b border-white/10 bg-[#0A0A0A] text-[#FAFAFA]">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8">
+    <div className="min-h-dvh bg-obsidian font-utility text-chalk">
+      {/* Nav bar: Obsidian with a 1px Graphite bottom border and no shadow —
+          depth comes from the hairline, never from elevation. */}
+      <header className={`border-b ${ruleDarkClass} bg-obsidian`}>
+        <div
+          className={`${PAGE_COLUMN_CLASS} flex flex-wrap items-center justify-between gap-4 py-4`}
+        >
           <div className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-control bg-[#FAFAFA] font-serif text-xl font-bold leading-none text-[#0A0A0A]">
+            <span
+              className={`grid h-9 w-9 place-items-center rounded-tag border ${ruleDarkClass} bg-obsidian font-editorial text-[1.125rem] leading-none ${chalkClass}`}
+            >
               R
             </span>
             <div>
-              <p className="font-serif text-xl leading-none">ReRoute</p>
-              <p className="mt-1 text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
-                Career orchestration
+              <p className={`font-editorial text-[1.125rem] leading-none ${chalkClass}`}>
+                ReRoute
               </p>
+              <p className={`mt-1 ${captionClass} ${smokeClass}`}>Career orchestration</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <span className="hidden text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#8A8A8A] sm:inline">
+          {/* Right rail is plain metadata text: a mono meta line, the demo switch,
+              then the slice indicator as bare text — no bordered pill. */}
+          <div className="flex flex-wrap items-center gap-6">
+            <span className={`hidden sm:inline ${metaClass} ${smokeClass}`}>
               Re Route · Hackfest demo
             </span>
             <Switch
@@ -142,54 +167,53 @@ export default function App() {
               onChange={toggleDemoMode}
               label="Demo mode"
             />
-            <Badge status="idle" label="Slice 04" />
+            <span className={`${metaClass} ${smokeClass}`}>Slice 04</span>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 sm:px-8">
-        {/* Hero: the one focal point on first load — a large serif headline, one
-            measure of body copy, then the persona summary as the single card. */}
+      <main className={PAGE_COLUMN_CLASS}>
+        {/* Hero: left-aligned (this is a working tool, not a landing-page
+            manifesto) — one serif display line, one measure of body copy, then
+            the persona card, the single bordered card on the page. */}
         <section aria-labelledby="demo-title" className="pb-4 pt-20 sm:pt-24 lg:pt-28">
           <Reveal>
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[#8A8A8A]">
-              Demo stage · Kavya
-            </p>
+            <p className={`${captionClass} ${smokeClass}`}>Demo stage · Kavya</p>
           </Reveal>
 
           <Reveal delay={70}>
-            <h1
-              id="demo-title"
-              className="mt-6 max-w-2xl font-serif text-5xl leading-[0.98] tracking-[-0.04em] text-[#0A0A0A] sm:text-6xl lg:text-7xl"
-            >
+            <h1 id="demo-title" className={`mt-6 ${displayClass} ${chalkClass}`}>
               Every agent,{' '}
-              <span className="block italic text-[#4A4A4A]">in sequence.</span>
+              {/* Same size, italic, one step quieter than the line above it. */}
+              <span className={`block italic ${smokeClass}`}>in sequence.</span>
             </h1>
           </Reveal>
 
           <Reveal delay={140}>
-            <p className="mt-8 max-w-[40rem] text-left text-base leading-7 text-[#4A4A4A] sm:text-lg sm:leading-8">
-              A transparent view of the orchestration backbone as ReRoute turns a
-              career transition into a fair, evidence-led plan.
+            <p className={`mt-8 ${bodyCopyClass}`}>
+              A transparent view of the orchestration backbone as ReRoute turns a career
+              transition into a fair, evidence-led plan.
             </p>
           </Reveal>
 
+          {/* Demo persona: the one card allowed to invert. Paper surface, Fog
+              hairline, 8px radius, and a single 2px amber stroke on the left
+              edge — capped at the reading width so it breaks out of the column
+              directly below the headline. */}
           <Reveal delay={210}>
-            <Card
-              variant="light"
-              padding="none"
-              className="mt-16 max-w-[40rem] rounded-card border border-[#E4E4E4] bg-white p-6 sm:p-8"
-            >
-              <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
-                Demo persona
-              </p>
-              <p className="mt-3 font-serif text-2xl leading-tight tracking-[-0.02em] text-[#0A0A0A]">
-                Kavya · 29 · Chennai
-              </p>
-              <p className="mt-3 max-w-[36rem] text-left text-sm leading-6 text-[#4A4A4A]">
-                Manual tester returning after an 18-month caregiving break
-              </p>
-            </Card>
+            <div className="relative mt-16 max-w-[40rem] overflow-hidden rounded-card border border-fog bg-paper p-8">
+              <span
+                className="pointer-events-none absolute inset-y-0 left-0 w-0.5 bg-compass-amber"
+                aria-hidden="true"
+              />
+              <div className="pl-4">
+                <p className={`${captionClass} ${slateClass}`}>Demo persona</p>
+                <p className={`mt-3 ${headingSmClass} ${inkClass}`}>Kavya · 29 · Chennai</p>
+                <p className={`mt-3 text-left ${bodyClass} ${slateClass}`}>
+                  Manual tester returning after an 18-month caregiving break
+                </p>
+              </div>
+            </div>
           </Reveal>
         </section>
 
@@ -203,13 +227,13 @@ export default function App() {
               isStreaming={isStreaming}
             />
           </Reveal>
+          {/* Plain text, no second hairline and no alert box — the section
+              divider already separates this from the form above it. */}
           {startError === '' ? null : (
             <Reveal delay={60}>
-              <div role="alert" className={`border-t ${RULE_CLASS} pt-8`}>
-                <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#4A4A4A]">
-                  Session could not start
-                </p>
-                <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#0A0A0A]">
+              <div role="alert" className="space-y-3">
+                <p className={`${captionClass} ${smokeClass}`}>Session could not start</p>
+                <p className={`${measureClass} text-left ${bodyClass} ${chalkClass}`}>
                   {startError}
                 </p>
               </div>
@@ -254,11 +278,18 @@ export default function App() {
           </Reveal>
         </SectionStack>
 
-        <footer className={`mt-24 border-t ${RULE_CLASS} py-24`}>
+        {/* Footer: 1px Graphite top border, transparent, 40px of vertical air.
+            No fill, no shadow. */}
+        <footer className={`mt-24 border-t ${ruleDarkClass} py-10`}>
           <Reveal>
-            <p className="max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
-              Every panel labels its own data source. Simulated results are never
-              presented as SAP results.
+            <p
+              className={`${measureClass} text-left font-utility text-label font-normal leading-body ${smokeClass}`}
+            >
+              Every panel labels its own data source. Simulated results are never presented as
+              SAP results.
+            </p>
+            <p className={`mt-6 ${metaClass} ${smokeClass}`}>
+              Re Route · Hackfest demo build · Slice 04
             </p>
           </Reveal>
         </footer>

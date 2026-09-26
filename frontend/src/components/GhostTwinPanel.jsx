@@ -2,17 +2,27 @@ import { useEffect, useRef, useState } from 'react'
 import { runGhostTwin } from '../api.js'
 import { isAbortError } from '../lib/guards.js'
 import {
+  bodyClass,
   bodyCopyClass,
+  captionClass,
+  chalkClass,
   dataLabelClass,
+  focusRingClass,
+  headingSmClass,
+  inlineLabelClass,
+  metaClass,
   metaRowClass,
+  ruleDarkClass,
   sectionHeadingClass,
+  smokeClass,
 } from '../styles/classes.js'
-import Badge from './Badge.jsx'
 import Button from './Button.jsx'
 import Card from './Card.jsx'
 import Field from './Field.jsx'
 import NumberInput from './NumberInput.jsx'
 import Select from './Select.jsx'
+import SourceTag from './SourceTag.jsx'
+import StatusLine from './StatusLine.jsx'
 import Switch from './Switch.jsx'
 import TextInput from './TextInput.jsx'
 
@@ -295,40 +305,47 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
   const scoringMode = getScoringMode(simulateLegacyAts)
   const editedFields = getEditedFields(form)
   const hasPendingEdits = editedFields.length > 0
-  // Monochrome verdict: a flagged run is marked by a black rule and black label,
-  // a passing run by a gray one. No red, no green.
-  const verdictClass = isPass
-    ? 'border-[#E4E4E4] text-[#4A4A4A]'
-    : 'border-[#0A0A0A] text-[#0A0A0A]'
+  // The verdict is a Status Line, not a banner: a filled Pulse dot reads as a
+  // clean run, and the outlined dot with its thin amber ring reads as a run
+  // blocked on the threshold. That ring is the one documented place amber may
+  // repeat, so a passing audit gets no colour at all.
+  const verdictStatus = isPass ? 'done' : 'waiting'
+  const verdictLabel = isPass ? 'PASS' : 'FLAGGED'
 
   return (
     <Card
       as="section"
-      variant="light"
+      variant="dark"
       eyebrow="Bias audit · Kavya"
       title="Ghost Twin audit"
       titleId="ghost-twin-title"
       description="Compare a candidate with counterfactual twins before making a fair role match."
-      actions={<Badge source={source ?? 'pending'} />}
+      actions={<SourceTag source={source ?? 'pending'} />}
       aria-labelledby="ghost-twin-title"
       aria-busy={isLoading}
       padding="none"
-      className="rounded-card border border-[#E4E4E4] bg-white p-6 sm:p-8"
+      // Carbon is the deepest surface in the system and this panel is the one
+      // place that earns it. The lift is a value step off Obsidian plus the same
+      // 1px Graphite rule everything else uses — never a shadow.
+      className={`rounded-card border ${ruleDarkClass} bg-carbon p-8 sm:p-10`}
     >
-      <div className="flex flex-col gap-4 border-t border-[#E4E4E4] pt-8 sm:flex-row sm:items-baseline sm:justify-between">
+      <div className={`flex flex-col gap-4 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-baseline sm:justify-between`}>
         <div>
           <p className={sectionHeadingClass}>Candidate</p>
-          <p className="mt-2 font-serif text-lg text-[#0A0A0A]">
+          <p className={`mt-2 ${headingSmClass} ${chalkClass}`}>
             Kavya · {form.age} · {form.city}
           </p>
         </div>
         <div className="sm:text-right">
           <p className={sectionHeadingClass}>Role context</p>
-          <p className="mt-2 font-mono text-sm text-[#0A0A0A]">{ROLE_ID}</p>
+          <p className={`mt-2 ${metaClass} ${smokeClass}`}>{ROLE_ID}</p>
         </div>
       </div>
 
-      <div className="mt-8 flex flex-col items-start gap-4 border-t border-[#E4E4E4] pt-8 sm:flex-row sm:items-center sm:justify-between">
+      <div className={`mt-8 flex flex-col items-start gap-4 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-center sm:justify-between`}>
+        {/* The nav bar's minimal switch: Graphite outline off, Chalk outline on,
+            state carried by the knob's position. Not a coloured track — amber
+            stays on the focus ring. */}
         <Switch
           id="simulate-legacy-ats"
           checked={simulateLegacyAts}
@@ -337,6 +354,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
           label="Simulate Legacy ATS"
           description="Add a comparison run for a legacy, biased screening model."
         />
+        {/* The one filled button on this view. */}
         <Button
           variant="primary"
           onClick={runAudit}
@@ -350,12 +368,12 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
       <fieldset
         aria-label="Edit the candidate profile"
         disabled={isLoading}
-        className="mt-8 border-t border-[#E4E4E4] pt-8"
+        className={`mt-8 border-t ${ruleDarkClass} pt-8`}
       >
         <p className={sectionHeadingClass}>Edit the candidate profile</p>
         <p
           id="ghost-twin-editor-description"
-          className="mt-3 max-w-[40rem] text-left text-xs leading-5 text-[#4A4A4A]"
+          className={`mt-3 ${bodyCopyClass}`}
         >
           Change any attribute and re-run. The pure-Python engine recomputes
           every twin, so a fair-merit run stays flat and a legacy run moves.
@@ -450,7 +468,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
           </Field>
         </div>
 
-        <div className="mt-8 flex flex-col items-start gap-4 border-t border-[#E4E4E4] pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className={`mt-8 flex flex-col items-start gap-4 border-t ${ruleDarkClass} pt-6 sm:flex-row sm:items-center sm:justify-between`}>
           <p className={bodyCopyClass} data-testid="edit-summary">
             {hasPendingEdits
               ? `Edited: ${editedFields
@@ -458,8 +476,10 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
                   .join(', ')}`
               : 'No edits yet. The seeded profile is Kavya’s.'}
           </p>
+          {/* Second action on the view: Ghost Outline, never a second filled
+              button beside the Run Audit primary. */}
           <Button
-            variant="secondary"
+            variant="ghost"
             onClick={runAudit}
             disabled={isLoading || !hasPendingEdits}
             aria-busy={isLoading}
@@ -469,7 +489,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
         </div>
       </fieldset>
 
-      <div className={`mt-8 border-t border-[#E4E4E4] pt-8 ${metaRowClass}`} aria-live="polite">
+      <div className={`mt-8 border-t ${ruleDarkClass} pt-8 ${metaRowClass}`} aria-live="polite">
         <span>{hasAudit ? `Source=${source}` : 'Source=pending'}</span>
         <span aria-hidden="true">·</span>
         <span>{scoringMode}</span>
@@ -483,10 +503,8 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
           role="status"
           aria-live="polite"
         >
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
-            Loading audit…
-          </p>
-          <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#4A4A4A]">
+          <p className={sectionHeadingClass}>Loading audit…</p>
+          <p className={`mx-auto mt-3 max-w-[40rem] text-center ${bodyClass} ${smokeClass}`}>
             Comparing {form.age}-year-old candidates in {form.city} against
             counterfactual twins.
           </p>
@@ -496,20 +514,16 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
           className="px-6 py-16 text-center"
           role="alert"
         >
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#0A0A0A]">
-            Audit unavailable
-          </p>
-          <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#0A0A0A]">{error}</p>
-          <p className="mx-auto mt-3 max-w-[40rem] text-center text-xs leading-5 text-[#8A8A8A]">
+          <p className={`${captionClass} ${chalkClass}`}>Audit unavailable</p>
+          <p className={`mx-auto mt-3 max-w-[40rem] text-center ${bodyClass} ${chalkClass}`}>{error}</p>
+          <p className={`mx-auto mt-3 max-w-[40rem] text-center ${bodyClass} ${smokeClass}`}>
             The audit could not be completed. Try the request again.
           </p>
         </div>
       ) : !hasAudit ? (
         <div className="px-6 py-16 text-center">
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
-            Ready to audit
-          </p>
-          <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#4A4A4A]">
+          <p className={sectionHeadingClass}>Ready to audit</p>
+          <p className={`mx-auto mt-3 max-w-[40rem] text-center ${bodyClass} ${smokeClass}`}>
             Run the audit to see how each counterfactual changes the base
             score. The server decides the fairness threshold.
           </p>
@@ -517,27 +531,27 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
       ) : (
         <div className="mt-12 space-y-16">
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-            <div className="border-t border-[#E4E4E4] pt-4">
+            <div className={`border-t ${ruleDarkClass} pt-4`}>
               <p className={dataLabelClass}>Actual score</p>
-              <p className="mt-1 font-mono text-xl text-[#0A0A0A]">
+              <p className={`mt-1 ${metaClass} ${chalkClass}`}>
                 {formatScore(audit.actual_score)}
               </p>
             </div>
-            <div className="border-t border-[#E4E4E4] pt-4">
+            <div className={`border-t ${ruleDarkClass} pt-4`}>
               <p className={dataLabelClass}>Max delta</p>
-              <p className="mt-1 font-mono text-xl text-[#0A0A0A]">
+              <p className={`mt-1 ${metaClass} ${chalkClass}`}>
                 {formatScore(audit.max_delta)}
               </p>
             </div>
-            <div className="border-t border-[#E4E4E4] pt-4">
+            <div className={`border-t ${ruleDarkClass} pt-4`}>
               <p className={dataLabelClass}>Threshold</p>
-              <p className="mt-1 font-mono text-xl text-[#0A0A0A]">
+              <p className={`mt-1 ${metaClass} ${chalkClass}`}>
                 {formatScore(audit.threshold)}
               </p>
             </div>
-            <div className="border-t border-[#E4E4E4] pt-4">
+            <div className={`border-t ${ruleDarkClass} pt-4`}>
               <p className={dataLabelClass}>Source</p>
-              <p className="mt-1 font-mono text-sm text-[#4A4A4A]">
+              <p className={`mt-1 ${metaClass} ${smokeClass}`}>
                 {audit.source}
               </p>
             </div>
@@ -547,13 +561,13 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
             role="region"
             tabIndex={0}
             aria-label="Scrollable Ghost Twin results table"
-            className="w-full overflow-x-auto border-t border-[#E4E4E4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5A623]"
+            className={`w-full overflow-x-auto border-t ${ruleDarkClass} ${focusRingClass}`}
           >
-            <table className="w-full min-w-[38rem] text-left text-sm">
+            <table className="w-full min-w-[38rem] text-left">
               <caption className="sr-only">
                 Ghost Twin counterfactual scores for Kavya
               </caption>
-              <thead className="border-b border-[#E4E4E4] text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#4A4A4A]">
+              <thead className={`border-b ${ruleDarkClass} ${captionClass} ${smokeClass}`}>
                 <tr>
                   <th scope="col" className="py-3 pr-4">
                     Twin Variant
@@ -569,7 +583,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E4E4E4]">
+              <tbody className="divide-y divide-graphite">
                 {twins.length > 0 ? (
                   twins.map((twin, index) => {
                     const attribute = getTwinAttribute(twin)
@@ -581,29 +595,32 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
                       <tr key={`${attribute}-${index}`}>
                         <th scope="row" className="py-4 pr-4 font-normal">
                           <span className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold text-[#0A0A0A]">
+                            <span className={inlineLabelClass}>
                               {getTwinLabel(twin)}
                             </span>
+                            {/* "Edited" is a fact about how this row was built,
+                                not a lifecycle state, so it is a plain caption
+                                word — no dot, and no capsule. */}
                             {isEdited ? (
-                              <Badge status="running" label="edited" />
+                              <span className={`${captionClass} ${smokeClass}`}>
+                                edited
+                              </span>
                             ) : null}
                           </span>
-                          <span className="mt-1 block text-xs text-[#8A8A8A]">
+                          <span className={`mt-1 block ${metaClass} ${smokeClass}`}>
                             {formatCounterfactualValue(twin.original_value)} →{' '}
                             {formatCounterfactualValue(twin.counterfactual_value)}
                           </span>
                         </th>
-                        <td className="px-4 py-4 font-mono text-[#4A4A4A]">
+                        <td className={`px-4 py-4 ${metaClass} ${smokeClass}`}>
                           {formatScore(audit.actual_score)}
                         </td>
-                        <td className="px-4 py-4 font-mono text-[#0A0A0A]">
+                        <td className={`px-4 py-4 ${metaClass} ${chalkClass}`}>
                           {formatScore(twin.score)}
                         </td>
                         <td
-                          className={`py-4 pl-4 font-mono ${
-                            twin.delta !== 0
-                              ? 'text-[#0A0A0A]'
-                              : 'text-[#8A8A8A]'
+                          className={`py-4 pl-4 ${metaClass} ${
+                            twin.delta !== 0 ? chalkClass : smokeClass
                           }`}
                         >
                           {formatSignedDelta(twin.delta)}
@@ -615,7 +632,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
                   <tr>
                     <td
                       colSpan={4}
-                      className="px-4 py-16 text-center text-[#8A8A8A]"
+                      className={`px-4 py-16 text-center ${bodyClass} ${smokeClass}`}
                     >
                       No counterfactual twins returned.
                     </td>
@@ -627,23 +644,26 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
 
           {isPass || isFlagged ? (
             <div
-              className="flex flex-col gap-4 border-t border-[#E4E4E4] pt-8 sm:flex-row sm:items-start sm:justify-between"
+              className={`flex flex-col gap-4 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-start sm:justify-between`}
               role="status"
               aria-live="polite"
             >
               <div>
-                <p
-                  className={`inline-block border px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.22em] ${verdictClass}`}
-                >
-                  {isPass ? 'PASS' : 'FLAGGED'}
-                </p>
-                <p className="mt-3 font-serif text-2xl leading-tight text-[#0A0A0A]">
+                {/* The verdict reads as a status word beside a 6px dot, at the
+                    caption scale the system uses for labels. No box, no border,
+                    no background. */}
+                <StatusLine
+                  status={verdictStatus}
+                  label={verdictLabel}
+                  className={captionClass}
+                />
+                <p className={`mt-3 ${headingSmClass} ${chalkClass}`}>
                   {isPass
                     ? 'Fairness guardrail passed'
                     : 'Fairness guardrail needs attention'}
                 </p>
               </div>
-              <p className="max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+              <p className={bodyCopyClass}>
                 {isPass
                   ? 'The observed score difference stays within the server threshold.'
                   : 'A counterfactual score difference exceeds the server threshold.'}

@@ -2,15 +2,23 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getRoute } from '../api.js'
 import { isAbortError } from '../lib/guards.js'
 import {
+  bodyClass,
+  bodyCopyClass,
+  chalkClass,
   dataLabelClass,
+  inlineLabelClass,
+  measureClass,
+  metaClass,
+  ruleDarkClass,
   sectionHeadingClass,
+  smokeClass,
 } from '../styles/classes.js'
-import Badge from '../components/Badge.jsx'
 import Button from '../components/Button.jsx'
 import Card from '../components/Card.jsx'
 import Field from '../components/Field.jsx'
 import NumberInput from '../components/NumberInput.jsx'
 import Select from '../components/Select.jsx'
+import SourceTag from '../components/SourceTag.jsx'
 import TextInput from '../components/TextInput.jsx'
 
 const DEFAULT_FROM_SKILL = 'Manual testing'
@@ -47,6 +55,36 @@ const TARGET_ROLE_OPTIONS = [
 ]
 
 const EMPTY_LEGS = []
+
+// One 1px Graphite rule plus 32px of air separates this panel's sections. Space
+// and a line, never a shift in background tint.
+const SECTION_CLASS = `border-t ${ruleDarkClass} pt-8`
+
+// Loading, empty and error states are plain muted copy in the reading measure
+// with room around them. Never a coloured banner box.
+const STATE_COPY_CLASS =
+  `mx-auto mt-3 ${measureClass} text-center ${bodyClass} ${smokeClass}`
+
+// Provenance line — mono metadata, because "where this came from" is a system
+// note and not prose. Inline with a heading it carries no top margin, so the
+// baseline row stays flush.
+const SOURCE_DETAIL_CLASS = `${metaClass} ${smokeClass}`
+
+// Station track geometry. The connector is a plain 1px Graphite rule: a 1px
+// vertical stub on the stacked layout, a 1px horizontal run on the side-by-side
+// one. No pill radius, no gradient, no fade.
+const CONNECTOR_CLASS = 'bg-graphite'
+const STATION_DOT_BASE_CLASS =
+  'relative z-10 h-4 w-4 shrink-0 border border-chalk sm:h-5 sm:w-5'
+
+// The target role is the endpoint the whole route exists to reach, so it is the
+// one filled dot on the track — the same emphasis the stage track gives its
+// active stage. It is filled in Chalk rather than amber because the single
+// Compass Amber on this screen already belongs to the active stage dot. Every
+// other station stays an outline, which is what lets the line read straight
+// through the track.
+const STATION_DOT_CLASS = `${STATION_DOT_BASE_CLASS} bg-obsidian`
+const TARGET_STATION_DOT_CLASS = `${STATION_DOT_BASE_CLASS} bg-chalk`
 
 /** @type {Record<string, { source: 'live' | 'simulated' | 'local' | 'pending', detail: string }>} */
 const SOURCE_DETAILS = {
@@ -318,19 +356,22 @@ export default function RouteMap({
   return (
     <Card
       as="section"
-      variant="light"
       eyebrow="Stage 02 · Learning pathway"
       title="Route map"
       titleId="route-map-title"
       description="The cheapest chain of skills from where Kavya is today to the target role, priced in hours."
-      actions={<Badge source={sourceDetails.source} />}
+      actions={<SourceTag source={sourceDetails.source} />}
       aria-labelledby="route-map-title"
       aria-busy={isLoading}
       padding="none"
-      className="rounded-card border border-[#E4E4E4] bg-white p-6 sm:p-8"
+      // The Route Builder is a form plus a reading list, so it caps narrower
+      // than the 1120px page column. 52rem (832px) sits a little wider than the
+      // 640px reading measure because the station track needs the room, and
+      // well inside the column so the three fields do not stretch.
+      className="max-w-[52rem]"
     >
       <div className="space-y-16">
-        <form className="border-t border-[#E4E4E4] pt-8" onSubmit={handleSubmit}>
+        <form className={SECTION_CLASS} onSubmit={handleSubmit}>
           <p className={sectionHeadingClass}>Plan a different route</p>
 
           <div className="mt-8 grid gap-8 sm:grid-cols-3">
@@ -369,11 +410,12 @@ export default function RouteMap({
                 max={MAX_HOURS_PER_WEEK}
                 value={draft.hoursPerWeek}
                 onChange={handleHoursPerWeekChange}
-                className="font-mono"
               />
             </Field>
           </div>
 
+          {/* The only button in this panel, and the one the reference names for
+              it, so it holds the viewport's single fill. */}
           <Button
             type="submit"
             variant="primary"
@@ -388,11 +430,11 @@ export default function RouteMap({
         {error === '' ? null : (
           <div
             role="alert"
-            className="border-t border-[#E4E4E4] pt-8"
+            className={SECTION_CLASS}
           >
             <p className={sectionHeadingClass}>Route unavailable</p>
-            <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#0A0A0A]">{error}</p>
-            <p className="mt-2 max-w-[40rem] text-left text-xs leading-5 text-[#8A8A8A]">
+            <p className={`mt-3 ${bodyCopyClass}`}>{error}</p>
+            <p className={`mt-2 ${measureClass} text-left ${SOURCE_DETAIL_CLASS}`}>
               {sourceDetails.detail}. Ask for the route again once the skills graph
               answers.
             </p>
@@ -405,20 +447,20 @@ export default function RouteMap({
             role="status"
             aria-live="polite"
           >
-            <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
+            <p className={sectionHeadingClass}>
               Mapping the least-hours path…
             </p>
-            <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#4A4A4A]">
+            <p className={STATE_COPY_CLASS}>
               Walking the skills graph from {draft.fromSkill} to{' '}
               {draft.targetRole} at {draft.hoursPerWeek} hours a week.
             </p>
           </div>
         ) : route === null ? (
           <div className="px-6 py-16 text-center">
-            <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
+            <p className={sectionHeadingClass}>
               No route yet
             </p>
-            <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#4A4A4A]">
+            <p className={STATE_COPY_CLASS}>
               Build a route to see the skill-by-skill metro line, the hours on
               each hop and the paid bridge at the end.
             </p>
@@ -426,40 +468,42 @@ export default function RouteMap({
         ) : (
           <>
             <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-              <div className="border-t border-[#E4E4E4] pt-4">
+              {/* Each value is server data — a skill name, a role id, a count —
+                  so all four read as mono metadata under a caption label. */}
+              <div className={`border-t ${ruleDarkClass} pt-4`}>
                 <p className={dataLabelClass}>Route from</p>
-                <p className="mt-2 text-sm font-semibold text-[#0A0A0A]">
+                <p className={`mt-2 ${metaClass} ${chalkClass}`}>
                   {route.from_skill ?? '—'}
                 </p>
               </div>
-              <div className="border-t border-[#E4E4E4] pt-4">
+              <div className={`border-t ${ruleDarkClass} pt-4`}>
                 <p className={dataLabelClass}>Route to</p>
-                <p className="mt-2 text-sm font-semibold text-[#0A0A0A]">
+                <p className={`mt-2 ${metaClass} ${chalkClass}`}>
                   {route.target_role ?? '—'}
                 </p>
               </div>
-              <div className="border-t border-[#E4E4E4] pt-4">
+              <div className={`border-t ${ruleDarkClass} pt-4`}>
                 <p className={dataLabelClass}>Total hours</p>
-                <p className="mt-2 font-mono text-xl text-[#0A0A0A]">
+                <p className={`mt-2 ${metaClass} ${chalkClass}`}>
                   {formatHours(route.total_hours)}
                 </p>
               </div>
-              <div className="border-t border-[#E4E4E4] pt-4">
+              <div className={`border-t ${ruleDarkClass} pt-4`}>
                 <p className={dataLabelClass}>
                   Weeks at {formatHours(route.hours_per_week)}h per week
                 </p>
-                <p className="mt-2 font-mono text-xl text-[#0A0A0A]">
+                <p className={`mt-2 ${metaClass} ${chalkClass}`}>
                   {formatWeeks(route.weeks)}
                 </p>
               </div>
             </div>
 
-            <div className="border-t border-[#E4E4E4] pt-8">
+            <div className={SECTION_CLASS}>
               <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
                 <p className={sectionHeadingClass}>
                   Metro line · {stations.length} stations
                 </p>
-                <p className="text-xs text-[#8A8A8A]">{sourceDetails.detail}</p>
+                <p className={SOURCE_DETAIL_CLASS}>{sourceDetails.detail}</p>
               </div>
 
               <p className="sr-only">
@@ -482,7 +526,7 @@ export default function RouteMap({
                       {isFirst ? null : (
                         <span
                           aria-hidden="true"
-                          className={`absolute left-2 top-0 w-0.5 -translate-x-1/2 bg-[#E4E4E4] sm:hidden ${isLast ? 'h-2' : 'inset-y-0'}`}
+                          className={`absolute left-2 top-0 w-px -translate-x-1/2 sm:hidden ${CONNECTOR_CLASS} ${isLast ? 'h-2' : 'inset-y-0'}`}
                         />
                       )}
 
@@ -490,24 +534,20 @@ export default function RouteMap({
                         {isLast ? null : (
                           <span
                             aria-hidden="true"
-                            className="absolute left-1/2 top-1/2 hidden h-0.5 w-full -translate-y-1/2 rounded-pill bg-[#E4E4E4] sm:block"
+                            className={`absolute left-1/2 top-1/2 hidden h-px w-full -translate-y-1/2 sm:block ${CONNECTOR_CLASS}`}
                           />
                         )}
                         <span
                           aria-hidden="true"
-                          className={`relative z-10 h-4 w-4 shrink-0 rounded-pill border-2 bg-white sm:h-5 sm:w-5 ${
-                            station.isTarget ? 'border-[#0A0A0A] bg-[#0A0A0A]' : 'border-[#0A0A0A]'
-                          }`}
+                          className={station.isTarget ? TARGET_STATION_DOT_CLASS : STATION_DOT_CLASS}
                         />
                       </div>
 
                       <div className="min-w-0 sm:mt-3">
-                        <p
-                          className="text-sm font-bold uppercase tracking-[0.12em] text-[#0A0A0A]"
-                        >
+                        <p className={inlineLabelClass}>
                           {station.skill}
                         </p>
-                        <p className="mt-1 font-mono text-xs text-[#4A4A4A]">
+                        <p className={`mt-1 ${metaClass} ${smokeClass}`}>
                           {station.isTarget
                             ? 'Target role'
                             : `${formatHours(station.hours)} hours on this hop`}
@@ -519,16 +559,16 @@ export default function RouteMap({
               </ol>
 
               {stations.length === 0 ? (
-                <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+                <p className={`mt-4 ${bodyCopyClass}`}>
                   The server returned a route with no stations to draw.
                 </p>
               ) : null}
             </div>
 
-            <div className="border-t border-[#E4E4E4] pt-8">
+            <div className={SECTION_CLASS}>
               <p className={sectionHeadingClass}>Paid bridge</p>
               {bridgeEntries.length === 0 ? (
-                <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+                <p className={`mt-3 ${bodyCopyClass}`}>
                   No paid bridge attached to this route. The server returned no
                   bridge block.
                 </p>
@@ -537,10 +577,10 @@ export default function RouteMap({
                   {bridgeEntries.map(([label, value]) => (
                     <div
                       key={label}
-                      className="flex items-baseline justify-between gap-4 border-b border-[#E4E4E4] pb-2"
+                      className={`flex items-baseline justify-between gap-4 border-b ${ruleDarkClass} pb-2`}
                     >
                       <dt className={dataLabelClass}>{label}</dt>
-                      <dd className="text-right font-mono text-sm text-[#0A0A0A]">
+                      <dd className={`text-right ${metaClass} ${chalkClass}`}>
                         {value}
                       </dd>
                     </div>

@@ -1,4 +1,16 @@
-import { controlBaseClass, controlHeightClass } from '../styles/classes.js'
+import { controlBaseClass, controlHeightClass, smokeClass } from '../styles/classes.js'
+
+// `appearance-none` retires the native arrow outright rather than letting the
+// platform wedge its own geometry and colour into the field. The chevron is
+// drawn in Smoke so it reads as a quiet affordance, stepping up to full Chalk
+// only while the pointer is over the control.
+const SELECT_WRAPPER_CLASS = 'group/select relative block'
+const SELECT_CLASS = [
+  controlBaseClass,
+  controlHeightClass,
+  'cursor-pointer appearance-none px-3 pr-9',
+].join(' ')
+const CHEVRON_SLOT_CLASS = `pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center justify-center transition-colors group-hover/select:text-chalk ${smokeClass}`
 
 function ChevronIcon() {
   return (
@@ -24,24 +36,14 @@ function ChevronIcon() {
  * @param {{ className?: string, children?: import('react').ReactNode } & Record<string, unknown>} props
  */
 export default function Select({ className = '', children, ...rest }) {
-  const classes = [
-    controlBaseClass,
-    controlHeightClass,
-    'cursor-pointer appearance-none px-3 pr-9',
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ')
+  const classes = [SELECT_CLASS, className].filter(Boolean).join(' ')
 
   return (
-    <span className="relative block">
+    <span className={SELECT_WRAPPER_CLASS}>
       <select {...rest} className={classes}>
         {children}
       </select>
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center justify-center text-[#8A8A8A]"
-      >
+      <span aria-hidden="true" className={CHEVRON_SLOT_CLASS}>
         <ChevronIcon />
       </span>
     </span>

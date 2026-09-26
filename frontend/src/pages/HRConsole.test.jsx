@@ -98,7 +98,7 @@ describe('HRConsole', () => {
     expect(screen.getByTestId('hidden-talent-count')).toHaveTextContent('12')
   })
 
-  it('renders a Simulated badge on every data block and never a Live badge', async () => {
+  it('marks every data block with a Source Tag and never a live one', async () => {
     radarMock.mockResolvedValue(RADAR_ROW)
     rewriteMock.mockResolvedValue(REWRITE_ROW)
 
@@ -107,12 +107,18 @@ describe('HRConsole', () => {
     await screen.findByTestId('radar-exposure')
     await screen.findByTestId('hidden-talent-count')
 
-    const badges = screen.getAllByText('Simulated')
-    expect(badges.length).toBeGreaterThanOrEqual(2)
+    // Each block header carries a Source Tag — plain mono "· simulated" with an
+    // outlined dot and no pill around it.
+    const sourceTags = screen.getAllByText('simulated')
+    expect(sourceTags).toHaveLength(2)
+    sourceTags.forEach((word) => {
+      expect(word.closest('span.font-mono.inline-flex')).not.toBeNull()
+    })
+    expect(container.querySelectorAll('[data-source-indicator]')).toHaveLength(2)
 
     expect(screen.getAllByText('source=simulated')).toHaveLength(2)
     expect(container.textContent).not.toMatch(LIVE_PATTERN)
-    expect(screen.queryByText('Live')).not.toBeInTheDocument()
+    expect(screen.queryByText('live')).not.toBeInTheDocument()
   })
 
   it('shows the backend disclaimer for both blocks', async () => {
@@ -300,7 +306,7 @@ describe('HRConsole', () => {
     )
     expect(screen.queryByTestId('radar-exposure')).not.toBeInTheDocument()
     expect(screen.queryByTestId('hidden-talent-count')).not.toBeInTheDocument()
-    expect(screen.getAllByText('Simulated')).toHaveLength(2)
+    expect(screen.getAllByText('simulated')).toHaveLength(2)
   })
 
   it('offers every bundled job post id and labels the disclaimer note', async () => {

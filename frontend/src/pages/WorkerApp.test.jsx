@@ -202,28 +202,35 @@ describe('WorkerApp', () => {
     vi.useRealTimers()
   })
 
-  it('labels verified and unverified claims with text and a marker, never colour alone', async () => {
+  it('labels verified and unverified claims with text and a dot, never colour alone', async () => {
     getSessionMock.mockResolvedValue(SESSION_WITH_PASSPORT)
     renderApp({ sessionId: 'session-1' })
 
     const list = await screen.findByRole('list', { name: 'Recovered skills' })
     const [manualTesting, automation] = within(list).getAllByRole('listitem')
-    const verifiedBadge = within(manualTesting).getByText('Verified').parentElement
-    const unverifiedBadge = within(automation).getByText('Unverified').parentElement
+    const verifiedStatus = within(manualTesting).getByText('Verified').parentElement
+    const unverifiedStatus = within(automation).getByText('Unverified').parentElement
 
-    if (verifiedBadge === null || unverifiedBadge === null) {
-      throw new Error('Verification badge is missing')
+    if (verifiedStatus === null || unverifiedStatus === null) {
+      throw new Error('Verification status line is missing')
     }
 
-    expect(
-      verifiedBadge.querySelector('[data-badge-indicator]'),
-    ).toHaveAttribute('aria-hidden', 'true')
-    expect(
-      unverifiedBadge.querySelector('[data-badge-indicator]'),
-    ).toHaveAttribute('aria-hidden', 'true')
+    const verifiedDot = verifiedStatus.querySelector('[data-status-indicator]')
+    const unverifiedDot = unverifiedStatus.querySelector('[data-status-indicator]')
+
+    // The dot is decorative; the word beside it is the state.
+    expect(verifiedDot).toHaveAttribute('aria-hidden', 'true')
+    expect(unverifiedDot).toHaveAttribute('aria-hidden', 'true')
+
+    // Verified is a filled sage dot, unverified a plain Graphite outline — two
+    // different shapes, so the state survives without colour.
+    expect(verifiedDot).toHaveClass('bg-pulse')
+    expect(verifiedDot).not.toHaveClass('running-dot')
+    expect(unverifiedDot).toHaveClass('border-graphite')
+    expect(unverifiedDot).not.toHaveClass('bg-pulse')
   })
 
-  it('lists the credentials and shows a simulated source badge for the passport', async () => {
+  it('lists the credentials and shows a simulated source tag for the passport', async () => {
     getSessionMock.mockResolvedValue(SESSION_WITH_PASSPORT)
     renderApp({ sessionId: 'session-1' })
 
@@ -232,8 +239,8 @@ describe('WorkerApp', () => {
     })
 
     expect(within(credentials).getByText('Manual testing')).toBeInTheDocument()
-    expect(screen.getByText('Simulated')).toBeInTheDocument()
-    expect(screen.queryByText('Live')).not.toBeInTheDocument()
+    expect(screen.getByText('simulated')).toBeInTheDocument()
+    expect(screen.queryByText('live')).not.toBeInTheDocument()
   })
 
   it('marks the passport as live when the server answers live', async () => {
@@ -244,8 +251,8 @@ describe('WorkerApp', () => {
     })
     renderApp({ sessionId: 'session-1' })
 
-    expect(await screen.findByText('Live')).toBeInTheDocument()
-    expect(screen.queryByText('Simulated')).not.toBeInTheDocument()
+    expect(await screen.findByText('live')).toBeInTheDocument()
+    expect(screen.queryByText('simulated')).not.toBeInTheDocument()
   })
 
   it('keeps the pending passport state while the session has no passport yet', async () => {
@@ -258,7 +265,7 @@ describe('WorkerApp', () => {
         'The skills agent is still reading the transcript. The passport lands here as soon as the orchestrator writes it.',
       ),
     ).toBeInTheDocument()
-    expect(screen.getByText('Source pending')).toBeInTheDocument()
+    expect(screen.getByText('source pending')).toBeInTheDocument()
     expect(
       screen.getByText(
         'A skill is needed before a work sample can be scored. The passport has not landed yet.',
@@ -292,7 +299,7 @@ describe('WorkerApp', () => {
     expect(
       screen.getByText('Credential issued and recorded on the passport.'),
     ).toBeInTheDocument()
-    expect(screen.getAllByText('Simulated')).toHaveLength(2)
+    expect(screen.getAllByText('simulated')).toHaveLength(2)
   })
 
   it('reports a rejected work sample without a credential', async () => {
@@ -316,7 +323,7 @@ describe('WorkerApp', () => {
     expect(
       screen.getByText('No credential issued. The score is below the server threshold.'),
     ).toBeInTheDocument()
-    expect(screen.getByText('Live')).toBeInTheDocument()
+    expect(screen.getByText('live')).toBeInTheDocument()
   })
 
   it('renders the ApiError message when the work sample request fails', async () => {

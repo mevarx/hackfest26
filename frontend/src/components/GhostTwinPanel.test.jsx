@@ -138,6 +138,33 @@ function successfulResponse(result) {
   }
 }
 
+// The header's Source Tag is the panel's only inline mono mark: the meta row
+// below it and the Source tile are block copy, so this selector finds the tag
+// exactly — and the source word on its own is ambiguous, because the tile
+// repeats it.
+function getSourceTag(container) {
+  return container.querySelector('span.font-mono.inline-flex')
+}
+
+/**
+ * A verdict rendered as a Status Line: the line wrapping the word, and the dot
+ * that carries the state. Both are narrowed here so a verdict that stops being
+ * a status line fails with a readable message, not a null-property crash.
+ *
+ * @param {Element} word
+ * @returns {{ line: Element, dot: Element }}
+ */
+function readStatusLine(word) {
+  const line = word.closest('span.inline-flex')
+  const dot = line === null ? null : line.querySelector('[data-status-indicator]')
+
+  if (line === null || dot === null) {
+    throw new Error('the verdict is not rendered as a status line with a dot')
+  }
+
+  return { line, dot }
+}
+
 describe('GhostTwinPanel', () => {
   let fetchMock
 
@@ -238,7 +265,7 @@ describe('GhostTwinPanel', () => {
 
   it('renders a zero-delta table and a PASS result for fair mode', async () => {
     fetchMock.mockResolvedValue(successfulResponse(FAIR_RESULT))
-    render(<GhostTwinPanel />)
+    const { container } = render(<GhostTwinPanel />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
 
@@ -266,10 +293,17 @@ describe('GhostTwinPanel', () => {
     expect(secondRowCells[2]).toHaveTextContent('0')
     expect(screen.getByText('Fairness guardrail passed')).toBeInTheDocument()
     expect(screen.getByText('Source=local')).toBeInTheDocument()
-    expect(screen.getByText('Local')).toBeInTheDocument()
-    // A passing run is a gray rule, never the black rule a flagged run gets.
-    expect(passVerdict).toHaveClass('border-[#E4E4E4]', 'text-[#4A4A4A]')
-    expect(passVerdict).not.toHaveClass('border-[#0A0A0A]')
+    // The header Source Tag is plain mono text, and `local` takes no dot —
+    // absence is the quieter signal.
+    expect(getSourceTag(container)).toHaveTextContent(/·\s*local/)
+    expect(getSourceTag(container).querySelector('[data-source-indicator]')).toBeNull()
+    // A passing run is a Status Line: a filled Pulse dot beside the word, in
+    // the panel's own ink. No box, no border, no amber.
+    const { line: passStatusLine, dot: passDot } = readStatusLine(passVerdict)
+    expect(passDot).toHaveClass('bg-pulse')
+    expect(passDot).not.toHaveClass('border')
+    expect(passStatusLine).toHaveClass('text-chalk')
+    expect(passStatusLine.className).not.toMatch(/border|bg-|rounded|shadow/)
     expect(screen.getByText('Pure-Python calculation')).toBeInTheDocument()
     expect(screen.getByText('Synthetic fair merit')).toBeInTheDocument()
     expect(
@@ -301,7 +335,7 @@ describe('GhostTwinPanel', () => {
     })
     expect(payload).not.toHaveProperty('threshold')
 
-    const flaggedBanner = await screen.findByText('FLAGGED')
+    const flaggedVerdict = await screen.findByText('FLAGGED')
     const table = screen.getByRole('table')
     const rows = within(table).getAllByRole('row')
     const firstRowCells = within(rows[1]).getAllByRole('cell')
@@ -313,10 +347,17 @@ describe('GhostTwinPanel', () => {
     expect(secondRowCells[0]).toHaveTextContent('86')
     expect(secondRowCells[1]).toHaveTextContent('98')
     expect(secondRowCells[2]).toHaveTextContent('+12')
-    // Monochrome verdict: a flagged run is marked by a black rule and a black
-    // label, not by a red banner.
-    expect(flaggedBanner.closest('[role="status"]')).not.toBeNull()
-    expect(flaggedBanner).toHaveClass('border-[#0A0A0A]', 'text-[#0A0A0A]')
+    // A flagged run is the one documented amber repeat: an outlined dot with a
+    // 1px amber ring, still a plain word in panel ink and still no banner box.
+    const { line: flaggedStatusLine, dot: flaggedDot } = readStatusLine(flaggedVerdict)
+    expect(flaggedDot).toHaveClass('border-graphite', 'bg-transparent')
+    expect(flaggedDot.className).toContain('var(--color-compass-amber)')
+    expect(flaggedDot).not.toHaveClass('bg-pulse')
+    expect(flaggedStatusLine).toHaveClass('text-chalk')
+    // The status line is a dot and a word, so the retired verdict capsule
+    // cannot come back wearing a different colour: no box, no fill, no radius.
+    expect(flaggedStatusLine.className).not.toMatch(/border|bg-|rounded/)
+    expect(flaggedVerdict.closest('[role="status"]')).not.toBeNull()
     expect(screen.getByText('Fairness guardrail needs attention')).toBeInTheDocument()
     expect(screen.getByText('Source=local')).toBeInTheDocument()
     expect(screen.queryByText('PASS')).not.toBeInTheDocument()
@@ -326,12 +367,16 @@ describe('GhostTwinPanel', () => {
     fetchMock.mockResolvedValue(
       successfulResponse({ ...FAIR_RESULT, source: 'live' }),
     )
-    render(<GhostTwinPanel />)
+    const { container } = render(<GhostTwinPanel />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
 
     expect(await screen.findByText('Source=live')).toBeInTheDocument()
-    expect(screen.getByText('Live')).toBeInTheDocument()
+    // The tag follows the response rather than assuming local, and `live` is
+    // the variant that carries the filled dot.
+    const liveTag = getSourceTag(container)
+    expect(liveTag).toHaveTextContent(/·\s*live/)
+    expect(liveTag.querySelector('[data-source-indicator]')).toHaveClass('bg-current')
     expect(screen.queryByText('Source=local')).not.toBeInTheDocument()
   })
 

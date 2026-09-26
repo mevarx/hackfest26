@@ -1,39 +1,46 @@
 import {
+  chalkClass,
+  inkClass,
   panelDescriptionClass,
   panelEyebrowClass,
   panelTitleClass,
+  smokeClass,
 } from '../styles/classes.js'
 
+// Panel padding runs 32-48px, so the two large steps land on 32px and 40px
+// (the upper one only once there is room for it). `sm` and `md` are kept for
+// the tight framings that wrap a field group rather than a panel.
 const PADDING_CLASS = {
   none: '',
   sm: 'p-3',
   md: 'p-4',
-  lg: 'p-6',
-  xl: 'p-8',
+  lg: 'p-8',
+  xl: 'p-8 sm:p-10',
 }
 
-// Editorial header: eyebrow, serif title, one measure of description. No border,
-// no tinted panel — the page background and whitespace do the separating.
-const HEADER_CLASS = 'flex flex-col gap-4 pb-10 sm:flex-row sm:items-start sm:justify-between'
+// Editorial header: eyebrow, serif title, one measure of description. The
+// separating space below it is 32px — the low end of the panel padding range —
+// which is what lets the header sit on bare background with no rule of its own.
+const HEADER_CLASS = 'flex flex-col gap-4 pb-8 sm:flex-row sm:items-start sm:justify-between'
 const FOOTER_CLASS = 'pt-6'
 
+// An empty panel says so in plain muted copy with room around it. No dashed
+// placeholder border, no illustration, no "no data yet" box.
+const EMPTY_STATE_CLASS = `px-6 py-16 text-center ${smokeClass}`
+
 /**
- * Editorial Card: plain by default (no border, no shadow, no tinted bg).
+ * Editorial Card: plain by default — no border, no shadow, no tinted surface.
  *
- * A visible bordered card is opt-in via `className`, and is reserved for the two
- * things that earn one — the demo persona summary and the two interactive
- * panels (Ghost Twin editor, route builder). Everything else sits directly on
- * the page background, separated by whitespace plus a single 1px rule.
- *
- * `tone`, `surface` and `emptyState` are kept for API compatibility but render
- * monochrome: no teal/red/amber surfaces, no dashed decorative borders. An empty
- * state is plain centered gray text with generous padding.
+ * Most content on this site sits directly on the Obsidian canvas and is
+ * separated by whitespace plus a single 1px Graphite rule. A visible bordered
+ * card is opt-in via `className` and is reserved for the two things that earn
+ * one: the demo persona card and the Ghost Twin panel. `variant` only picks the
+ * text ink, since dark is the default surface and `light` is the Paper reading
+ * mode.
  *
  * @param {{
  *   as?: import('react').ElementType,
  *   variant?: 'dark' | 'light',
- *   surface?: 'panel' | 'raised',
- *   tone?: 'neutral' | 'amber' | 'teal' | 'red',
  *   padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl',
  *   emptyState?: boolean,
  *   eyebrow?: string,
@@ -50,8 +57,6 @@ const FOOTER_CLASS = 'pt-6'
 export default function Card({
   as: Tag = 'div',
   variant = 'dark',
-  surface: _surface = 'panel',
-  tone: _tone = 'neutral',
   padding = 'lg',
   emptyState = false,
   eyebrow,
@@ -65,10 +70,8 @@ export default function Card({
   children,
   ...rest
 }) {
-  // Text colour follows the variant so a charcoal section can invert to
-  // white-on-dark, while the default light sections read black-on-white.
-  const variantTextClass = variant === 'light' ? 'text-[#0A0A0A]' : 'text-[#FAFAFA]'
-  const emptyStateClass = emptyState ? 'px-6 py-16 text-center' : ''
+  const variantTextClass = variant === 'light' ? inkClass : chalkClass
+  const emptyStateClass = emptyState ? EMPTY_STATE_CLASS : ''
 
   const classes = ['min-w-0', variantTextClass, emptyStateClass, className]
     .filter(Boolean)

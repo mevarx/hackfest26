@@ -2,16 +2,27 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getSession, scoreWorkSample } from '../api.js'
 import { isAbortError } from '../lib/guards.js'
 import {
+  bodyClass,
+  bodyCopyClass,
+  chalkClass,
   controlFieldHintClass,
   controlFieldLabelClass,
   dataLabelClass,
+  headingSmClass,
+  inlineLabelClass,
+  labelClass,
+  measureClass,
+  metaClass,
+  ruleDarkClass,
   sectionHeadingClass,
+  smokeClass,
 } from '../styles/classes.js'
-import Badge from '../components/Badge.jsx'
 import Button from '../components/Button.jsx'
 import Card from '../components/Card.jsx'
 import Field from '../components/Field.jsx'
 import Select from '../components/Select.jsx'
+import SourceTag from '../components/SourceTag.jsx'
+import StatusLine from '../components/StatusLine.jsx'
 import Textarea from '../components/Textarea.jsx'
 
 const KAVYA_PERSONA = 'Kavya'
@@ -42,6 +53,57 @@ const EVENT_STATUS_DETAILS = {
   done: { label: 'Done', status: 'done' },
   waiting_consent: { label: 'Waiting for consent', status: 'waiting' },
   unknown: { label: 'Unknown status', status: 'waiting' },
+}
+
+// One 1px Graphite rule plus 32px of air is what separates this panel's
+// sections. Never a shift in background tint between them.
+const SECTION_CLASS = `border-t ${ruleDarkClass} pt-8`
+
+// A failure is ordinary body copy in the panel's own ink. The box is the thing
+// that used to make these read as status chips rather than as sentences.
+const ALERT_CLASS = `mt-4 ${measureClass} text-left ${bodyClass} ${chalkClass}`
+
+// Idle, loading and empty states say so in plain muted copy with room around
+// them — no box, no placeholder border.
+const EMPTY_STATE_COPY_CLASS =
+  `mx-auto mt-3 ${measureClass} text-center ${bodyClass} ${smokeClass}`
+
+// An agent-log message is body-weight copy set at the label size. `labelClass`
+// carries the 14px and only the weight drops back to 400, so the type scale
+// stays the single source and no new size string is invented here.
+const LOG_MESSAGE_CLASS = `${labelClass} ${smokeClass} font-normal leading-6`
+
+// A confidence reading is a number the server returned, not a headline: 6px
+// track, square ends. Full pill radius belongs to the one top-level CTA only.
+const CONFIDENCE_TRACK_CLASS = 'h-1.5 flex-1 overflow-hidden bg-graphite'
+const CONFIDENCE_FILL_CLASS = 'h-full bg-chalk'
+
+// A credential is a name, not a state, so it gets no status dot. It is set as a
+// plain tag — 4px radius, 1px Graphite rule, no fill — because these are short
+// nouns that wrap as a group; a hairline-separated inline list would shatter
+// across lines, and the tag radius is the one the reference allows outside a
+// card. Nothing here is a status capsule.
+const CREDENTIAL_TAG_CLASS =
+  `inline-block rounded-tag border ${ruleDarkClass} px-2 py-0.5 ${metaClass} ${smokeClass}`
+
+// Timeline dot geometry: a 6px dot whose centre lands on the 1px Graphite rule
+// carried by the list itself. The vocabulary matches the status line so the two
+// event lists on this page cannot drift apart.
+const TIMELINE_DOT_BASE_CLASS =
+  'absolute -left-[3.5px] top-1.5 h-1.5 w-1.5 rounded-full'
+
+function getTimelineDotClass(status) {
+  if (status === 'running') {
+    return `${TIMELINE_DOT_BASE_CLASS} border border-smoke bg-transparent running-dot`
+  }
+
+  if (status === 'done') {
+    return `${TIMELINE_DOT_BASE_CLASS} bg-pulse`
+  }
+
+  // Waiting and idle are the same shape on purpose. Amber is the one thing this
+  // panel must not repeat, and the word beside the dot already says which it is.
+  return `${TIMELINE_DOT_BASE_CLASS} border border-graphite bg-transparent`
 }
 
 function getSourceDetails(source) {
@@ -418,30 +480,29 @@ export default function WorkerApp({
   return (
     <Card
       as="section"
-      variant="light"
       eyebrow="Stage 01 · Skills discovery"
       title="Worker intake & skill passport"
       titleId="worker-app-title"
       description="Speak or paste what Kavya actually did, then let the pipeline recover durable skills instead of keywords."
-      actions={<Badge source={passportSource ?? 'pending'} />}
+      actions={<SourceTag source={passportSource ?? 'pending'} />}
       aria-labelledby="worker-app-title"
       aria-busy={isBusy}
       padding="none"
     >
       <div className="space-y-16">
         <div
-          className="border-t border-[#E4E4E4] pt-8"
+          className={SECTION_CLASS}
           role="status"
           aria-live="polite"
           aria-atomic="true"
         >
           <p className={sectionHeadingClass}>{statusHeading}</p>
-          <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+          <p className={`mt-3 ${bodyCopyClass}`}>
             {statusDetail}
           </p>
           {latestEvent === null ? null : (
-            <p className="mt-2 max-w-[40rem] text-left text-xs leading-5 text-[#4A4A4A]">
-              <span className="font-bold uppercase tracking-[0.12em] text-[#0A0A0A]">
+            <p className={`mt-2 ${bodyCopyClass}`}>
+              <span className={inlineLabelClass}>
                 {latestEvent.agent}
               </span>
               {': '}
@@ -452,10 +513,10 @@ export default function WorkerApp({
 
         {hasSession ? null : (
           <div className="px-6 py-16 text-center" role="status">
-            <p className={`text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]`}>
+            <p className={sectionHeadingClass}>
               Idle · no session open
             </p>
-            <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#4A4A4A]">
+            <p className={EMPTY_STATE_COPY_CLASS}>
               The transcript below is prefilled with the Kavya demo. Press Run
               pipeline to open a session — the orchestrator fills the skill
               passport in the background.
@@ -464,33 +525,34 @@ export default function WorkerApp({
         )}
 
         <form
-          className="border-t border-[#E4E4E4] pt-8"
+          className={SECTION_CLASS}
           onSubmit={(event) => {
             event.preventDefault()
             handleRunPipeline()
           }}
         >
-          <div>
-            <Field id="worker-transcript" label="Session transcript">
-              <p id="worker-transcript-hint" className={controlFieldHintClass}>
-                Plain speech, the way Kavya would say it. No CV formatting
-                needed.
-              </p>
-              <Textarea
-                id="worker-transcript"
-                rows={6}
-                value={transcript}
-                onChange={handleTranscriptChange}
-                aria-describedby="worker-transcript-hint"
-                className="mt-3"
-              />
-            </Field>
-          </div>
+          <Field id="worker-transcript" label="Session transcript">
+            <Textarea
+              id="worker-transcript"
+              rows={6}
+              value={transcript}
+              onChange={handleTranscriptChange}
+              aria-describedby="worker-transcript-hint"
+            />
+            {/* The helper is a footnote to the control, so it sits below the
+                textarea and the textarea points back at it. */}
+            <p id="worker-transcript-hint" className={controlFieldHintClass}>
+              Plain speech, the way Kavya would say it. No CV formatting
+              needed.
+            </p>
+          </Field>
 
           <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+            {/* The one filled action this page is allowed. Voice input is a
+                secondary gesture and stays an outline. */}
             <Button
               type="submit"
-              variant="accent"
+              variant="primary"
               disabled={isBusy || transcript.trim() === ''}
               aria-busy={isBusy}
             >
@@ -500,14 +562,14 @@ export default function WorkerApp({
             {speechSupported ? (
               <Button
                 type="button"
-                variant="secondary"
+                variant="ghost"
                 onClick={isListening ? handleVoiceStop : handleVoiceStart}
                 aria-pressed={isListening}
               >
                 {isListening ? 'Stop voice input' : 'Start voice input'}
               </Button>
             ) : (
-              <p className="max-w-[28rem] text-xs leading-5 text-[#4A4A4A]">
+              <p className={bodyCopyClass}>
                 Voice input is unavailable in this browser. Paste or type the
                 transcript instead.
               </p>
@@ -515,35 +577,35 @@ export default function WorkerApp({
           </div>
 
           {voiceError === '' ? null : (
-            <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#0A0A0A]" role="alert">
+            <p className={ALERT_CLASS} role="alert">
               {voiceError}
             </p>
           )}
 
           {sessionError === '' ? null : (
-            <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#0A0A0A]" role="alert">
+            <p className={ALERT_CLASS} role="alert">
               {sessionError}
             </p>
           )}
         </form>
 
-        <div className="border-t border-[#E4E4E4] pt-8">
+        <div className={SECTION_CLASS}>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className={sectionHeadingClass}>Skill passport</p>
-              <h3 className="mt-2 font-serif text-xl leading-tight text-[#0A0A0A]">
+              <h3 className={`mt-2 ${headingSmClass} ${chalkClass}`}>
                 {passport === null ? 'Passport pending' : passport.owner}
               </h3>
             </div>
             {passport === null ? null : (
-              <p className="font-mono text-xs text-[#8A8A8A]">
+              <p className={`${metaClass} ${smokeClass}`}>
                 {passport.passport_id}
               </p>
             )}
           </div>
 
           {passport === null ? (
-            <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+            <p className={`mt-4 ${bodyCopyClass}`}>
               {isStreaming
                 ? 'The skills agent is still reading the transcript. The passport lands here as soon as the orchestrator writes it.'
                 : hasSession
@@ -560,13 +622,13 @@ export default function WorkerApp({
                   const confidenceLabel = formatConfidence(skill.confidence)
 
                   return (
-                    <li key={skill.name} className="border-t border-[#E4E4E4] pt-4">
+                    <li key={skill.name} className={`border-t ${ruleDarkClass} pt-4`}>
                       <div>
                         <div className="flex items-start justify-between gap-3">
-                          <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#0A0A0A]">
+                          <p className={inlineLabelClass}>
                             {skill.name}
                           </p>
-                          <Badge
+                          <StatusLine
                             status={skill.verified ? 'done' : 'idle'}
                             label={skill.verified ? 'Verified' : 'Unverified'}
                           />
@@ -579,16 +641,16 @@ export default function WorkerApp({
                             aria-valuemax={100}
                             aria-valuenow={toPercent(skill.confidence)}
                             aria-valuetext={`Confidence ${confidenceLabel}`}
-                            className="h-1.5 flex-1 overflow-hidden rounded-pill bg-[#E4E4E4]"
+                            className={CONFIDENCE_TRACK_CLASS}
                           >
                             <div
-                              className="h-full rounded-pill bg-[#0A0A0A]"
+                              className={CONFIDENCE_FILL_CLASS}
                               style={{
                                 width: `${toPercent(skill.confidence)}%`,
                               }}
                             />
                           </div>
-                          <span className="font-mono text-xs text-[#4A4A4A]">
+                          <span className={`${metaClass} ${smokeClass}`}>
                             {confidenceLabel}
                           </span>
                         </div>
@@ -603,7 +665,7 @@ export default function WorkerApp({
 
               <p className={`mt-12 ${sectionHeadingClass}`}>Credentials</p>
               {credentials.length === 0 ? (
-                <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+                <p className={`mt-3 ${bodyCopyClass}`}>
                   No credentials yet. Score a work sample below to earn one.
                 </p>
               ) : (
@@ -613,7 +675,7 @@ export default function WorkerApp({
                 >
                   {credentials.map((credential) => (
                     <li key={credential}>
-                      <Badge status="done" label={credential} />
+                      <span className={CREDENTIAL_TAG_CLASS}>{credential}</span>
                     </li>
                   ))}
                 </ul>
@@ -623,22 +685,22 @@ export default function WorkerApp({
         </div>
 
         <form
-          className="border-t border-[#E4E4E4] pt-8"
+          className={SECTION_CLASS}
           onSubmit={handleWorkSampleSubmit}
         >
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#8A8A8A]">
+          <p className={sectionHeadingClass}>
             Proof · work sample
           </p>
-          <h3 className="mt-2 font-serif text-xl leading-tight text-[#0A0A0A]">
+          <h3 className={`mt-2 ${headingSmClass} ${chalkClass}`}>
             Turn a claim into a credential
           </h3>
-          <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+          <p className={`mt-3 ${bodyCopyClass}`}>
             Pick one skill from the passport and paste the evidence. The server
             scores it and decides whether a credential is issued.
           </p>
 
           {skills.length === 0 ? (
-            <p className="mt-6 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+            <p className={`mt-6 ${bodyCopyClass}`}>
               A skill is needed before a work sample can be scored. The passport
               has not landed yet.
             </p>
@@ -666,7 +728,7 @@ export default function WorkerApp({
                   </p>
                   <p
                     aria-labelledby="worker-sample-score"
-                    className="mt-3 border-b border-[#E4E4E4] pb-2 font-mono text-sm text-[#0A0A0A]"
+                    className={`mt-3 border-b ${ruleDarkClass} pb-2 ${metaClass} ${chalkClass}`}
                   >
                     {sample === null
                       ? 'No score yet'
@@ -690,9 +752,11 @@ export default function WorkerApp({
               </Field>
 
               <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+                {/* Second action on this view, so it is an outline: the filled
+                    Run pipeline above owns the viewport's single fill. */}
                 <Button
                   type="submit"
-                  variant="primary"
+                  variant="ghost"
                   disabled={isScoring || submission.trim() === ''}
                   aria-busy={isScoring}
                 >
@@ -700,7 +764,7 @@ export default function WorkerApp({
                 </Button>
 
                 {sample === null ? null : (
-                  <Badge
+                  <SourceTag
                     source={sampleSource.source}
                     role="img"
                     aria-label={`Work sample source: ${sampleSource.label}`}
@@ -710,7 +774,7 @@ export default function WorkerApp({
               </div>
 
               {sample === null ? null : (
-                <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
+                <p className={`mt-4 ${bodyCopyClass}`}>
                   {sample.credential_issued
                     ? 'Credential issued and recorded on the passport.'
                     : 'No credential issued. The score is below the server threshold.'}
@@ -718,7 +782,7 @@ export default function WorkerApp({
               )}
 
               {workSampleError === '' ? null : (
-                <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#0A0A0A]" role="alert">
+                <p className={ALERT_CLASS} role="alert">
                   {workSampleError}
                 </p>
               )}
@@ -727,11 +791,13 @@ export default function WorkerApp({
         </form>
 
         {events.length === 0 ? null : (
-          <div className="border-t border-[#E4E4E4] pt-8">
+          <div className={SECTION_CLASS}>
             <p className={sectionHeadingClass}>Pipeline agents</p>
+            {/* The vertical rule and the dots carry the structure: no row
+                numbering, no per-row border, no per-row background. */}
             <ul
               aria-label="Pipeline agent events"
-              className="mt-6 space-y-4"
+              className={`mt-6 ml-1 border-l ${ruleDarkClass}`}
             >
               {events.map((event, index) => {
                 const status = getEventStatusDetails(event.status)
@@ -739,16 +805,24 @@ export default function WorkerApp({
                 return (
                   <li
                     key={event.eventId ?? `${event.agent}-${index}`}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#E4E4E4] pb-4 text-sm text-[#4A4A4A] last:border-0 last:pb-0"
+                    className="relative pb-6 pl-6 last:pb-0"
                   >
-                    <span className="font-mono text-xs text-[#8A8A8A]">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <span className="font-bold uppercase tracking-[0.12em] text-[#0A0A0A]">
-                      {event.agent}
-                    </span>
-                    <Badge status={status.status} label={status.label} />
-                    <span className="max-w-[40rem] leading-6">{event.message}</span>
+                    <span
+                      aria-hidden="true"
+                      className={getTimelineDotClass(status.status)}
+                    />
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <p className={inlineLabelClass}>
+                        {event.agent}
+                      </p>
+                      <StatusLine
+                        status={status.status}
+                        label={status.label}
+                      />
+                    </div>
+                    <p className={`mt-1 ${measureClass} ${LOG_MESSAGE_CLASS}`}>
+                      {event.message}
+                    </p>
                   </li>
                 )
               })}
