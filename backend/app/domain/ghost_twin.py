@@ -130,13 +130,12 @@ def score_candidate(
 
 
 def validate_candidate_profile(candidate_profile: Mapping[str, Any]) -> dict[str, Any]:
-    if not isinstance(candidate_profile, Mapping):
-        raise ValueError("candidate_profile must be an object")
-    if any(not isinstance(attribute, str) for attribute in candidate_profile):
-        raise ValueError("candidate attribute names must be strings")
+    """Check that a mapping is exactly one complete, well-typed audit profile.
+
+    Callers go through :func:`_validated_audit_inputs`, which has already lifted
+    the two transport-only keys out, so this only enforces the attribute contract.
+    """
     profile_inputs = dict(candidate_profile)
-    profile_inputs.pop("skill_score", None)
-    profile_inputs.pop("simulate_legacy_ats", None)
     required_attributes = set(GHOST_TWIN_ATTRIBUTES)
     missing_attributes = required_attributes.difference(profile_inputs)
     unsupported_attributes = set(profile_inputs).difference(required_attributes)
@@ -237,11 +236,7 @@ def _counterfactual_value(attribute: GhostTwinAttribute, original_value: object)
     if attribute == "college_tier":
         return _COLLEGE_TIER_TWINS[str(original_value)]
     city = str(original_value).casefold()
-    if city == "chennai":
-        return "Bengaluru"
-    if city == "bengaluru" or city == "remote":
-        return "Chennai"
-    return "Chennai"
+    return "Bengaluru" if city == "chennai" else "Chennai"
 
 
 def _career_gap_months(value: object) -> float:

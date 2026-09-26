@@ -1,10 +1,27 @@
 import asyncio
 import json
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Protocol
+from uuid import uuid4
 
 from app.models import SessionState
+
+_UPDATE_SESSION_SQL = """
+    UPDATE sessions
+    SET input_type = ?,
+        content = ?,
+        persona = ?,
+        status = ?,
+        source = ?,
+        state_json = ?,
+        payload_json = ?,
+        updated_at = ?,
+        version = ?
+    WHERE session_id = ? AND version = ?
+"""
 
 
 class SessionVersionConflictError(RuntimeError):
@@ -38,7 +55,7 @@ class SqliteSessionStore:
         self._database_path = str(database_path)
         self._uses_uri = self._database_path == ":memory:"
         self._database_target = (
-            f"file:reroute_{id(self)}?mode=memory&cache=shared"
+            f"file:reroute_{uuid4().hex}?mode=memory&cache=shared"
             if self._uses_uri
             else self._database_path
         )
@@ -54,7 +71,7 @@ class SqliteSessionStore:
         return await asyncio.to_thread(self._update, session, expected_version)
 
     async def upsert(self, session: SessionState, expected_version: int) -> SessionState:
-        return await asyncio.to_thread(self._upsert, session, expected_version, True)
+        return await asyncio.to_thread(self._upsert, session, expected_version)
 
     async def get(self, session_id: str) -> SessionState | None:
         return await asyncio.to_thread(self._get, session_id)
@@ -71,6 +88,23 @@ class SqliteSessionStore:
         connection.row_factory = sqlite3.Row
         return connection
 
+    @contextmanager
+    def _transaction(self) -> Iterator[sqlite3.Connection]:
+        """Yield a connection inside a transaction and always close it.
+
+        ``sqlite3.Connection.__exit__`` only commits or rolls back; it never
+        closes the handle. Relying on reference counting alone leaks connections
+        whenever a traceback outlives the ``with`` block -- which is exactly what
+        happens on the optimistic-locking paths that raise
+        ``SessionVersionConflictError`` from inside the block.
+        """
+        connection = self._connect()
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
+
     def _initialize(self) -> None:
         if self._uses_uri and self._keeper is None:
             self._keeper = sqlite3.connect(
@@ -81,7 +115,7 @@ class SqliteSessionStore:
             )
         elif not self._uses_uri:
             Path(self._database_path).parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._transaction() as connection:
             if not self._uses_uri:
                 connection.execute("PRAGMA journal_mode = WAL")
             connection.execute(
@@ -114,7 +148,7 @@ class SqliteSessionStore:
         if session.version != 0:
             raise ValueError("new sessions must start at version 0")
         values = self._session_values(session, 0)
-        with self._connect() as connection:
+        with self._transaction() as connection:
             try:
                 self._insert(connection, values)
             except sqlite3.IntegrityError as error:
@@ -123,82 +157,71 @@ class SqliteSessionStore:
     def _update(self, session: SessionState, expected_version: int) -> SessionState:
         if session.version != expected_version:
             raise ValueError("session payload version must match expected_version")
-        with self._connect() as connection:
-            connection.execute("BEGIN IMMEDIATE")
-            row = connection.execute(
-                "SELECT version FROM sessions WHERE session_id = ?",
-                (session.session_id,),
-            ).fetchone()
-            if row is None:
-                raise SessionNotFoundError(session.session_id)
-            if int(row["version"]) != expected_version:
-                raise SessionVersionConflictError(session.session_id)
-            stored = session.model_copy(update={"version": expected_version + 1})
-            values = self._session_values(stored, expected_version + 1)
-            cursor = connection.execute(
-                """
-                UPDATE sessions
-                SET input_type = ?,
-                    content = ?,
-                    persona = ?,
-                    status = ?,
-                    source = ?,
-                    state_json = ?,
-                    payload_json = ?,
-                    updated_at = ?,
-                    version = ?
-                WHERE session_id = ? AND version = ?
-                """,
-                (*values[1:8], values[9], values[10], session.session_id, expected_version),
-            )
-            if cursor.rowcount != 1:
-                raise SessionVersionConflictError(session.session_id)
-            return stored
+        with self._transaction() as connection:
+            self._assert_stored_version(connection, session, expected_version)
+            return self._bump_version(connection, session, expected_version)
 
     def _upsert(
         self,
         session: SessionState,
         expected_version: int,
-        allow_missing: bool,
     ) -> SessionState:
-        with self._connect() as connection:
+        """Create the row when it is missing at version 0, otherwise version it."""
+        with self._transaction() as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT version FROM sessions WHERE session_id = ?",
                 (session.session_id,),
             ).fetchone()
             if row is None:
-                if not allow_missing or expected_version != 0:
+                if expected_version != 0:
                     raise SessionVersionConflictError(session.session_id)
                 stored = session.model_copy(update={"version": 0})
                 self._insert(connection, self._session_values(stored, 0))
                 return stored
-            if session.version != expected_version or int(row["version"]) != expected_version:
+            if session.version != expected_version:
                 raise SessionVersionConflictError(session.session_id)
-            stored = session.model_copy(update={"version": expected_version + 1})
-            values = self._session_values(stored, expected_version + 1)
-            cursor = connection.execute(
-                """
-                UPDATE sessions
-                SET input_type = ?,
-                    content = ?,
-                    persona = ?,
-                    status = ?,
-                    source = ?,
-                    state_json = ?,
-                    payload_json = ?,
-                    updated_at = ?,
-                    version = ?
-                WHERE session_id = ? AND version = ?
-                """,
-                (*values[1:8], values[9], values[10], session.session_id, expected_version),
-            )
-            if cursor.rowcount != 1:
-                raise SessionVersionConflictError(session.session_id)
-            return stored
+            self._assert_stored_version(connection, session, expected_version, row=row)
+            return self._bump_version(connection, session, expected_version)
+
+    def _assert_stored_version(
+        self,
+        connection: sqlite3.Connection,
+        session: SessionState,
+        expected_version: int,
+        row: sqlite3.Row | None = None,
+    ) -> None:
+        stored_row = (
+            row
+            if row is not None
+            else connection.execute(
+                "SELECT version FROM sessions WHERE session_id = ?",
+                (session.session_id,),
+            ).fetchone()
+        )
+        if stored_row is None:
+            raise SessionNotFoundError(session.session_id)
+        if int(stored_row["version"]) != expected_version:
+            raise SessionVersionConflictError(session.session_id)
+
+    def _bump_version(
+        self,
+        connection: sqlite3.Connection,
+        session: SessionState,
+        expected_version: int,
+    ) -> SessionState:
+        stored = session.model_copy(update={"version": expected_version + 1})
+        values = self._session_values(stored, expected_version + 1)
+        cursor = connection.execute(
+            _UPDATE_SESSION_SQL,
+            (*values[1:8], values[9], values[10], session.session_id, expected_version),
+        )
+        if cursor.rowcount != 1:
+            raise SessionVersionConflictError(session.session_id)
+        return stored
 
     def _get(self, session_id: str) -> SessionState | None:
-        with self._connect() as connection:
+        with self._transaction() as connection:
             row = connection.execute(
                 "SELECT payload_json FROM sessions WHERE session_id = ?",
                 (session_id,),
