@@ -232,8 +232,8 @@ describe('WorkerApp', () => {
     })
 
     expect(within(credentials).getByText('Manual testing')).toBeInTheDocument()
-    expect(screen.getByText('SIMULATED')).toBeInTheDocument()
-    expect(screen.queryByText('LIVE')).not.toBeInTheDocument()
+    expect(screen.getByText('Simulated')).toBeInTheDocument()
+    expect(screen.queryByText('Live')).not.toBeInTheDocument()
   })
 
   it('marks the passport as live when the server answers live', async () => {
@@ -244,8 +244,8 @@ describe('WorkerApp', () => {
     })
     renderApp({ sessionId: 'session-1' })
 
-    expect(await screen.findByText('LIVE')).toBeInTheDocument()
-    expect(screen.queryByText('SIMULATED')).not.toBeInTheDocument()
+    expect(await screen.findByText('Live')).toBeInTheDocument()
+    expect(screen.queryByText('Simulated')).not.toBeInTheDocument()
   })
 
   it('keeps the pending passport state while the session has no passport yet', async () => {
@@ -258,7 +258,7 @@ describe('WorkerApp', () => {
         'The skills agent is still reading the transcript. The passport lands here as soon as the orchestrator writes it.',
       ),
     ).toBeInTheDocument()
-    expect(screen.getByText('SOURCE PENDING')).toBeInTheDocument()
+    expect(screen.getByText('Source pending')).toBeInTheDocument()
     expect(
       screen.getByText(
         'A skill is needed before a work sample can be scored. The passport has not landed yet.',
@@ -292,7 +292,7 @@ describe('WorkerApp', () => {
     expect(
       screen.getByText('Credential issued and recorded on the passport.'),
     ).toBeInTheDocument()
-    expect(screen.getAllByText('SIMULATED')).toHaveLength(2)
+    expect(screen.getAllByText('Simulated')).toHaveLength(2)
   })
 
   it('reports a rejected work sample without a credential', async () => {
@@ -316,7 +316,7 @@ describe('WorkerApp', () => {
     expect(
       screen.getByText('No credential issued. The score is below the server threshold.'),
     ).toBeInTheDocument()
-    expect(screen.getByText('LIVE')).toBeInTheDocument()
+    expect(screen.getByText('Live')).toBeInTheDocument()
   })
 
   it('renders the ApiError message when the work sample request fails', async () => {

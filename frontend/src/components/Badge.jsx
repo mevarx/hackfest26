@@ -9,51 +9,66 @@
 const STATUS_VARIANTS = {
   running: {
     label: 'Running',
-    className: 'border-amber text-amber',
-    dotClassName: 'bg-amber animate-pulse',
+    rootClass: 'text-slate',
+    dotClassName: 'bg-slate running-dot',
+    labelClassName: 'font-medium uppercase tracking-[0.12em]',
   },
   done: {
     label: 'Done',
-    className: 'border-teal text-teal',
-    dotClassName: 'bg-teal',
+    rootClass: '',
+    dotClassName: 'bg-current',
+    labelClassName: 'font-medium uppercase tracking-[0.12em]',
   },
   waiting: {
     label: 'Waiting for consent',
-    className: 'border-red text-red',
-    dotClassName: 'bg-red',
+    rootClass: '',
+    dotClassName: 'border border-current bg-transparent',
+    labelClassName: 'font-medium uppercase tracking-[0.12em]',
   },
   idle: {
     label: 'Idle',
-    className: 'border-slate text-slate',
-    dotClassName: 'bg-slate',
+    rootClass: 'text-slate',
+    dotClassName: 'border border-current bg-transparent',
+    labelClassName: 'font-medium uppercase tracking-[0.12em]',
   },
 }
 
 const SOURCE_VARIANTS = {
   live: {
-    label: 'LIVE',
-    className: 'border-teal bg-teal text-navy',
-    dotClassName: 'bg-navy',
+    label: 'Live',
+    rootClass: '',
+    dotClassName: 'bg-current',
+    showDot: true,
+    labelClassName: 'font-normal',
+    underline: false,
   },
   simulated: {
-    label: 'SIMULATED',
-    className: 'border-amber text-amber',
-    dotClassName: 'bg-amber',
+    label: 'Simulated',
+    rootClass: 'text-slate',
+    dotClassName: 'border border-current bg-transparent',
+    showDot: true,
+    labelClassName: 'font-normal',
+    underline: false,
   },
   local: {
-    label: 'LOCAL',
-    className: 'border-slate text-slate',
-    dotClassName: 'bg-slate',
+    label: 'Local',
+    rootClass: 'text-slate',
+    dotClassName: '',
+    showDot: false,
+    labelClassName: 'font-normal',
+    underline: false,
   },
   pending: {
-    label: 'SOURCE PENDING',
-    className: 'border-dashed border-slate text-slate',
-    dotClassName: 'bg-slate',
+    label: 'Source pending',
+    rootClass: 'text-slate',
+    dotClassName: '',
+    showDot: false,
+    labelClassName: 'font-normal',
+    underline: true,
   },
 }
 
-const BADGE_BASE_CLASS =
-  'inline-flex h-badge w-fit shrink-0 items-center gap-1.5 rounded-pill border px-2.5 text-[0.65rem] font-bold uppercase leading-none tracking-[0.12em]'
+const BADGE_BASE_CLASS = 'inline-flex items-center gap-1.5 text-xs leading-5'
 
 const BADGE_DOT_CLASS = 'h-1.5 w-1.5 shrink-0 rounded-full'
 
@@ -67,22 +82,32 @@ export default function Badge({
   className = '',
   ...rest
 }) {
-  const sourceVariant = source === undefined ? null : SOURCE_VARIANTS[source]
-  const statusVariant = status === undefined ? null : STATUS_VARIANTS[status]
+  const sourceVariant = source === undefined ? null : (SOURCE_VARIANTS[source] ?? null)
+  const statusVariant = status === undefined ? null : (STATUS_VARIANTS[status] ?? null)
   const variant = sourceVariant ?? statusVariant ?? STATUS_VARIANTS.idle
   const dotVariant = statusVariant ?? sourceVariant ?? STATUS_VARIANTS.idle
-  const classes = [BADGE_BASE_CLASS, variant.className, className]
+  const showDot = dotVariant.showDot ?? true
+  const dotClassName = dotVariant.dotClassName ?? STATUS_VARIANTS.idle.dotClassName
+  const classes = [BADGE_BASE_CLASS, variant.rootClass, className]
+    .filter(Boolean)
+    .join(' ')
+  const labelClasses = [
+    variant.labelClassName,
+    variant.underline ? 'border-b border-dashed border-current' : '',
+  ]
     .filter(Boolean)
     .join(' ')
 
   return (
     <span {...rest} className={classes}>
-      <span
-        aria-hidden="true"
-        data-badge-indicator=""
-        className={`${BADGE_DOT_CLASS} ${dotVariant.dotClassName}`}
-      />
-      <span>{label ?? variant.label}</span>
+      {showDot ? (
+        <span
+          aria-hidden="true"
+          data-badge-indicator=""
+          className={`${BADGE_DOT_CLASS} ${dotClassName}`}
+        />
+      ) : null}
+      <span className={labelClasses}>{label ?? variant.label}</span>
     </span>
   )
 }

@@ -266,7 +266,7 @@ describe('GhostTwinPanel', () => {
     expect(secondRowCells[2]).toHaveTextContent('0')
     expect(screen.getByText('Fairness guardrail passed')).toBeInTheDocument()
     expect(screen.getByText('Source=local')).toBeInTheDocument()
-    expect(screen.getByText('LOCAL')).toBeInTheDocument()
+    expect(screen.getByText('Local')).toBeInTheDocument()
     expect(screen.getByText('Pure-Python calculation')).toBeInTheDocument()
     expect(screen.getByText('Synthetic fair merit')).toBeInTheDocument()
     expect(
@@ -325,7 +325,7 @@ describe('GhostTwinPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
 
     expect(await screen.findByText('Source=live')).toBeInTheDocument()
-    expect(screen.getByText('LIVE')).toBeInTheDocument()
+    expect(screen.getByText('Live')).toBeInTheDocument()
     expect(screen.queryByText('Source=local')).not.toBeInTheDocument()
   })
 

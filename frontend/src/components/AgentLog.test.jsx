@@ -149,25 +149,25 @@ describe('AgentLog', () => {
       <AgentLog events={EVENTS} source="simulated" />,
     )
 
-    expect(header().getByText('SIMULATED')).toBeInTheDocument()
+    expect(header().getByText('Simulated')).toBeInTheDocument()
 
     rerender(<AgentLog events={EVENTS} source="live" />)
 
-    expect(header().getByText('LIVE')).toBeInTheDocument()
-    expect(screen.queryByText('SIMULATED')).not.toBeInTheDocument()
+    expect(header().getByText('Live')).toBeInTheDocument()
+    expect(screen.queryByText('Simulated')).not.toBeInTheDocument()
     expect(screen.getByText('Live event adapter')).toBeInTheDocument()
   })
 
   it('renders a three-way source badge for local, simulated, and live', () => {
     const { rerender } = render(<AgentLog events={EVENTS} source="local" />)
 
-    expect(header().getByText('LOCAL')).toBeInTheDocument()
+    expect(header().getByText('Local')).toBeInTheDocument()
     expect(screen.getByText('In-browser event adapter')).toBeInTheDocument()
 
     rerender(<AgentLog events={EVENTS} source="simulated" />)
 
-    expect(header().getByText('SIMULATED')).toBeInTheDocument()
-    expect(screen.queryByText('LOCAL')).not.toBeInTheDocument()
+    expect(header().getByText('Simulated')).toBeInTheDocument()
+    expect(screen.queryByText('Local')).not.toBeInTheDocument()
   })
 
   it('labels every line with the source of that event', () => {
@@ -181,30 +181,42 @@ describe('AgentLog', () => {
     })
     const entries = within(log).getAllByRole('listitem')
 
-    expect(entries.map((entry) => within(entry).getByText(/^(LIVE|SIMULATED|LOCAL)$/).textContent)).toEqual([
-      'LIVE',
-      'SIMULATED',
-      'LOCAL',
+    expect(entries.map((entry) => within(entry).getByText(/^(Live|Simulated|Local)$/).textContent)).toEqual([
+      'Live',
+      'Simulated',
+      'Local',
     ])
 
-    for (const [label, source] of [
-      ['Event source live', 'live'],
-      ['Event source simulated', 'simulated'],
-      ['Event source local', 'local'],
-    ]) {
-      const badge = within(log).getByLabelText(label)
+    const liveBadge = within(log).getByLabelText('Event source live')
+    const simulatedBadge = within(log).getByLabelText('Event source simulated')
+    const localBadge = within(log).getByLabelText('Event source local')
 
+    for (const badge of [liveBadge, simulatedBadge, localBadge]) {
       expect(badge).toHaveAttribute('role', 'img')
-      expect(badge.className).toContain(
-        source === 'live' ? 'teal' : source === 'simulated' ? 'amber' : 'slate',
-      )
     }
+
+    // The source mark is monochrome and structural: live is a filled dot,
+    // simulated a hollow one, and local carries no dot at all.
+    expect(
+      liveBadge.querySelector('[data-badge-indicator]'),
+    ).toHaveClass('bg-current')
+    expect(
+      simulatedBadge.querySelector('[data-badge-indicator]'),
+    ).not.toHaveClass('bg-current')
+    expect(
+      localBadge.querySelector('[data-badge-indicator]'),
+    ).toBeNull()
+
+    // Only the live badge is drawn in full ink; the weaker sources are muted.
+    expect(liveBadge).not.toHaveClass('text-slate')
+    expect(simulatedBadge).toHaveClass('text-slate')
+    expect(localBadge).toHaveClass('text-slate')
   })
 
   it('falls back to the stream source when an event carries none', () => {
     const log = renderLog({ source: 'local' })
 
-    expect(within(log).getAllByText('LOCAL')).toHaveLength(EVENTS.length)
+    expect(within(log).getAllByText('Local')).toHaveLength(EVENTS.length)
   })
 
   it('shows the connection indicator and a reconnect affordance', () => {

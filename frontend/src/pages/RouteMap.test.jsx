@@ -136,19 +136,19 @@ describe('RouteMap', () => {
   it('labels the route source from the response and switches it for a live route', async () => {
     const { unmount } = render(<RouteMap />)
 
-    expect(screen.getByText('SOURCE PENDING')).toBeInTheDocument()
+    expect(screen.getByText('Source pending')).toBeInTheDocument()
 
     getRouteMock.mockResolvedValue(ROUTE)
     fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
-    expect(await screen.findByText('SIMULATED')).toBeInTheDocument()
+    expect(await screen.findByText('Simulated')).toBeInTheDocument()
     unmount()
 
     getRouteMock.mockResolvedValue({ ...ROUTE, source: 'live' })
     render(<RouteMap />)
     fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
 
-    expect(await screen.findByText('LIVE')).toBeInTheDocument()
-    expect(screen.queryByText('SIMULATED')).not.toBeInTheDocument()
+    expect(await screen.findByText('Live')).toBeInTheDocument()
+    expect(screen.queryByText('Simulated')).not.toBeInTheDocument()
   })
 
   it('keeps the live and simulated distinction visible while loading', async () => {
@@ -305,7 +305,7 @@ describe('RouteMap', () => {
         name: 'Route stations from Manual testing to qa-analyst',
       }),
     ).toBeInTheDocument()
-    expect(screen.getByText('SIMULATED')).toBeInTheDocument()
+    expect(screen.getByText('Simulated')).toBeInTheDocument()
   })
 
   it('renders a rejected request as an alert and stays retryable', async () => {
