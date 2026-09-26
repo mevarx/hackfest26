@@ -12,6 +12,15 @@ import {
 //
 // The radius is the card token (12px) and nothing more: the reference's Don't
 // list rules full pill radius out for cards, and 9999px is the badge's alone.
+//
+// `bleed` is the opt-in for a card that has a visible border. On a bordered
+// panel the padding used to sit on the padded wrapper, which meant every
+// `border-t` rule a child drew stopped 48px short of the panel's own border —
+// the rule floated inside the surface with a band of Carbon on either side, and
+// the panel stopped reading as one object. With `bleed`, the padding moves onto
+// the root and the rules span the full interior, so a bordered panel's
+// hairlines run edge to edge. Borderless panels are unaffected, which is why it
+// is opt-in rather than the default.
 const PADDING_CLASS = {
   none: '',
   sm: 'p-3',
@@ -19,6 +28,13 @@ const PADDING_CLASS = {
   lg: 'p-8',
   xl: 'p-8 sm:p-12',
 }
+
+// When a card bleeds its padding, each of its stacked blocks carries the
+// horizontal padding itself and the space between them is pure air. That way a
+// `border-t` on any block spans the full interior width instead of stopping
+// 48px short of the panel's own border, which is what made the bordered audit
+// panel read as a rule floating inside a surface rather than as one object.
+const BLEED_BLOCK_CLASS = 'px-6 sm:px-12'
 
 // Header: eyebrow, 23px title, one measure of description. The separating space
 // below it is 32px — the low end of the padding band — which is what lets the
@@ -43,6 +59,7 @@ const EMPTY_STATE_CLASS = `px-6 py-16 text-center ${smokeClass}`
  * @param {{
  *   as?: import('react').ElementType,
  *   padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl',
+ *   bleed?: boolean,
  *   emptyState?: boolean,
  *   eyebrow?: string,
  *   title?: string,
@@ -58,6 +75,7 @@ const EMPTY_STATE_CLASS = `px-6 py-16 text-center ${smokeClass}`
 export default function Card({
   as: Tag = 'div',
   padding = 'lg',
+  bleed = false,
   emptyState = false,
   eyebrow,
   title,
@@ -71,6 +89,15 @@ export default function Card({
   ...rest
 }) {
   const emptyStateClass = emptyState ? EMPTY_STATE_CLASS : ''
+  // In bleed mode there is no padded wrapper at all: `children` becomes the
+  // card's own child list, and each child is expected to carry
+  // `BLEED_BLOCK_CLASS` for its inline padding. That is the caller's
+  // responsibility and is why this is opt-in — a caller that opts in without
+  // applying the block class gets edge-to-edge content, which is exactly what
+  // the one panel that uses it (the bordered audit panel) wants.
+  const bodyClass = bleed
+    ? ''
+    : PADDING_CLASS[padding] ?? PADDING_CLASS.lg
 
   const classes = [
     'min-w-0 rounded-card',
@@ -108,7 +135,11 @@ export default function Card({
           )}
         </div>
       )}
-      <div className={PADDING_CLASS[padding] ?? PADDING_CLASS.lg}>{children}</div>
+      {bleed ? (
+        children
+      ) : (
+        <div className={bodyClass}>{children}</div>
+      )}
       {footer === undefined ? null : (
         <div className={FOOTER_CLASS}>{footer}</div>
       )}
@@ -116,4 +147,4 @@ export default function Card({
   )
 }
 
-export { Card }
+export { Card, BLEED_BLOCK_CLASS }
