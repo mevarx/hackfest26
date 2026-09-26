@@ -266,7 +266,7 @@ describe('GhostTwinPanel', () => {
     expect(secondRowCells[2]).toHaveTextContent('0')
     expect(screen.getByText('Fairness guardrail passed')).toBeInTheDocument()
     expect(screen.getByText('Source=local')).toBeInTheDocument()
-    expect(screen.getByText('Local source')).toBeInTheDocument()
+    expect(screen.getByText('LOCAL')).toBeInTheDocument()
     expect(screen.getByText('Pure-Python calculation')).toBeInTheDocument()
     expect(screen.getByText('Synthetic fair merit')).toBeInTheDocument()
     expect(
@@ -310,7 +310,7 @@ describe('GhostTwinPanel', () => {
     expect(secondRowCells[0]).toHaveTextContent('86')
     expect(secondRowCells[1]).toHaveTextContent('98')
     expect(secondRowCells[2]).toHaveTextContent('+12')
-    expect(flaggedBanner.closest('[role="status"]')).toHaveClass('bg-red')
+    expect(flaggedBanner.closest('[role="status"]')).toHaveClass('bg-red/10')
     expect(screen.getByText('Fairness guardrail needs attention')).toBeInTheDocument()
     expect(screen.getByText('Source=local')).toBeInTheDocument()
     expect(screen.queryByText('PASS')).not.toBeInTheDocument()
@@ -325,7 +325,7 @@ describe('GhostTwinPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
 
     expect(await screen.findByText('Source=live')).toBeInTheDocument()
-    expect(screen.getByText('Live source')).toBeInTheDocument()
+    expect(screen.getByText('LIVE')).toBeInTheDocument()
     expect(screen.queryByText('Source=local')).not.toBeInTheDocument()
   })
 

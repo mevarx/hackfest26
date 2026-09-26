@@ -1,91 +1,76 @@
 import { useMemo } from 'react'
 import { normalizeAgentEvent } from '../domain/agentEvents.js'
+import { metaRowClass } from '../styles/classes.js'
+import Badge from './Badge.jsx'
+import Button from './Button.jsx'
+import Card from './Card.jsx'
 
 const EMPTY_EVENTS = Array.from({ length: 0 })
 
+/** @type {Record<string, { label: string, status: 'running' | 'done' | 'waiting' | 'idle' }>} */
 const STATUS_DETAILS = {
   running: {
     label: 'Running',
-    symbol: '↻',
-    className: 'border-amber/40 bg-amber/10 text-amber',
+    status: 'running',
   },
   done: {
     label: 'Done',
-    symbol: '✓',
-    className: 'border-teal/40 bg-teal/10 text-teal',
+    status: 'done',
   },
   waiting_consent: {
     label: 'Waiting for consent',
-    symbol: '◇',
-    className: 'border-red/50 bg-red/10 text-red-300',
+    status: 'waiting',
   },
   error: {
     label: 'Unknown status',
-    symbol: '!',
-    className: 'border-red/50 bg-red/10 text-red-300',
+    status: 'waiting',
   },
   invalid: {
     label: 'Invalid event',
-    symbol: '×',
-    className: 'border-red/50 bg-red/10 text-red-300',
+    status: 'waiting',
   },
 }
 
+/** @type {Record<string, { label: string, token: 'live' | 'simulated' | 'local', adapterLabel: string }>} */
 const SOURCE_DETAILS = {
   simulated: {
     label: 'Simulated',
     token: 'simulated',
-    code: 'SIM',
-    symbol: '◐',
     adapterLabel: 'Local event adapter',
-    className: 'border-amber/45 bg-amber/10 text-amber',
-    dotClassName: 'bg-amber',
   },
   live: {
     label: 'Live',
     token: 'live',
-    code: 'LIVE',
-    symbol: '◉',
     adapterLabel: 'Live event adapter',
-    className: 'border-teal/45 bg-teal/10 text-teal',
-    dotClassName: 'bg-teal',
   },
   local: {
     label: 'Local',
     token: 'local',
-    code: 'LOCAL',
-    symbol: '○',
     adapterLabel: 'In-browser event adapter',
-    className: 'border-dashed border-red/55 bg-red/10 text-red-300',
-    dotClassName: 'bg-red',
   },
 }
 
+/** @type {Record<string, { label: string, status: 'running' | 'done' | 'waiting' | 'idle' }>} */
 const CONNECTION_DETAILS = {
   idle: {
     label: 'Stream idle',
-    className: 'border-white/20 bg-white/5 text-off-white/55',
-    dotClassName: 'bg-white/30',
+    status: 'idle',
   },
   connecting: {
     label: 'Connecting',
-    className: 'border-amber/40 bg-amber/10 text-amber',
-    dotClassName: 'bg-amber',
+    status: 'running',
   },
   open: {
     label: 'Stream live',
-    className: 'border-teal/45 bg-teal/10 text-teal',
-    dotClassName: 'bg-teal',
+    status: 'done',
   },
   closed: {
     label: 'Stream closed',
-    className: 'border-amber/40 bg-amber/10 text-amber',
-    dotClassName: 'bg-amber',
+    status: 'running',
   },
   error: {
     label: 'Stream error',
-    className: 'border-red/50 bg-red/10 text-red-300',
-    dotClassName: 'bg-red',
+    status: 'waiting',
   },
 }
 
@@ -183,58 +168,52 @@ export default function AgentLog(props) {
     lastEventId > 0
 
   return (
-    <section
-      className="overflow-hidden rounded-2xl border border-white/10 bg-navy shadow-2xl shadow-navy/20"
+    <Card
+      as="section"
+      variant="dark"
+      eyebrow="Demo backbone"
+      title="Orchestration stream"
+      titleId="agent-log-title"
       aria-labelledby="agent-log-title"
       aria-busy={status === 'connecting'}
-    >
-      <div className="flex flex-col gap-4 border-b border-white/10 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber">
-            Demo backbone
-          </p>
-          <h2
-            id="agent-log-title"
-            className="mt-1 font-serif text-2xl text-off-white"
-          >
-            Orchestration stream
-          </h2>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      padding="none"
+      actions={
+        <>
           {connectionDetails ? (
-            <span
+            <Badge
+              key="connection"
+              status={connectionDetails.status}
+              label={connectionDetails.label}
               role="status"
-              className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] ${connectionDetails.className}`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${connectionDetails.dotClassName}`}
-                aria-hidden="true"
-              />
-              {connectionDetails.label}
+            />
+          ) : null}
+          <Badge key="source" source={source} />
+          {showReconnect ? (
+            <Button key="reconnect" variant="ghost" onClick={onReconnect}>
+              <span aria-hidden="true">↻</span> Reconnect
+            </Button>
+          ) : null}
+        </>
+      }
+      footer={
+        <div className={`${metaRowClass} justify-between gap-x-4`}>
+          <span>{sourceDetails.adapterLabel}</span>
+          <span>
+            {validEventCount} valid events
+            {invalidEventCount > 0 ? ` · ${invalidEventCount} invalid` : ''}
+          </span>
+          {hasResumeCursor || reconnectAttempts > 0 ? (
+            <span className="w-full sm:w-auto">
+              {hasResumeCursor ? `last_event_id=${lastEventId}` : ''}
+              {hasResumeCursor && reconnectAttempts > 0 ? ' · ' : ''}
+              {reconnectAttempts > 0
+                ? `${reconnectAttempts} reconnect attempt${reconnectAttempts === 1 ? '' : 's'}`
+                : ''}
             </span>
           ) : null}
-          <span
-            className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] ${sourceDetails.className}`}
-          >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${sourceDetails.dotClassName}`}
-              aria-hidden="true"
-            />
-            {sourceDetails.label}
-          </span>
-          {showReconnect ? (
-            <button
-              type="button"
-              onClick={onReconnect}
-              className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-off-white/80 transition-colors hover:border-amber/50 hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
-            >
-              <span aria-hidden="true">↻</span>
-              Reconnect
-            </button>
-          ) : null}
         </div>
-      </div>
-
+      }
+    >
       <div
         className="max-h-[34rem] min-h-80 overflow-y-auto px-3 py-3 font-mono text-sm sm:px-4"
         role="log"
@@ -244,7 +223,7 @@ export default function AgentLog(props) {
         aria-atomic="false"
       >
         {displayEvents.length === 0 ? (
-          <p className="px-3 py-8 text-center text-off-white/50">
+          <p className="px-3 py-8 text-center text-offwhite/50">
             Waiting for orchestration events…
           </p>
         ) : (
@@ -256,10 +235,10 @@ export default function AgentLog(props) {
               return (
                 <li
                   key={event.id}
-                  className="grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-3 rounded-lg border border-transparent px-2 py-3 transition-colors hover:border-white/10 hover:bg-white/[0.04] sm:grid-cols-[4rem_minmax(8rem,11rem)_minmax(0,1fr)] sm:items-start"
+                  className="grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-3 rounded-control border border-transparent px-2 py-3 transition-colors hover:border-rule hover:bg-navy-raised sm:grid-cols-[4rem_minmax(8rem,11rem)_minmax(0,1fr)] sm:items-start"
                 >
                   <time
-                    className="pt-1 text-xs text-off-white/45"
+                    className="pt-1 text-xs text-offwhite/40"
                     // The machine-readable value must be the event's own time, not
                     // the moment this browser happened to receive it.
                     dateTime={event.eventTime ?? event.receivedAt}
@@ -268,28 +247,20 @@ export default function AgentLog(props) {
                     {event.timestamp}
                   </time>
                   <div className="min-w-0 sm:pr-3">
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-off-white/90">
+                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-offwhite">
                       {event.agent}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] ${eventStatus.className}`}
-                      >
-                        <span aria-hidden="true">{eventStatus.symbol}</span>
-                        <span>{eventStatus.label}</span>
-                      </span>
-                      <span
+                      <Badge status={eventStatus.status} label={eventStatus.label} />
+                      <Badge
+                        source={eventSource.token}
                         role="img"
                         aria-label={`Event source ${eventSource.token}`}
                         title={`Event source ${eventSource.label}`}
-                        className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-1 text-[0.6rem] font-bold uppercase tracking-[0.12em] ${eventSource.className}`}
-                      >
-                        <span aria-hidden="true">{eventSource.symbol}</span>
-                        <span>{eventSource.code}</span>
-                      </span>
+                      />
                     </div>
                   </div>
-                  <p className="col-start-2 mt-2 leading-6 text-off-white/75 sm:col-start-3 sm:mt-0 sm:pt-1">
+                  <p className="col-start-2 mt-2 leading-6 text-offwhite/70 sm:col-start-3 sm:mt-0 sm:pt-1">
                     {event.message}
                   </p>
                 </li>
@@ -298,23 +269,6 @@ export default function AgentLog(props) {
           </ol>
         )}
       </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-white/10 px-5 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-off-white/45 sm:px-6">
-        <span>{sourceDetails.adapterLabel}</span>
-        <span>
-          {validEventCount} valid events
-          {invalidEventCount > 0 ? ` · ${invalidEventCount} invalid` : ''}
-        </span>
-        {hasResumeCursor || reconnectAttempts > 0 ? (
-          <span className="w-full sm:w-auto">
-            {hasResumeCursor ? `last_event_id=${lastEventId}` : ''}
-            {hasResumeCursor && reconnectAttempts > 0 ? ' · ' : ''}
-            {reconnectAttempts > 0
-              ? `${reconnectAttempts} reconnect attempt${reconnectAttempts === 1 ? '' : 's'}`
-              : ''}
-          </span>
-        ) : null}
-      </div>
-    </section>
+    </Card>
   )
 }

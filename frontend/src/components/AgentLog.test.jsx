@@ -28,6 +28,17 @@ function renderLog(properties = {}) {
   return screen.getByRole('log', { name: 'Agent activity' })
 }
 
+function header() {
+  const heading = screen.getByRole('heading', { name: 'Orchestration stream' })
+  const headerElement = heading.parentElement?.parentElement
+
+  if (!headerElement) {
+    throw new Error('Log header is missing')
+  }
+
+  return within(headerElement)
+}
+
 describe('AgentLog', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -94,26 +105,17 @@ describe('AgentLog', () => {
     expect(within(log).getByText('Skill claims extracted')).toBeInTheDocument()
   })
 
-  it('announces polite updates and labels every status with text and an icon', () => {
+  it('announces polite updates and labels every status with text and a status indicator', () => {
     const log = renderLog()
 
     expect(log).toHaveAttribute('aria-live', 'polite')
 
-    for (const status of [
-      ['Running', '↻'],
-      ['Done', '✓'],
-      ['Waiting for consent', '◇'],
-    ]) {
-      const label = screen.getByText(status[0])
-      const statusBadge = label.parentElement
+    for (const label of ['Running', 'Done', 'Waiting for consent']) {
+      const badge = screen.getByText(label).parentElement
+      const indicator = badge?.querySelector('[data-badge-indicator]')
 
-      if (!statusBadge) {
-        throw new Error('Status badge is missing')
-      }
-
-      const icon = within(statusBadge).getByText(status[1])
-
-      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      expect(indicator).not.toBeNull()
+      expect(indicator).toHaveAttribute('aria-hidden', 'true')
     }
   })
 
@@ -147,25 +149,25 @@ describe('AgentLog', () => {
       <AgentLog events={EVENTS} source="simulated" />,
     )
 
-    expect(screen.getByText('Simulated')).toBeInTheDocument()
+    expect(header().getByText('SIMULATED')).toBeInTheDocument()
 
     rerender(<AgentLog events={EVENTS} source="live" />)
 
-    expect(screen.getByText('Live')).toBeInTheDocument()
-    expect(screen.queryByText('Simulated')).not.toBeInTheDocument()
+    expect(header().getByText('LIVE')).toBeInTheDocument()
+    expect(screen.queryByText('SIMULATED')).not.toBeInTheDocument()
     expect(screen.getByText('Live event adapter')).toBeInTheDocument()
   })
 
   it('renders a three-way source badge for local, simulated, and live', () => {
     const { rerender } = render(<AgentLog events={EVENTS} source="local" />)
 
-    expect(screen.getByText('Local')).toBeInTheDocument()
+    expect(header().getByText('LOCAL')).toBeInTheDocument()
     expect(screen.getByText('In-browser event adapter')).toBeInTheDocument()
 
     rerender(<AgentLog events={EVENTS} source="simulated" />)
 
-    expect(screen.getByText('Simulated')).toBeInTheDocument()
-    expect(screen.queryByText('Local')).not.toBeInTheDocument()
+    expect(header().getByText('SIMULATED')).toBeInTheDocument()
+    expect(screen.queryByText('LOCAL')).not.toBeInTheDocument()
   })
 
   it('labels every line with the source of that event', () => {
@@ -179,9 +181,9 @@ describe('AgentLog', () => {
     })
     const entries = within(log).getAllByRole('listitem')
 
-    expect(entries.map((entry) => within(entry).getByText(/^(LIVE|SIM|LOCAL)$/).textContent)).toEqual([
+    expect(entries.map((entry) => within(entry).getByText(/^(LIVE|SIMULATED|LOCAL)$/).textContent)).toEqual([
       'LIVE',
-      'SIM',
+      'SIMULATED',
       'LOCAL',
     ])
 
@@ -194,7 +196,7 @@ describe('AgentLog', () => {
 
       expect(badge).toHaveAttribute('role', 'img')
       expect(badge.className).toContain(
-        source === 'live' ? 'teal' : source === 'simulated' ? 'amber' : 'red',
+        source === 'live' ? 'teal' : source === 'simulated' ? 'amber' : 'slate',
       )
     }
   })
