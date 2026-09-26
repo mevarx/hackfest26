@@ -1,9 +1,7 @@
 import { useMemo } from 'react'
 import { normalizeAgentEvent } from '../domain/agentEvents.js'
-import { metaRowClass } from '../styles/classes.js'
 import Badge from './Badge.jsx'
 import Button from './Button.jsx'
-import Card from './Card.jsx'
 
 const EMPTY_EVENTS = Array.from({ length: 0 })
 
@@ -119,6 +117,21 @@ function getConnectionDetails(status) {
   return null
 }
 
+const TIMELINE_DOT_BASE_CLASS =
+  'absolute -left-[3.5px] top-1.5 h-1.5 w-1.5 rounded-full'
+
+function getTimelineDotClass(status) {
+  if (status === 'running') {
+    return `${TIMELINE_DOT_BASE_CLASS} running-dot bg-gray-400 dark:bg-gray-400`
+  }
+
+  if (status === 'done') {
+    return `${TIMELINE_DOT_BASE_CLASS} bg-gray-900 dark:bg-white`
+  }
+
+  return `${TIMELINE_DOT_BASE_CLASS} border border-gray-300 bg-transparent dark:border-white/30`
+}
+
 function readEventSource(event) {
   if (
     event !== null &&
@@ -168,17 +181,17 @@ export default function AgentLog(props) {
     lastEventId > 0
 
   return (
-    <Card
-      as="section"
-      variant="dark"
-      eyebrow="Demo backbone"
-      title="Orchestration stream"
-      titleId="agent-log-title"
-      aria-labelledby="agent-log-title"
-      aria-busy={status === 'connecting'}
-      padding="none"
-      actions={
-        <>
+    <section aria-labelledby="agent-log-title" aria-busy={status === 'connecting'}>
+      <div className="flex flex-col gap-4 border-b border-gray-200 pb-4 sm:flex-row sm:items-start sm:justify-between dark:border-white/10">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gray-400">
+            Demo backbone
+          </p>
+          <h2 id="agent-log-title" className="mt-1 font-serif text-2xl text-gray-900 dark:text-white">
+            Orchestration stream
+          </h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           {connectionDetails ? (
             <Badge
               key="connection"
@@ -193,29 +206,10 @@ export default function AgentLog(props) {
               <span aria-hidden="true">↻</span> Reconnect
             </Button>
           ) : null}
-        </>
-      }
-      footer={
-        <div className={`${metaRowClass} justify-between gap-x-4`}>
-          <span>{sourceDetails.adapterLabel}</span>
-          <span>
-            {validEventCount} valid events
-            {invalidEventCount > 0 ? ` · ${invalidEventCount} invalid` : ''}
-          </span>
-          {hasResumeCursor || reconnectAttempts > 0 ? (
-            <span className="w-full sm:w-auto">
-              {hasResumeCursor ? `last_event_id=${lastEventId}` : ''}
-              {hasResumeCursor && reconnectAttempts > 0 ? ' · ' : ''}
-              {reconnectAttempts > 0
-                ? `${reconnectAttempts} reconnect attempt${reconnectAttempts === 1 ? '' : 's'}`
-                : ''}
-            </span>
-          ) : null}
         </div>
-      }
-    >
+      </div>
       <div
-        className="max-h-[34rem] min-h-80 overflow-y-auto px-3 py-3 font-mono text-sm sm:px-4"
+        className="max-h-[34rem] min-h-80 overflow-y-auto py-4 text-sm"
         role="log"
         aria-label="Agent activity"
         aria-live="polite"
@@ -223,52 +217,66 @@ export default function AgentLog(props) {
         aria-atomic="false"
       >
         {displayEvents.length === 0 ? (
-          <p className="px-3 py-8 text-center text-offwhite/50">
+          <p className="px-3 py-16 text-center text-sm text-gray-400">
             Waiting for orchestration events…
           </p>
         ) : (
-          <ol className="space-y-1">
+          <ol className="relative ml-1 border-l border-gray-200 dark:border-white/10">
             {displayEvents.map((event) => {
               const eventStatus = getStatusDetails(event.status)
               const eventSource = getSourceDetails(event.source || source)
 
               return (
-                <li
-                  key={event.id}
-                  className="grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-3 rounded-control border border-transparent px-2 py-3 transition-colors hover:border-rule hover:bg-navy-raised sm:grid-cols-[4rem_minmax(8rem,11rem)_minmax(0,1fr)] sm:items-start"
-                >
-                  <time
-                    className="pt-1 text-xs text-offwhite/40"
-                    // The machine-readable value must be the event's own time, not
-                    // the moment this browser happened to receive it.
-                    dateTime={event.eventTime ?? event.receivedAt}
-                    title={event.eventTime ?? event.receivedAt}
-                  >
-                    {event.timestamp}
-                  </time>
-                  <div className="min-w-0 sm:pr-3">
-                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-offwhite">
+                <li key={event.id} className="relative pb-6 pl-6 last:pb-0">
+                  <span aria-hidden="true" className={getTimelineDotClass(eventStatus.status)} />
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {event.agent}
                     </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <Badge status={eventStatus.status} label={eventStatus.label} />
-                      <Badge
-                        source={eventSource.token}
-                        role="img"
-                        aria-label={`Event source ${eventSource.token}`}
-                        title={`Event source ${eventSource.label}`}
-                      />
-                    </div>
+                    <time
+                      className="shrink-0 text-xs text-gray-400"
+                      // The machine-readable value must be the event's own time, not
+                      // the moment this browser happened to receive it.
+                      dateTime={event.eventTime ?? event.receivedAt}
+                      title={event.eventTime ?? event.receivedAt}
+                    >
+                      {event.timestamp}
+                    </time>
                   </div>
-                  <p className="col-start-2 mt-2 leading-6 text-offwhite/70 sm:col-start-3 sm:mt-0 sm:pt-1">
+                  <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">
                     {event.message}
                   </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <Badge status={eventStatus.status} label={eventStatus.label} />
+                    <Badge
+                      source={eventSource.token}
+                      role="img"
+                      aria-label={`Event source ${eventSource.token}`}
+                      title={`Event source ${eventSource.label}`}
+                    />
+                  </div>
                 </li>
               )
             })}
           </ol>
         )}
       </div>
-    </Card>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-gray-200 pt-3 text-xs text-gray-400 dark:border-white/10">
+        <span>{sourceDetails.adapterLabel}</span>
+        <span>
+          {validEventCount} valid events
+          {invalidEventCount > 0 ? ` · ${invalidEventCount} invalid` : ''}
+        </span>
+        {hasResumeCursor || reconnectAttempts > 0 ? (
+          <span className="w-full sm:w-auto">
+            {hasResumeCursor ? `last_event_id=${lastEventId}` : ''}
+            {hasResumeCursor && reconnectAttempts > 0 ? ' · ' : ''}
+            {reconnectAttempts > 0
+              ? `${reconnectAttempts} reconnect attempt${reconnectAttempts === 1 ? '' : 's'}`
+              : ''}
+          </span>
+        ) : null}
+      </div>
+    </section>
   )
 }
