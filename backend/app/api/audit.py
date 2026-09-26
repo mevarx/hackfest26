@@ -19,23 +19,21 @@ async def audit_ghost_twin(
             status_code=422,
             detail="threshold must match the configured server guardrail",
         )
+
     try:
         outcome = run_ghost_twin_audit(
-            candidate_profile=request.candidate_profile.model_dump(
-                mode="json",
-                exclude={"skill_score"},
-                exclude_none=True,
-            ),
+            candidate_profile=request.candidate_profile.model_dump(mode="json", exclude_none=True),
             role_id=request.role_id,
             threshold=settings.ghost_twin_threshold,
-            skill_score=request.candidate_profile.skill_score,
             simulate_legacy_ats=request.simulate_legacy_ats,
+            skill_score=request.candidate_profile.skill_score,
         )
     except ValueError as error:
         raise HTTPException(
             status_code=422,
             detail=str(error),
         ) from error
+
     twins = [
         GhostTwinVariant(
             variant=f"{twin.attribute}_counterfactual",
@@ -47,6 +45,7 @@ async def audit_ghost_twin(
         )
         for twin in outcome.twins
     ]
+
     return GhostTwinResult(
         actual_score=outcome.actual_score,
         twins=twins,
