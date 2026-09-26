@@ -15,11 +15,32 @@ const VIEW_HEIGHT = 320
 
 /** Path ink is Chalk at full opacity; background field is Card Slate at reduced
  *  opacity. Both are the reference's own values for this graphic. */
-const PATH_RADIUS = 2
+const PATH_RADIUS = 2.4
 const FIELD_STEP_X = 19
 const FIELD_STEP_Y = 17
 const FIELD_JITTER = 12
 const FIELD_CLEARANCE = 15
+
+/* The field's treatment is the one place in this file that is a judgement
+ * rather than a transcription, for two measurable reasons.
+ *
+ * The reference says the background field is Card Slate "at reduced opacity"
+ * and offers 0.5. On a #101010 canvas that composites to about #252a2f — a
+ * contrast ratio against the page of roughly 1.4:1, which is below the
+ * threshold where a mark reads as texture at all. The sampled result was a
+ * uniform grey haze with no visible lattice, so the route floated on an empty
+ * plane.
+ *
+ * Full opacity fixes the level: Card Slate at #3b3d45 sits at about 4.3:1,
+ * clearly present as a lattice and still an order of magnitude below the Chalk
+ * route at #f3f3f3. The second fix is size — the field dots are sub-pixel at
+ * this viewBox scale (1.1-1.8 units over a 1200-unit box shown at 1440px), so
+ * they anti-aliased away even at the right colour. Lifting the floor to 1.5
+ * units gives them enough area to survive the raster.
+ */
+const FIELD_OPACITY = 1
+const FIELD_RADIUS_MIN = 1.5
+const FIELD_RADIUS_RANGE = 0.7
 
 const ROUTE_STEP = 9
 const ROUTE_JITTER = 2.6
@@ -133,7 +154,11 @@ const FIELD_DOTS = (() => {
       if (cx < 0 || cx > VIEW_WIDTH || cy < 0 || cy > VIEW_HEIGHT) continue
       if (distanceToRoute(cx, cy) < FIELD_CLEARANCE) continue
       if (insideAnyBox(cx, cy)) continue
-      dots.push({ x: round(cx), y: round(cy), r: round(1.1 + random() * 0.7) })
+      dots.push({
+        x: round(cx),
+        y: round(cy),
+        r: round(FIELD_RADIUS_MIN + random() * FIELD_RADIUS_RANGE),
+      })
     }
   }
   return dots
@@ -222,7 +247,7 @@ export default function DotMapRoute({ className = '' }) {
         aria-hidden="true"
         className={`block h-auto w-full ${className}`.trim()}
       >
-        <g style={{ fill: 'var(--color-card-slate)', fillOpacity: 0.5 }}>
+        <g style={{ fill: 'var(--color-card-slate)', fillOpacity: FIELD_OPACITY }}>
           {FIELD_DOTS.map((dot, index) => (
             <circle key={`field-${index}`} cx={dot.x} cy={dot.y} r={dot.r} />
           ))}
