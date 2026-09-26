@@ -40,7 +40,7 @@ export default function Select({ className = '', children, ...rest }) {
       </select>
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center justify-center text-offwhite/50"
+        className="pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center justify-center text-[#8A8A8A]"
       >
         <ChevronIcon />
       </span>

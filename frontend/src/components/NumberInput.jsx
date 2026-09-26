@@ -2,7 +2,7 @@ import { controlBaseClass, controlHeightClass } from '../styles/classes.js'
 
 const STEPPER_ROW_CLASS = 'absolute right-1 top-1 flex flex-col gap-0.5'
 const STEPPER_BUTTON_CLASS =
-  'grid h-4 w-6 place-items-center text-offwhite/50 transition-colors hover:bg-navy hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-amber'
+  'grid h-4 w-6 place-items-center rounded text-[#8A8A8A] transition-colors hover:bg-[#E4E4E4] hover:text-[#0A0A0A] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#F5A623]'
 
 function toNumber(value) {
   const parsed = Number(value)
