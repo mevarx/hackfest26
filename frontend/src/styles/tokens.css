@@ -1,0 +1,41 @@
+:root {
+  --navy: #0f1a2b;
+  --navy-raised: #16223a;
+  --offwhite: #f4f6fa;
+  --amber: #f5a623;
+  --teal: #0fa38f;
+  --red: #e5484d;
+  --slate: #6b7a90;
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-subtle-light: rgba(15, 26, 43, 0.1);
+
+  --rule-dark: var(--border-subtle);
+  --rule-light: var(--border-subtle-light);
+}
+
+@theme {
+  --color-navy: var(--navy);
+  --color-navy-raised: var(--navy-raised);
+  --color-offwhite: var(--offwhite);
+  --color-off-white: var(--offwhite);
+  --color-amber: var(--amber);
+  --color-teal: var(--teal);
+  --color-red: var(--red);
+  --color-slate: var(--slate);
+
+  --color-rule: var(--rule-dark);
+  --color-rule-light: var(--rule-light);
+
+  --font-serif: "Noto Serif", Cambria, Georgia, serif;
+  --font-sans: Inter, Calibri, system-ui, sans-serif;
+
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --radius-pill: 999px;
+
+  --height-control: 40px;
+  --height-badge: 24px;
+
+  --shadow-card: 0 1px 2px rgba(15, 26, 43, 0.06), 0 10px 30px rgba(15, 26, 43, 0.06);
+}
