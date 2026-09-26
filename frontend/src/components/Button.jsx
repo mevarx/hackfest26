@@ -2,6 +2,7 @@ import {
   buttonBaseClass,
   buttonGhostClass,
   buttonGlossyClass,
+  buttonHeightClass,
 } from '../styles/classes.js'
 
 // Two buttons exist, and only two. `glossy` is the primary action; `ghost` is
@@ -19,13 +20,16 @@ import {
 // the same 14px button token. 14px is inside the reference's stated 12–14px
 // button band, so the shared token stands rather than reintroducing a
 // duplicate radius at the call site.
+//
+// Height comes from the shared 44px token rather than from padding, so a button
+// sitting on the same row as a form control is exactly as tall as the control.
 const VARIANT_CLASS = {
-  glossy: `${buttonGlossyClass} py-2.5 pl-2.5 pr-5`,
+  glossy: `${buttonGlossyClass} pl-2.5 pr-5`,
   // Asymmetric on purpose: the reference's `10px 20px 10px 10px` pulls the
   // leading edge in so the 24px logomark circle sits flush inside the pill. A
   // caller with no icon inherits the same padding — that is the spec, not a
   // bug to be tidied away.
-  ghost: `${buttonGhostClass} py-2.5 px-5`,
+  ghost: `${buttonGhostClass} px-5`,
 }
 
 // `buttonBaseClass` already carries the Aeonik 400 14px/1 uppercase voice, the
@@ -63,6 +67,7 @@ export default function Button({
 }) {
   const classes = [
     buttonBaseClass,
+    buttonHeightClass,
     VARIANT_CLASS[variant] ?? VARIANT_CLASS.glossy,
     className,
   ]
