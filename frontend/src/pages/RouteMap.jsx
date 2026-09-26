@@ -6,19 +6,18 @@ import {
   bodyCopyClass,
   chalkClass,
   dataLabelClass,
-  inlineLabelClass,
-  measureClass,
   metaClass,
-  ruleDarkClass,
+  readingClass,
+  ruleClass,
   sectionHeadingClass,
   smokeClass,
 } from '../styles/classes.js'
-import Button from '../components/Button.jsx'
-import Card from '../components/Card.jsx'
+import { Button } from '../components/Button.jsx'
+import { Card } from '../components/Card.jsx'
 import Field from '../components/Field.jsx'
 import NumberInput from '../components/NumberInput.jsx'
 import Select from '../components/Select.jsx'
-import SourceTag from '../components/SourceTag.jsx'
+import StatusBadge from '../components/StatusBadge.jsx'
 import TextInput from '../components/TextInput.jsx'
 
 const DEFAULT_FROM_SKILL = 'Manual testing'
@@ -58,12 +57,12 @@ const EMPTY_LEGS = []
 
 // One 1px Graphite rule plus 32px of air separates this panel's sections. Space
 // and a line, never a shift in background tint.
-const SECTION_CLASS = `border-t ${ruleDarkClass} pt-8`
+const SECTION_CLASS = `border-t ${ruleClass} pt-8`
 
 // Loading, empty and error states are plain muted copy in the reading measure
 // with room around them. Never a coloured banner box.
 const STATE_COPY_CLASS =
-  `mx-auto mt-3 ${measureClass} text-center ${bodyClass} ${smokeClass}`
+  `mx-auto mt-3 ${readingClass} text-center ${bodyClass} ${smokeClass}`
 
 // Provenance line — mono metadata, because "where this came from" is a system
 // note and not prose. Inline with a heading it carries no top margin, so the
@@ -75,28 +74,39 @@ const SOURCE_DETAIL_CLASS = `${metaClass} ${smokeClass}`
 // one. No pill radius, no gradient, no fade.
 const CONNECTOR_CLASS = 'bg-graphite'
 const STATION_DOT_BASE_CLASS =
-  'relative z-10 h-4 w-4 shrink-0 border border-chalk sm:h-5 sm:w-5'
+  'relative z-10 h-4 w-4 shrink-0 rounded-full border sm:h-5 sm:w-5'
 
-// The target role is the endpoint the whole route exists to reach, so it is the
-// one filled dot on the track — the same emphasis the stage track gives its
-// active stage. It is filled in Chalk rather than amber because the single
-// Compass Amber on this screen already belongs to the active stage dot. Every
-// other station stays an outline, which is what lets the line read straight
-// through the track.
-const STATION_DOT_CLASS = `${STATION_DOT_BASE_CLASS} bg-obsidian`
-const TARGET_STATION_DOT_CLASS = `${STATION_DOT_BASE_CLASS} bg-chalk`
+// Every station is a Graphite-outlined circle on the bare canvas, so the line
+// reads straight through the track. The target role is the one node the whole
+// route exists to reach, so it is the only filled dot — Chalk, the same ink as
+// the reference's "path" dots. Compass Gold is reserved for icon strokes and
+// Pulse Green for the live-status dot, so neither appears here.
+const STATION_DOT_CLASS = `${STATION_DOT_BASE_CLASS} border-graphite bg-obsidian`
+const TARGET_STATION_DOT_CLASS = `${STATION_DOT_BASE_CLASS} border-chalk bg-chalk`
 
-/** @type {Record<string, { source: 'live' | 'simulated' | 'local' | 'pending', detail: string }>} */
+// A station name is a name, so it takes the same treatment the reference gives
+// the Pipeline Agent Card's heading: Aeonik 14px, weight 400, uppercase, Chalk.
+const STATION_LABEL_CLASS = `font-aeonik text-sm font-normal uppercase ${chalkClass}`
+
+/** @type {Record<string, { label: string, source: 'live' | 'simulated' | 'local' | 'pending', detail: string }>} */
 const SOURCE_DETAILS = {
   live: {
+    label: 'live',
     source: 'live',
     detail: 'Answered by SAP HANA Cloud',
   },
   simulated: {
+    label: 'simulated',
     source: 'simulated',
     detail: 'Bundled skills-graph fixture, no SAP HANA call',
   },
+  local: {
+    label: 'local',
+    source: 'local',
+    detail: 'Answered from the bundled local fixture',
+  },
   pending: {
+    label: 'source pending',
     source: 'pending',
     detail: 'No route has been returned yet',
   },
@@ -109,6 +119,10 @@ function getSourceDetails(source) {
 
   if (source === 'simulated') {
     return SOURCE_DETAILS.simulated
+  }
+
+  if (source === 'local') {
+    return SOURCE_DETAILS.local
   }
 
   return SOURCE_DETAILS.pending
@@ -360,14 +374,21 @@ export default function RouteMap({
       title="Route map"
       titleId="route-map-title"
       description="The cheapest chain of skills from where Kavya is today to the target role, priced in hours."
-      actions={<SourceTag source={sourceDetails.source} />}
+      actions={
+        <StatusBadge
+          live={sourceDetails.source === 'live'}
+          label={sourceDetails.label}
+        />
+      }
       aria-labelledby="route-map-title"
       aria-busy={isLoading}
       padding="none"
       // The Route Builder is a form plus a reading list, so it caps narrower
-      // than the 1120px page column. 52rem (832px) sits a little wider than the
-      // 640px reading measure because the station track needs the room, and
-      // well inside the column so the three fields do not stretch.
+      // than the 1200px page column. 52rem (832px) sits a little wider than the
+      // 620px reading measure because the station track needs the room, and
+      // well inside the column so the three fields do not stretch. The panel
+      // itself takes no border and no fill — the reference reserves both for the
+      // badge and the glossy pill.
       className="max-w-[52rem]"
     >
       <div className="space-y-16">
@@ -414,11 +435,13 @@ export default function RouteMap({
             </Field>
           </div>
 
-          {/* The only button in this panel, and the one the reference names for
-              it, so it holds the viewport's single fill. */}
+          {/* The one button in this panel, and the one the reference names for
+              it, so it holds the viewport's single fill. The ↗ is the
+              reference's forward-action arrow. */}
           <Button
             type="submit"
-            variant="primary"
+            variant="glossy"
+            arrow="↗"
             disabled={isLoading || !canQuery}
             aria-busy={isLoading}
             className="mt-8"
@@ -434,7 +457,7 @@ export default function RouteMap({
           >
             <p className={sectionHeadingClass}>Route unavailable</p>
             <p className={`mt-3 ${bodyCopyClass}`}>{error}</p>
-            <p className={`mt-2 ${measureClass} text-left ${SOURCE_DETAIL_CLASS}`}>
+            <p className={`mt-2 ${readingClass} text-left ${SOURCE_DETAIL_CLASS}`}>
               {sourceDetails.detail}. Ask for the route again once the skills graph
               answers.
             </p>
@@ -470,25 +493,25 @@ export default function RouteMap({
             <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
               {/* Each value is server data — a skill name, a role id, a count —
                   so all four read as mono metadata under a caption label. */}
-              <div className={`border-t ${ruleDarkClass} pt-4`}>
+              <div className={`border-t ${ruleClass} pt-4`}>
                 <p className={dataLabelClass}>Route from</p>
                 <p className={`mt-2 ${metaClass} ${chalkClass}`}>
                   {route.from_skill ?? '—'}
                 </p>
               </div>
-              <div className={`border-t ${ruleDarkClass} pt-4`}>
+              <div className={`border-t ${ruleClass} pt-4`}>
                 <p className={dataLabelClass}>Route to</p>
                 <p className={`mt-2 ${metaClass} ${chalkClass}`}>
                   {route.target_role ?? '—'}
                 </p>
               </div>
-              <div className={`border-t ${ruleDarkClass} pt-4`}>
+              <div className={`border-t ${ruleClass} pt-4`}>
                 <p className={dataLabelClass}>Total hours</p>
                 <p className={`mt-2 ${metaClass} ${chalkClass}`}>
                   {formatHours(route.total_hours)}
                 </p>
               </div>
-              <div className={`border-t ${ruleDarkClass} pt-4`}>
+              <div className={`border-t ${ruleClass} pt-4`}>
                 <p className={dataLabelClass}>
                   Weeks at {formatHours(route.hours_per_week)}h per week
                 </p>
@@ -544,10 +567,10 @@ export default function RouteMap({
                       </div>
 
                       <div className="min-w-0 sm:mt-3">
-                        <p className={inlineLabelClass}>
+                        <p className={STATION_LABEL_CLASS}>
                           {station.skill}
                         </p>
-                        <p className={`mt-1 ${metaClass} ${smokeClass}`}>
+                        <p className={`mt-1 ${SOURCE_DETAIL_CLASS}`}>
                           {station.isTarget
                             ? 'Target role'
                             : `${formatHours(station.hours)} hours on this hop`}
@@ -577,7 +600,7 @@ export default function RouteMap({
                   {bridgeEntries.map(([label, value]) => (
                     <div
                       key={label}
-                      className={`flex items-baseline justify-between gap-4 border-b ${ruleDarkClass} pb-2`}
+                      className={`flex items-baseline justify-between gap-4 border-b ${ruleClass} pb-2`}
                     >
                       <dt className={dataLabelClass}>{label}</dt>
                       <dd className={`text-right ${metaClass} ${chalkClass}`}>

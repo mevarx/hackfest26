@@ -57,9 +57,9 @@ function labelledCard(label) {
 }
 
 /**
- * The panel header. The route's source tag is the only one on screen, so scoping
- * to the header keeps it distinguishable from the `source: 'simulated'` row the
- * paid bridge block happens to print from the same fixture.
+ * The panel header. The route's source badge is the only one in the header, so
+ * scoping to it keeps the badge distinguishable from the `source: 'simulated'`
+ * row the paid bridge block happens to print from the same fixture.
  */
 function panelHeader() {
   const section = screen.getByRole('heading', { name: 'Route map' }).closest('section')
@@ -92,6 +92,20 @@ describe('RouteMap', () => {
       'Test automation80 hours on this hop',
       'qa-analystTarget role',
     ])
+
+    // The line is the reference's dot-map vocabulary: a Graphite-outlined circle
+    // per hop on the bare canvas, with the destination the one filled dot. Neither
+    // Compass Gold nor Pulse Green appears — those are the icon stroke and the
+    // live-status dot respectively.
+    for (const hop of items.slice(0, 3)) {
+      expect(hop.querySelector('.border-graphite.bg-obsidian')).not.toBeNull()
+      expect(hop.querySelector('.bg-chalk')).toBeNull()
+    }
+
+    const target = items[3]
+
+    expect(target.querySelector('.bg-chalk')).not.toBeNull()
+    expect(target.querySelector('.bg-pulse-green')).toBeNull()
   })
 
   it('summarises the total hours, weeks and weekly capacity with labels', async () => {
@@ -152,18 +166,40 @@ describe('RouteMap', () => {
   it('labels the route source from the response and switches it for a live route', async () => {
     const { unmount } = render(<RouteMap />)
 
-    expect(within(panelHeader()).getByText('source pending')).toBeInTheDocument()
+    // Before a route exists the source is a gap, not a state: the badge says so
+    // and keeps the Graphite dot.
+    const pendingBadge = within(panelHeader()).getByText('source pending')
+
+    expect(pendingBadge).toHaveClass('rounded-badge')
+    expect(pendingBadge.querySelector('[data-status-dot]')).toHaveClass(
+      'border-graphite',
+    )
 
     getRouteMock.mockResolvedValue(ROUTE)
     fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
-    expect(await within(panelHeader()).findByText('simulated')).toBeInTheDocument()
+
+    // A fixture answer is honest about not being live, so it takes the outline
+    // dot rather than the Pulse Green one.
+    const simulatedBadge = await within(panelHeader()).findByText('simulated')
+
+    expect(simulatedBadge.querySelector('[data-status-dot]')).toHaveClass(
+      'border-graphite',
+    )
+    expect(
+      simulatedBadge.querySelector('[data-status-dot]'),
+    ).not.toHaveClass('bg-pulse-green')
     unmount()
 
     getRouteMock.mockResolvedValue({ ...ROUTE, source: 'live' })
     render(<RouteMap />)
     fireEvent.click(screen.getByRole('button', { name: 'Build route' }))
 
-    expect(await within(panelHeader()).findByText('live')).toBeInTheDocument()
+    // `live` is the one source that earns the live dot.
+    const liveBadge = await within(panelHeader()).findByText('live')
+
+    expect(liveBadge.querySelector('[data-status-dot]')).toHaveClass(
+      'bg-pulse-green',
+    )
     expect(within(panelHeader()).queryByText('simulated')).not.toBeInTheDocument()
   })
 

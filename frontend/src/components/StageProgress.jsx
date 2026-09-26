@@ -1,25 +1,44 @@
-import { captionClass, chalkClass, smokeClass } from '../styles/classes.js'
+import { captionClass, chalkClass, metaClass, smokeClass } from '../styles/classes.js'
 
-// The rule is Graphite for every state and every segment, so the row reads as
-// one continuous 1px line rather than per-segment tints of "how far you got".
+// The connector is Graphite in every state and every segment, so the row reads as
+// one continuous 1px line rather than as per-segment tints of "how far you got".
 // Progress is carried by the dots alone; the line is structure.
 const CONNECTOR_CLASS = 'bg-graphite'
 
-// 10px. Current is filled Compass Amber — the single accent on this screen.
-// Completed is a solid Chalk dot, upcoming is an outline only. Nothing is
-// padded, filled or numbered to signal state.
+// 10px. `rounded-full` here is a circle on a 10px dot, not the full-pill radius
+// the reference reserves for the badge and the primary button — a card or a
+// button never gets it.
 const STAGE_DOT_CLASS = 'h-2.5 w-2.5 shrink-0 rounded-full'
 
+/**
+ * Dot and label treatment per stage state. Three states, one grammar:
+ *
+ *   active    — a solid Chalk dot with a Graphite halo, so the current step reads
+ *               as the only filled node on the row. Pulse Green is deliberately
+ *               NOT used here: the reference confines it to "the single
+ *               live-status dot in the badge", and the live run already says so
+ *               through the panel's own Status Badge. Spending the one accent the
+ *               system allows on a second component would dilute it.
+ *   complete  — a Graphite outline: finished, and receded to structure.
+ *   upcoming  — a Graphite outline too, so an unstarted step is visually identical
+ *               to a finished one. The row is a track, not a progress bar, and
+ *               this component has no completion signal to report: the app only
+ *               knows whether a session is open and whether its stream is still
+ *               settling, so "complete" is never actually driven.
+ *
+ * The label differentiates by ink, never by weight: the reference bans bold and
+ * semibold on display type, and the only available emphasis inside a caption is
+ * Chalk against Smoke.
+ */
 /** @type {Record<'complete' | 'active' | 'upcoming', { dotClass: string, labelClass: string }>} */
 const STATUS_DETAILS = {
   complete: {
-    dotClass: 'bg-chalk',
+    dotClass: 'border border-graphite bg-transparent',
     labelClass: smokeClass,
   },
   active: {
-    dotClass: 'bg-compass-amber',
-    // The only label on the row at full ink and the only one above weight 400.
-    labelClass: `font-medium ${chalkClass}`,
+    dotClass: 'border border-chalk bg-chalk',
+    labelClass: chalkClass,
   },
   upcoming: {
     dotClass: 'border border-graphite bg-transparent',
@@ -29,16 +48,16 @@ const STATUS_DETAILS = {
 
 const DEFAULT_STATUS = 'upcoming'
 
-// 13px Smoke, set as body copy rather than as a second caption: the style
-// reference gives the stage row exactly one label, and a tracked uppercase line
-// under it would read as a second one competing with the caption above.
-const DESCRIPTION_CLASS = `mt-1 font-utility text-caption font-normal leading-body ${smokeClass}`
+// 13px Smoke set as body copy rather than as a second caption: the reference gives
+// the stage row exactly one label, and a second tracked uppercase line under it
+// would compete with the caption above. `leading-body` keeps the caption's
+// unusually loose 2.69 off a two-line description.
+const DESCRIPTION_CLASS = `mt-1 font-aeonik text-caption font-normal leading-body ${smokeClass}`
 
-// Stage data still carries 01/02/03/04, but the style reference retires those
-// as standalone typography, so the number is folded into the caption at 11px —
-// a metadata mark beside the label, never a headline of its own. It is hidden
-// from assistive tech because the caption already announces "Step N of M".
-const STAGE_NUMBER_CLASS = 'text-timestamp'
+// The stage number is metadata about a row's position, not a label, so it is set
+// in the Input voice — the system's own Aeonik/Input pairing, as on the Session
+// Card. It stays aria-hidden because the row already announces "Step N of M".
+const STAGE_NUMBER_CLASS = metaClass
 
 /**
  * @param {{

@@ -11,7 +11,7 @@ import {
   headingSmClass,
   metaClass,
   metaRowClass,
-  ruleDarkClass,
+  ruleClass,
   sectionHeadingClass,
   smokeClass,
 } from '../styles/classes.js'
@@ -19,7 +19,7 @@ import Button from '../components/Button.jsx'
 import Card from '../components/Card.jsx'
 import Field from '../components/Field.jsx'
 import Select from '../components/Select.jsx'
-import SourceTag from '../components/SourceTag.jsx'
+import StatusBadge from '../components/StatusBadge.jsx'
 import TextInput from '../components/TextInput.jsx'
 
 const KNOWN_JOB_POST_IDS = [
@@ -65,7 +65,7 @@ const STATUS_CARD_DETAILS = {
 // An aside the reader must not skip: a hairline above it, 13px Smoke below.
 // The system has no icon for "read this first", so the rule and the type carry
 // it — one paragraph, no glyph, no tinted panel.
-const NOTE_CLASS = `max-w-[40rem] border-t ${ruleDarkClass} pt-6 text-left font-utility text-caption font-normal leading-6 ${smokeClass}`
+const NOTE_CLASS = `max-w-[40rem] border-t ${ruleClass} pt-6 text-left font-aeonik text-caption font-normal leading-6 ${smokeClass}`
 
 function formatErrorMessage(requestError, fallback) {
   if (requestError instanceof Error && requestError.message) {
@@ -116,8 +116,10 @@ function readStatusDetails(status) {
 function DisclaimerNote({ disclaimer, scope }) {
   return (
     <p className={`mt-8 ${NOTE_CLASS}`}>
-      {/* Weight 500 at the note's own size marks the scope word. A bold run or a
-          second colour would be a heavier signal than an aside warrants. */}
+      {/* Weight 500 at the note's own size marks the scope word. The reference
+          keeps Aeonik 400 for display type; 500 is a half-step, never bold or
+          semibold, and a second colour would be a heavier signal than an aside
+          warrants. */}
       <span className="font-medium">{scope}: </span>
       {asText(disclaimer, 'Simulated demo data, not an observed ATS connection.')}
     </p>
@@ -128,12 +130,14 @@ function BlockShell({ titleId, eyebrow, title, description, className = '', chil
   return (
     <Card
       as="section"
-      variant="dark"
       eyebrow={eyebrow}
       title={title}
       titleId={titleId}
       description={description}
-      actions={<SourceTag source="simulated" />}
+      // Both blocks are backed by bundled demo fixtures wired to no ATS, so the
+      // honest reading of the source is a non-live badge: the Graphite outline
+      // dot rather than the Pulse Green live dot.
+      actions={<StatusBadge label="simulated" live={false} />}
       aria-labelledby={titleId}
       padding="none"
       className={className}
@@ -148,7 +152,7 @@ function StatusMessage({ tone, title, message, testId }) {
 
   return (
     <div
-      className={`border-t ${ruleDarkClass} ${details.emptyState ? 'px-6 py-16' : 'pt-8'}`}
+      className={`border-t ${ruleClass} ${details.emptyState ? 'px-6 py-16' : 'pt-8'}`}
       data-testid={testId}
       role={tone === 'error' ? 'alert' : 'status'}
     >
@@ -180,7 +184,7 @@ function RadarBlock({
       className={className}
     >
       <form
-        className={`flex flex-col items-start gap-8 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-end`}
+        className={`flex flex-col items-start gap-8 border-t ${ruleClass} pt-8 sm:flex-row sm:items-end`}
         onSubmit={onSubmit}
       >
         <div className="flex-1">
@@ -202,9 +206,13 @@ function RadarBlock({
         <Field id="radar-city" label="City" className="sm:w-40">
           <TextInput id="radar-city" name="city" value={city} onChange={onCityChange} />
         </Field>
+        {/* One forward action per block, and the blocks are a screen apart, so
+            each earns the single filled Glossy Pill. `↗` is the reference's
+            glyph for a forward action. */}
         <Button
           type="submit"
-          variant="primary"
+          variant="glossy"
+          arrow="↗"
           disabled={isLoading}
           aria-busy={isLoading}
         >
@@ -243,19 +251,19 @@ function RadarBlock({
         ) : (
           <div>
             <dl className="grid gap-8 sm:grid-cols-2">
-              <div className={`border-t ${ruleDarkClass} pt-4`}>
+              <div className={`border-t ${ruleClass} pt-4`}>
                 <dt className={dataLabelClass}>Role</dt>
                 <dd className={`mt-2 ${metaClass} ${chalkClass}`}>
                   {asText(radar.role, role)}
                 </dd>
               </div>
-              <div className={`border-t ${ruleDarkClass} pt-4`}>
+              <div className={`border-t ${ruleClass} pt-4`}>
                 <dt className={dataLabelClass}>City</dt>
                 <dd className={`mt-2 ${metaClass} ${chalkClass}`}>
                   {asText(radar.city, city)}
                 </dd>
               </div>
-              <div className={`border-t ${ruleDarkClass} pt-4`}>
+              <div className={`border-t ${ruleClass} pt-4`}>
                 <dt className={dataLabelClass}>Displacement exposure</dt>
                 <dd
                   className={`mt-2 ${headingSmClass} ${chalkClass}`}
@@ -264,7 +272,7 @@ function RadarBlock({
                   {asText(radar.exposure, 'unknown')}
                 </dd>
               </div>
-              <div className={`border-t ${ruleDarkClass} pt-4`}>
+              <div className={`border-t ${ruleClass} pt-4`}>
                 <dt className={dataLabelClass}>Local demand</dt>
                 <dd
                   className={`mt-2 ${headingSmClass} ${chalkClass}`}
@@ -274,8 +282,9 @@ function RadarBlock({
                 </dd>
               </div>
             </dl>
-            {/* Meta row, not a pill: the source reads as a Source Tag would —
-                plain mono Smoke with a "·" separator and no box. */}
+            {/* Meta row, not a badge: this line is data about the fetch, and the
+                reference gives a source word no badge of its own here — plain
+                mono Smoke with a "·" separator and no box. */}
             <div className={`mt-8 ${metaRowClass}`}>
               <span>source=simulated</span>
               <span aria-hidden="true">·</span>
@@ -294,7 +303,7 @@ function RadarBlock({
 
 function FilterPanel({ heading, headingId, text, children }) {
   return (
-    <div className={`border-t ${ruleDarkClass} pt-6`}>
+    <div className={`border-t ${ruleClass} pt-6`}>
       <h3 id={headingId} className={sectionHeadingClass}>
         {heading}
       </h3>
@@ -326,7 +335,7 @@ function RewriteBlock({
       className={className}
     >
       <form
-        className={`flex flex-col items-start gap-8 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-end`}
+        className={`flex flex-col items-start gap-8 border-t ${ruleClass} pt-8 sm:flex-row sm:items-end`}
         onSubmit={onSubmit}
       >
         <div className="flex-1">
@@ -351,7 +360,8 @@ function RewriteBlock({
         </div>
         <Button
           type="submit"
-          variant="primary"
+          variant="glossy"
+          arrow="↗"
           disabled={isLoading}
           aria-busy={isLoading}
         >
@@ -389,7 +399,7 @@ function RewriteBlock({
           />
         ) : (
           <div>
-            <div className={`flex flex-col gap-6 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-start sm:justify-between`}>
+            <div className={`flex flex-col gap-6 border-t ${ruleClass} pt-8 sm:flex-row sm:items-start sm:justify-between`}>
               <div>
                 <p className={sectionHeadingClass}>Hidden by this filter</p>
                 {/* The block's one hero figure, at the heading size. It stays a
@@ -422,7 +432,7 @@ function RewriteBlock({
               </dl>
             </div>
 
-            <div className={`mt-12 flex flex-col gap-3 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-center`}>
+            <div className={`mt-12 flex flex-col gap-3 border-t ${ruleClass} pt-8 sm:flex-row sm:items-center`}>
               {/* The words and the hairline do the work an arrow used to: the
                   "·" is the same separator the meta rows use. */}
               <p className={sectionHeadingClass}>Flagged · rewritten</p>
@@ -450,7 +460,7 @@ function RewriteBlock({
                   'No before text supplied.',
                 )}
               >
-                <p className={`mt-4 border-t ${ruleDarkClass} pt-4`}>
+                <p className={`mt-4 border-t ${ruleClass} pt-4`}>
                   <span className={`block ${dataLabelClass}`}>
                     Restrictive phrase removed
                   </span>
@@ -468,7 +478,7 @@ function RewriteBlock({
                 headingId="filter-text-after"
                 text={asText(rewrite.filter_text_after, 'No after text supplied.')}
               >
-                <p className={`mt-4 border-t ${ruleDarkClass} pt-4`}>
+                <p className={`mt-4 border-t ${ruleClass} pt-4`}>
                   <span className={`block ${dataLabelClass}`}>
                     Pedigree wording gone
                   </span>
@@ -488,7 +498,7 @@ function RewriteBlock({
               </p>
             </div>
 
-            <div className={`mt-12 border-t ${ruleDarkClass} pt-8`}>
+            <div className={`mt-12 border-t ${ruleClass} pt-8`}>
               <h3 id="removed-criteria-title" className={sectionHeadingClass}>
                 Criteria removed ({removedCriteria.length})
               </h3>
@@ -502,7 +512,7 @@ function RewriteBlock({
                   {removedCriteria.map((criterion, index) => (
                     <li
                       key={`${criterion}-${index}`}
-                      className={`border-t ${ruleDarkClass} pt-3 text-left ${bodyClass} ${smokeClass}`}
+                      className={`border-t ${ruleClass} pt-3 text-left ${bodyClass} ${smokeClass}`}
                     >
                       {criterion}
                     </li>
@@ -640,9 +650,11 @@ export default function HRConsole({ baseUrl = '' }) {
       <header className="pb-12">
         <p className={sectionHeadingClass}>Employer readiness · Phase 4C</p>
         {/* An h2, not a second h1: this panel renders inside App's page column,
-            which already owns the document's only h1. Serif at the heading size;
-            the second line is the same size, italic and one step quieter, which
-            is what makes "not the shortlist" read as the aside it is. */}
+            which already owns the document's only h1. The reference's Headline
+            Display Block: line one at full weight in Chalk, line two the same
+            size in italic one step quieter, both left-aligned. "not the
+            shortlist" reads as the aside it is precisely because it is not
+            louder than the line above it. */}
         <h2 className={`mt-4 max-w-2xl ${headingClass} ${chalkClass}`}>
           Rewrite the filter,
           <span className={`block italic ${smokeClass}`}>
@@ -667,7 +679,7 @@ export default function HRConsole({ baseUrl = '' }) {
           radar={radar}
           error={radarError}
           isLoading={isRadarLoading}
-          className={`mt-24 border-t ${ruleDarkClass} pt-24`}
+          className={`mt-24 border-t ${ruleClass} pt-24`}
           onRoleChange={(event) => setRole(event.target.value)}
           onCityChange={(event) => setCity(event.target.value)}
           onSubmit={handleRadarSubmit}
@@ -678,7 +690,7 @@ export default function HRConsole({ baseUrl = '' }) {
           rewrite={rewrite}
           error={rewriteError}
           isLoading={isRewriteLoading}
-          className={`mt-24 border-t ${ruleDarkClass} pt-24`}
+          className={`mt-24 border-t ${ruleClass} pt-24`}
           onJobPostChange={(event) => setJobPostId(event.target.value)}
           onSubmit={handleRewriteSubmit}
         />

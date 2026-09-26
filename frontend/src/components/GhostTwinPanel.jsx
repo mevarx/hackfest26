@@ -7,12 +7,11 @@ import {
   captionClass,
   chalkClass,
   dataLabelClass,
-  focusRingClass,
   headingSmClass,
   inlineLabelClass,
   metaClass,
   metaRowClass,
-  ruleDarkClass,
+  ruleClass,
   sectionHeadingClass,
   smokeClass,
 } from '../styles/classes.js'
@@ -21,8 +20,7 @@ import Card from './Card.jsx'
 import Field from './Field.jsx'
 import NumberInput from './NumberInput.jsx'
 import Select from './Select.jsx'
-import SourceTag from './SourceTag.jsx'
-import StatusLine from './StatusLine.jsx'
+import StatusBadge from './StatusBadge.jsx'
 import Switch from './Switch.jsx'
 import TextInput from './TextInput.jsx'
 
@@ -88,6 +86,28 @@ const EMPTY_AUDIT = {
   threshold: null,
   source: null,
 }
+
+// The header badge follows the response's own source word instead of assuming
+// one. Both audit paths score in-process, so `local` is the settled reading and
+// `live` is the exception worth a Pulse Green dot; a run that has not happened
+// yet takes the same outlined dot, because absence of a live dot is the signal
+// and a third word would only add noise to the header.
+/** @type {Record<'live' | 'local' | 'pending', { label: string, live: boolean }>} */
+const SOURCE_BADGE = {
+  live: { label: 'live', live: true },
+  local: { label: 'local', live: false },
+  pending: { label: 'no run yet', live: false },
+}
+
+// The results table scrolls, so its region is focusable and needs a visible ring:
+// an Ash outline, the same shape the form controls use. Never a hue.
+const FOCUS_RING_CLASS = 'focus:outline-2 focus:outline-offset-2 focus:outline-ash'
+
+// Loading, failed and empty are one plain shape — centred copy inside the panel's
+// own padding, no box, no tint, no banner colour. Only the words differ; what
+// separates a failure from a wait is the `role`, not the ink.
+const STATE_WRAP_CLASS = 'py-16 text-center'
+const STATE_COPY_CLASS = `mx-auto mt-3 max-w-[40rem] ${bodyClass} ${smokeClass}`
 
 function formatCounterfactualValue(value) {
   if (value && typeof value === 'object') {
@@ -302,34 +322,35 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
   const isPass = hasAudit && audit.result === 'PASS'
   const isFlagged = hasAudit && audit.result === 'FLAGGED'
   const source = hasAudit ? audit.source : null
+  const sourceBadge = SOURCE_BADGE[source ?? 'pending'] ?? SOURCE_BADGE.pending
   const scoringMode = getScoringMode(simulateLegacyAts)
   const editedFields = getEditedFields(form)
   const hasPendingEdits = editedFields.length > 0
-  // The verdict is a Status Line, not a banner: a filled Pulse dot reads as a
-  // clean run, and the outlined dot with its thin amber ring reads as a run
-  // blocked on the threshold. That ring is the one documented place amber may
-  // repeat, so a passing audit gets no colour at all.
-  const verdictStatus = isPass ? 'done' : 'waiting'
+  // The verdict is a Status Badge, the one component the reference builds a box
+  // for: a full-pill surface whose 6px prefix dot is Pulse Green on a live run
+  // and a Graphite outline otherwise. A completed audit inside the threshold is
+  // the live reading; FLAGGED takes the outline rather than borrowing a second
+  // accent colour for "bad".
   const verdictLabel = isPass ? 'PASS' : 'FLAGGED'
+  const verdictLive = isPass
 
   return (
     <Card
       as="section"
-      variant="dark"
       eyebrow="Bias audit · Kavya"
       title="Ghost Twin audit"
       titleId="ghost-twin-title"
       description="Compare a candidate with counterfactual twins before making a fair role match."
-      actions={<SourceTag source={source ?? 'pending'} />}
+      actions={<StatusBadge label={sourceBadge.label} live={sourceBadge.live} />}
       aria-labelledby="ghost-twin-title"
       aria-busy={isLoading}
-      padding="none"
-      // Carbon is the deepest surface in the system and this panel is the one
-      // place that earns it. The lift is a value step off Obsidian plus the same
-      // 1px Graphite rule everything else uses — never a shadow.
-      className={`rounded-card border ${ruleDarkClass} bg-carbon p-8 sm:p-10`}
+      padding="xl"
+      // Carbon is the reference's deepest surface level and this is the one panel
+      // that earns it: a value step off Obsidian plus a Card Slate hairline. No
+      // shadow — elevation here is the value shift and the border alone.
+      className="rounded-card border border-card-slate bg-carbon"
     >
-      <div className={`flex flex-col gap-4 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-baseline sm:justify-between`}>
+      <div className={`flex flex-col gap-4 border-t ${ruleClass} pt-8 sm:flex-row sm:items-baseline sm:justify-between`}>
         <div>
           <p className={sectionHeadingClass}>Candidate</p>
           <p className={`mt-2 ${headingSmClass} ${chalkClass}`}>
@@ -342,10 +363,10 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
         </div>
       </div>
 
-      <div className={`mt-8 flex flex-col items-start gap-4 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-center sm:justify-between`}>
+      <div className={`mt-8 flex flex-col items-start gap-4 border-t ${ruleClass} pt-8 sm:flex-row sm:items-center sm:justify-between`}>
         {/* The nav bar's minimal switch: Graphite outline off, Chalk outline on,
-            state carried by the knob's position. Not a coloured track — amber
-            stays on the focus ring. */}
+            state carried by the knob's position. A toggle is never a status
+            light, so no Pulse Green here either. */}
         <Switch
           id="simulate-legacy-ats"
           checked={simulateLegacyAts}
@@ -354,9 +375,9 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
           label="Simulate Legacy ATS"
           description="Add a comparison run for a legacy, biased screening model."
         />
-        {/* The one filled button on this view. */}
+        {/* The one filled surface on this screen. */}
         <Button
-          variant="primary"
+          variant="glossy"
           onClick={runAudit}
           disabled={isLoading}
           aria-busy={isLoading}
@@ -368,7 +389,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
       <fieldset
         aria-label="Edit the candidate profile"
         disabled={isLoading}
-        className={`mt-8 border-t ${ruleDarkClass} pt-8`}
+        className={`mt-8 border-t ${ruleClass} pt-8`}
       >
         <p className={sectionHeadingClass}>Edit the candidate profile</p>
         <p
@@ -468,7 +489,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
           </Field>
         </div>
 
-        <div className={`mt-8 flex flex-col items-start gap-4 border-t ${ruleDarkClass} pt-6 sm:flex-row sm:items-center sm:justify-between`}>
+        <div className={`mt-8 flex flex-col items-start gap-4 border-t ${ruleClass} pt-6 sm:flex-row sm:items-center sm:justify-between`}>
           <p className={bodyCopyClass} data-testid="edit-summary">
             {hasPendingEdits
               ? `Edited: ${editedFields
@@ -476,8 +497,8 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
                   .join(', ')}`
               : 'No edits yet. The seeded profile is Kavya’s.'}
           </p>
-          {/* Second action on the view: Ghost Outline, never a second filled
-              button beside the Run Audit primary. */}
+          {/* The second action on the view is the Ghost Outline, so the panel
+              never shows two filled surfaces. */}
           <Button
             variant="ghost"
             onClick={runAudit}
@@ -489,7 +510,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
         </div>
       </fieldset>
 
-      <div className={`mt-8 border-t ${ruleDarkClass} pt-8 ${metaRowClass}`} aria-live="polite">
+      <div className={`mt-8 border-t ${ruleClass} pt-8 ${metaRowClass}`} aria-live="polite">
         <span>{hasAudit ? `Source=${source}` : 'Source=pending'}</span>
         <span aria-hidden="true">·</span>
         <span>{scoringMode}</span>
@@ -499,31 +520,31 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
 
       {isLoading ? (
         <div
-          className="px-6 py-16 text-center"
+          className={STATE_WRAP_CLASS}
           role="status"
           aria-live="polite"
         >
           <p className={sectionHeadingClass}>Loading audit…</p>
-          <p className={`mx-auto mt-3 max-w-[40rem] text-center ${bodyClass} ${smokeClass}`}>
+          <p className={STATE_COPY_CLASS}>
             Comparing {form.age}-year-old candidates in {form.city} against
             counterfactual twins.
           </p>
         </div>
       ) : error ? (
         <div
-          className="px-6 py-16 text-center"
+          className={STATE_WRAP_CLASS}
           role="alert"
         >
-          <p className={`${captionClass} ${chalkClass}`}>Audit unavailable</p>
-          <p className={`mx-auto mt-3 max-w-[40rem] text-center ${bodyClass} ${chalkClass}`}>{error}</p>
-          <p className={`mx-auto mt-3 max-w-[40rem] text-center ${bodyClass} ${smokeClass}`}>
+          <p className={sectionHeadingClass}>Audit unavailable</p>
+          <p className={STATE_COPY_CLASS}>{error}</p>
+          <p className={STATE_COPY_CLASS}>
             The audit could not be completed. Try the request again.
           </p>
         </div>
       ) : !hasAudit ? (
-        <div className="px-6 py-16 text-center">
+        <div className={STATE_WRAP_CLASS}>
           <p className={sectionHeadingClass}>Ready to audit</p>
-          <p className={`mx-auto mt-3 max-w-[40rem] text-center ${bodyClass} ${smokeClass}`}>
+          <p className={STATE_COPY_CLASS}>
             Run the audit to see how each counterfactual changes the base
             score. The server decides the fairness threshold.
           </p>
@@ -531,25 +552,25 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
       ) : (
         <div className="mt-12 space-y-16">
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-            <div className={`border-t ${ruleDarkClass} pt-4`}>
+            <div className={`border-t ${ruleClass} pt-4`}>
               <p className={dataLabelClass}>Actual score</p>
               <p className={`mt-1 ${metaClass} ${chalkClass}`}>
                 {formatScore(audit.actual_score)}
               </p>
             </div>
-            <div className={`border-t ${ruleDarkClass} pt-4`}>
+            <div className={`border-t ${ruleClass} pt-4`}>
               <p className={dataLabelClass}>Max delta</p>
               <p className={`mt-1 ${metaClass} ${chalkClass}`}>
                 {formatScore(audit.max_delta)}
               </p>
             </div>
-            <div className={`border-t ${ruleDarkClass} pt-4`}>
+            <div className={`border-t ${ruleClass} pt-4`}>
               <p className={dataLabelClass}>Threshold</p>
               <p className={`mt-1 ${metaClass} ${chalkClass}`}>
                 {formatScore(audit.threshold)}
               </p>
             </div>
-            <div className={`border-t ${ruleDarkClass} pt-4`}>
+            <div className={`border-t ${ruleClass} pt-4`}>
               <p className={dataLabelClass}>Source</p>
               <p className={`mt-1 ${metaClass} ${smokeClass}`}>
                 {audit.source}
@@ -561,24 +582,26 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
             role="region"
             tabIndex={0}
             aria-label="Scrollable Ghost Twin results table"
-            className={`w-full overflow-x-auto border-t ${ruleDarkClass} ${focusRingClass}`}
+            className={`w-full overflow-x-auto border-t ${ruleClass} ${FOCUS_RING_CLASS}`}
           >
             <table className="w-full min-w-[38rem] text-left">
               <caption className="sr-only">
                 Ghost Twin counterfactual scores for Kavya
               </caption>
-              <thead className={`border-b ${ruleDarkClass} ${captionClass} ${smokeClass}`}>
+              {/* Column heads are data labels, not display type: Input 13px
+                  uppercase Smoke above a 1px Graphite rule. */}
+              <thead className={`border-b ${ruleClass}`}>
                 <tr>
-                  <th scope="col" className="py-3 pr-4">
+                  <th scope="col" className={`py-3 pr-4 ${dataLabelClass}`}>
                     Twin Variant
                   </th>
-                  <th scope="col" className="px-4 py-3">
+                  <th scope="col" className={`px-4 py-3 ${dataLabelClass}`}>
                     Base Score
                   </th>
-                  <th scope="col" className="px-4 py-3">
+                  <th scope="col" className={`px-4 py-3 ${dataLabelClass}`}>
                     Twin Score
                   </th>
-                  <th scope="col" className="py-3 pl-4">
+                  <th scope="col" className={`py-3 pl-4 ${dataLabelClass}`}>
                     Delta
                   </th>
                 </tr>
@@ -598,9 +621,12 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
                             <span className={inlineLabelClass}>
                               {getTwinLabel(twin)}
                             </span>
-                            {/* "Edited" is a fact about how this row was built,
-                                not a lifecycle state, so it is a plain caption
-                                word — no dot, and no capsule. */}
+                            {/* "Edited" is a fact about how this row was built, not
+                                a lifecycle state, and the reference gives rows no
+                                status component of their own — a badge on every
+                                changed row would rebuild the dashboard-grid feel the
+                                system is shedding. So it stays plain caption text:
+                                no dot, no box. */}
                             {isEdited ? (
                               <span className={`${captionClass} ${smokeClass}`}>
                                 edited
@@ -644,19 +670,17 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
 
           {isPass || isFlagged ? (
             <div
-              className={`flex flex-col gap-4 border-t ${ruleDarkClass} pt-8 sm:flex-row sm:items-start sm:justify-between`}
+              className={`flex flex-col gap-4 border-t ${ruleClass} pt-8 sm:flex-row sm:items-start sm:justify-between`}
               role="status"
               aria-live="polite"
             >
               <div>
-                {/* The verdict reads as a status word beside a 6px dot, at the
-                    caption scale the system uses for labels. No box, no border,
-                    no background. */}
-                <StatusLine
-                  status={verdictStatus}
-                  label={verdictLabel}
-                  className={captionClass}
-                />
+                {/* The verdict is the one place on this screen the reference
+                    builds a box for: the Status Badge's full-pill surface, with a
+                    Pulse Green dot when the run passed and a Graphite outline
+                    when it did not. The sentence below carries the meaning, so
+                    the badge only has to name the state. */}
+                <StatusBadge label={verdictLabel} live={verdictLive} />
                 <p className={`mt-3 ${headingSmClass} ${chalkClass}`}>
                   {isPass
                     ? 'Fairness guardrail passed'

@@ -10,19 +10,17 @@ import {
   dataLabelClass,
   headingSmClass,
   inlineLabelClass,
-  labelClass,
-  measureClass,
   metaClass,
-  ruleDarkClass,
+  readingClass,
+  ruleClass,
   sectionHeadingClass,
   smokeClass,
 } from '../styles/classes.js'
-import Button from '../components/Button.jsx'
-import Card from '../components/Card.jsx'
+import { Button } from '../components/Button.jsx'
+import { Card } from '../components/Card.jsx'
 import Field from '../components/Field.jsx'
 import Select from '../components/Select.jsx'
-import SourceTag from '../components/SourceTag.jsx'
-import StatusLine from '../components/StatusLine.jsx'
+import StatusBadge from '../components/StatusBadge.jsx'
 import Textarea from '../components/Textarea.jsx'
 
 const KAVYA_PERSONA = 'Kavya'
@@ -40,71 +38,50 @@ const EMPTY_EVENTS = []
 const EMPTY_SKILLS = []
 const EMPTY_CREDENTIALS = []
 
-/** @type {Record<string, { label: string, source: 'live' | 'simulated' | 'local' | 'pending' }>} */
+/**
+ * Where a payload came from, in the badge's own vocabulary.
+ *
+ * The reference sanctions exactly one status component, the full-pill Status
+ * Badge, so a source is a badge label and nothing more — no per-row pill, no
+ * second status idiom. `live` is the only value that earns the Pulse Green dot;
+ * a simulated or local source, and the pending gap, all take the Graphite
+ * outline dot, because a mocked answer must not borrow the live cue.
+ *
+ * @type {Record<string, { label: string, source: 'live' | 'simulated' | 'local' | 'pending' }>}
+ */
 const SOURCE_DETAILS = {
-  live: { label: 'Live', source: 'live' },
-  simulated: { label: 'Simulated', source: 'simulated' },
-  pending: { label: 'Source pending', source: 'pending' },
-}
-
-/** @type {Record<string, { label: string, status: 'running' | 'done' | 'waiting' | 'idle' }>} */
-const EVENT_STATUS_DETAILS = {
-  running: { label: 'Running', status: 'running' },
-  done: { label: 'Done', status: 'done' },
-  waiting_consent: { label: 'Waiting for consent', status: 'waiting' },
-  unknown: { label: 'Unknown status', status: 'waiting' },
+  live: { label: 'live', source: 'live' },
+  simulated: { label: 'simulated', source: 'simulated' },
+  local: { label: 'local', source: 'local' },
+  pending: { label: 'source pending', source: 'pending' },
 }
 
 // One 1px Graphite rule plus 32px of air is what separates this panel's
-// sections. Never a shift in background tint between them.
-const SECTION_CLASS = `border-t ${ruleDarkClass} pt-8`
+// sections. The line IS the structure — never a shift in background tint.
+const SECTION_CLASS = `border-t ${ruleClass} pt-8`
 
 // A failure is ordinary body copy in the panel's own ink. The box is the thing
 // that used to make these read as status chips rather than as sentences.
-const ALERT_CLASS = `mt-4 ${measureClass} text-left ${bodyClass} ${chalkClass}`
+const ALERT_CLASS = `mt-4 ${readingClass} text-left ${bodyClass} ${chalkClass}`
 
 // Idle, loading and empty states say so in plain muted copy with room around
 // them — no box, no placeholder border.
 const EMPTY_STATE_COPY_CLASS =
-  `mx-auto mt-3 ${measureClass} text-center ${bodyClass} ${smokeClass}`
+  `mx-auto mt-3 ${readingClass} text-center ${bodyClass} ${smokeClass}`
 
-// An agent-log message is body-weight copy set at the label size. `labelClass`
-// carries the 14px and only the weight drops back to 400, so the type scale
-// stays the single source and no new size string is invented here.
-const LOG_MESSAGE_CLASS = `${labelClass} ${smokeClass} font-normal leading-6`
-
-// A confidence reading is a number the server returned, not a headline: 6px
-// track, square ends. Full pill radius belongs to the one top-level CTA only.
+// A confidence reading is a number the server returned, not a headline: a 6px
+// track with square ends. The reference reserves full pill radius for the badge
+// and the one glossy pill, so neither the track nor its fill rounds.
 const CONFIDENCE_TRACK_CLASS = 'h-1.5 flex-1 overflow-hidden bg-graphite'
 const CONFIDENCE_FILL_CLASS = 'h-full bg-chalk'
 
-// A credential is a name, not a state, so it gets no status dot. It is set as a
-// plain tag — 4px radius, 1px Graphite rule, no fill — because these are short
-// nouns that wrap as a group; a hairline-separated inline list would shatter
-// across lines, and the tag radius is the one the reference allows outside a
-// card. Nothing here is a status capsule.
+// A credential is a name, not a state, so it earns no status dot. The radius
+// table's own "tags / badges → 9999px" row sanctions a full pill for exactly
+// this kind of short noun, so each one is a pill tag: 1px Graphite rule, no
+// fill, meta ink. It stays a tag rather than a bordered surface — nothing here
+// is a card.
 const CREDENTIAL_TAG_CLASS =
-  `inline-block rounded-tag border ${ruleDarkClass} px-2 py-0.5 ${metaClass} ${smokeClass}`
-
-// Timeline dot geometry: a 6px dot whose centre lands on the 1px Graphite rule
-// carried by the list itself. The vocabulary matches the status line so the two
-// event lists on this page cannot drift apart.
-const TIMELINE_DOT_BASE_CLASS =
-  'absolute -left-[3.5px] top-1.5 h-1.5 w-1.5 rounded-full'
-
-function getTimelineDotClass(status) {
-  if (status === 'running') {
-    return `${TIMELINE_DOT_BASE_CLASS} border border-smoke bg-transparent running-dot`
-  }
-
-  if (status === 'done') {
-    return `${TIMELINE_DOT_BASE_CLASS} bg-pulse`
-  }
-
-  // Waiting and idle are the same shape on purpose. Amber is the one thing this
-  // panel must not repeat, and the word beside the dot already says which it is.
-  return `${TIMELINE_DOT_BASE_CLASS} border border-graphite bg-transparent`
-}
+  `inline-block rounded-badge border ${ruleClass} px-3 py-1 ${metaClass} ${smokeClass}`
 
 function getSourceDetails(source) {
   if (source === 'live') {
@@ -115,11 +92,11 @@ function getSourceDetails(source) {
     return SOURCE_DETAILS.simulated
   }
 
-  return SOURCE_DETAILS.pending
-}
+  if (source === 'local') {
+    return SOURCE_DETAILS.local
+  }
 
-function getEventStatusDetails(status) {
-  return EVENT_STATUS_DETAILS[status] ?? EVENT_STATUS_DETAILS.unknown
+  return SOURCE_DETAILS.pending
 }
 
 function getErrorMessage(error) {
@@ -211,6 +188,7 @@ export default function WorkerApp({
   onSessionStart,
   events = EMPTY_EVENTS,
   isStreaming = false,
+  runSignal = 0,
 }) {
   const [transcript, setTranscript] = useState(KAVYA_TRANSCRIPT)
   const [session, setSession] = useState(null)
@@ -242,6 +220,7 @@ export default function WorkerApp({
     ? selectedSkill
     : (skillNames[0] ?? '')
   const passportSource = passport === null ? null : (passport.source ?? null)
+  const passportSourceDetails = getSourceDetails(passportSource)
   const sessionStatus = sessionPayload?.status ?? null
   const sample = optionalValue(workSampleResult)
   const sampleSource = getSourceDetails(sample?.source)
@@ -367,6 +346,41 @@ export default function WorkerApp({
     }
   }
 
+  // The nav and hero glossy pills are the product's primary action, so they have
+  // to reach the form rather than scroll to it. A counter is the signal instead
+  // of a callback so the parent never has to hold a ref to this component's
+  // internals, and so two clicks in a row are two distinct signals.
+  const runLatest = useRef({ isBusy, transcript, onSessionStart })
+
+  // Synced in an effect, not during render: the effect below must read the
+  // values as they are when the signal fires, and writing a ref mid-render is
+  // exactly the kind of thing that desynchronises under concurrent rendering.
+  useEffect(() => {
+    runLatest.current = { isBusy, transcript, onSessionStart }
+  }, [isBusy, transcript, onSessionStart])
+
+  useEffect(() => {
+    if (runSignal === 0) {
+      return
+    }
+
+    const latest = runLatest.current
+
+    if (latest.isBusy || latest.transcript.trim() === '') {
+      return
+    }
+
+    if (typeof latest.onSessionStart === 'function') {
+      setSessionError('')
+      setIsStarting(true)
+      latest.onSessionStart({
+        input_type: 'text',
+        content: latest.transcript,
+        persona: KAVYA_PERSONA,
+      })
+    }
+  }, [runSignal])
+
   function handleVoiceStart() {
     const Recognition = getSpeechRecognitionConstructor()
 
@@ -484,9 +498,16 @@ export default function WorkerApp({
       title="Worker intake & skill passport"
       titleId="worker-app-title"
       description="Speak or paste what Kavya actually did, then let the pipeline recover durable skills instead of keywords."
-      actions={<SourceTag source={passportSource ?? 'pending'} />}
+      actions={
+        <StatusBadge
+          live={passportSourceDetails.source === 'live'}
+          label={passportSourceDetails.label}
+        />
+      }
       aria-labelledby="worker-app-title"
       aria-busy={isBusy}
+      // No border, no fill, no shadow: the panel is carved out of the Obsidian
+      // canvas by its hairlines alone, so the spacing stays on the sections.
       padding="none"
     >
       <div className="space-y-16">
@@ -548,11 +569,13 @@ export default function WorkerApp({
           </Field>
 
           <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center">
-            {/* The one filled action this page is allowed. Voice input is a
+            {/* The one filled surface this panel is allowed, and the arrow the
+                reference reserves for a forward action. Voice input is a
                 secondary gesture and stays an outline. */}
             <Button
               type="submit"
-              variant="primary"
+              variant="glossy"
+              arrow="↗"
               disabled={isBusy || transcript.trim() === ''}
               aria-busy={isBusy}
             >
@@ -622,14 +645,17 @@ export default function WorkerApp({
                   const confidenceLabel = formatConfidence(skill.confidence)
 
                   return (
-                    <li key={skill.name} className={`border-t ${ruleDarkClass} pt-4`}>
+                    <li key={skill.name} className={`border-t ${ruleClass} pt-4`}>
                       <div>
                         <div className="flex items-start justify-between gap-3">
+                          {/* A skill is a name, so it takes the inline label
+                              treatment — never the uppercase bold micro-label
+                              this row used to carry. */}
                           <p className={inlineLabelClass}>
                             {skill.name}
                           </p>
-                          <StatusLine
-                            status={skill.verified ? 'done' : 'idle'}
+                          <StatusBadge
+                            live={skill.verified === true}
                             label={skill.verified ? 'Verified' : 'Unverified'}
                           />
                         </div>
@@ -728,7 +754,7 @@ export default function WorkerApp({
                   </p>
                   <p
                     aria-labelledby="worker-sample-score"
-                    className={`mt-3 border-b ${ruleDarkClass} pb-2 ${metaClass} ${chalkClass}`}
+                    className={`mt-3 border-b ${ruleClass} pb-2 ${metaClass} ${chalkClass}`}
                   >
                     {sample === null
                       ? 'No score yet'
@@ -764,11 +790,9 @@ export default function WorkerApp({
                 </Button>
 
                 {sample === null ? null : (
-                  <SourceTag
-                    source={sampleSource.source}
-                    role="img"
-                    aria-label={`Work sample source: ${sampleSource.label}`}
-                    title={`Work sample source: ${sampleSource.label}`}
+                  <StatusBadge
+                    live={sampleSource.source === 'live'}
+                    label={sampleSource.label}
                   />
                 )}
               </div>
@@ -789,46 +813,6 @@ export default function WorkerApp({
             </>
           )}
         </form>
-
-        {events.length === 0 ? null : (
-          <div className={SECTION_CLASS}>
-            <p className={sectionHeadingClass}>Pipeline agents</p>
-            {/* The vertical rule and the dots carry the structure: no row
-                numbering, no per-row border, no per-row background. */}
-            <ul
-              aria-label="Pipeline agent events"
-              className={`mt-6 ml-1 border-l ${ruleDarkClass}`}
-            >
-              {events.map((event, index) => {
-                const status = getEventStatusDetails(event.status)
-
-                return (
-                  <li
-                    key={event.eventId ?? `${event.agent}-${index}`}
-                    className="relative pb-6 pl-6 last:pb-0"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={getTimelineDotClass(status.status)}
-                    />
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <p className={inlineLabelClass}>
-                        {event.agent}
-                      </p>
-                      <StatusLine
-                        status={status.status}
-                        label={status.label}
-                      />
-                    </div>
-                    <p className={`mt-1 ${measureClass} ${LOG_MESSAGE_CLASS}`}>
-                      {event.message}
-                    </p>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        )}
       </div>
     </Card>
   )

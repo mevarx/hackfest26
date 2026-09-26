@@ -98,7 +98,7 @@ describe('HRConsole', () => {
     expect(screen.getByTestId('hidden-talent-count')).toHaveTextContent('12')
   })
 
-  it('marks every data block with a Source Tag and never a live one', async () => {
+  it('marks every data block with a Status Badge and never a live one', async () => {
     radarMock.mockResolvedValue(RADAR_ROW)
     rewriteMock.mockResolvedValue(REWRITE_ROW)
 
@@ -107,14 +107,21 @@ describe('HRConsole', () => {
     await screen.findByTestId('radar-exposure')
     await screen.findByTestId('hidden-talent-count')
 
-    // Each block header carries a Source Tag — plain mono "· simulated" with an
-    // outlined dot and no pill around it.
-    const sourceTags = screen.getAllByText('simulated')
-    expect(sourceTags).toHaveLength(2)
-    sourceTags.forEach((word) => {
-      expect(word.closest('span.font-mono.inline-flex')).not.toBeNull()
+    // Each block header carries the reference's full-pill Status Badge. Both
+    // endpoints serve bundled fixtures, so both are non-live: the Graphite
+    // outline dot, never the Pulse Green live dot.
+    const badges = screen.getAllByText('simulated')
+    expect(badges).toHaveLength(2)
+    badges.forEach((word) => {
+      const badge = word.closest('span.rounded-badge')
+      expect(badge).not.toBeNull()
+      expect(badge).toHaveClass('border-graphite')
     })
-    expect(container.querySelectorAll('[data-source-indicator]')).toHaveLength(2)
+    expect(container.querySelectorAll('[data-status-dot]')).toHaveLength(2)
+    container.querySelectorAll('[data-status-dot]').forEach((dot) => {
+      expect(dot).toHaveClass('border-graphite')
+      expect(dot).not.toHaveClass('bg-pulse-green')
+    })
 
     expect(screen.getAllByText('source=simulated')).toHaveLength(2)
     expect(container.textContent).not.toMatch(LIVE_PATTERN)

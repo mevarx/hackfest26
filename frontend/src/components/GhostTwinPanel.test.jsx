@@ -138,31 +138,30 @@ function successfulResponse(result) {
   }
 }
 
-// The header's Source Tag is the panel's only inline mono mark: the meta row
-// below it and the Source tile are block copy, so this selector finds the tag
-// exactly — and the source word on its own is ambiguous, because the tile
-// repeats it.
-function getSourceTag(container) {
-  return container.querySelector('span.font-mono.inline-flex')
+// Every Status Badge on the panel, in render order. Queried by class rather than
+// by text: the source word is repeated by the meta row and by the Source tile,
+// so a text query on its own is ambiguous.
+function getStatusBadges(container) {
+  return Array.from(container.querySelectorAll('span.rounded-badge'))
 }
 
 /**
- * A verdict rendered as a Status Line: the line wrapping the word, and the dot
- * that carries the state. Both are narrowed here so a verdict that stops being
- * a status line fails with a readable message, not a null-property crash.
+ * The badge wrapping a label word, and the 6px prefix dot that carries its
+ * state. Both are narrowed here so a label that stops being a badge fails with a
+ * readable message, not a null-property crash.
  *
- * @param {Element} word
- * @returns {{ line: Element, dot: Element }}
+ * @param {Element} word An element whose own text is the badge's label.
+ * @returns {{ badge: Element, dot: Element }}
  */
-function readStatusLine(word) {
-  const line = word.closest('span.inline-flex')
-  const dot = line === null ? null : line.querySelector('[data-status-indicator]')
+function readStatusBadge(word) {
+  const badge = word.closest('span.rounded-badge')
+  const dot = badge === null ? null : badge.querySelector('[data-status-dot]')
 
-  if (line === null || dot === null) {
-    throw new Error('the verdict is not rendered as a status line with a dot')
+  if (badge === null || dot === null) {
+    throw new Error('the label is not rendered inside a status badge with a dot')
   }
 
-  return { line, dot }
+  return { badge, dot }
 }
 
 describe('GhostTwinPanel', () => {
@@ -293,17 +292,21 @@ describe('GhostTwinPanel', () => {
     expect(secondRowCells[2]).toHaveTextContent('0')
     expect(screen.getByText('Fairness guardrail passed')).toBeInTheDocument()
     expect(screen.getByText('Source=local')).toBeInTheDocument()
-    // The header Source Tag is plain mono text, and `local` takes no dot —
-    // absence is the quieter signal.
-    expect(getSourceTag(container)).toHaveTextContent(/·\s*local/)
-    expect(getSourceTag(container).querySelector('[data-source-indicator]')).toBeNull()
-    // A passing run is a Status Line: a filled Pulse dot beside the word, in
-    // the panel's own ink. No box, no border, no amber.
-    const { line: passStatusLine, dot: passDot } = readStatusLine(passVerdict)
-    expect(passDot).toHaveClass('bg-pulse')
-    expect(passDot).not.toHaveClass('border')
-    expect(passStatusLine).toHaveClass('text-chalk')
-    expect(passStatusLine.className).not.toMatch(/border|bg-|rounded|shadow/)
+    // The header badge follows the response rather than assuming a source, and
+    // a settled in-process run is not a live one: its prefix dot is the Graphite
+    // outline, never the Pulse Green live dot.
+    const [sourceBadge] = getStatusBadges(container)
+    expect(sourceBadge).toHaveTextContent('local')
+    expect(sourceBadge.querySelector('[data-status-dot]')).not.toHaveClass(
+      'bg-pulse-green',
+    )
+    // A passing verdict is the reference's Status Badge: the full-pill surface
+    // with a filled Pulse Green live dot. The pill's own bevel is the only
+    // shadow in the system, so the badge box itself carries none.
+    const { badge: passBadge, dot: passDot } = readStatusBadge(passVerdict)
+    expect(passBadge).toHaveClass('rounded-badge', 'border-graphite')
+    expect(passDot).toHaveClass('bg-pulse-green')
+    expect(passBadge.className).not.toMatch(/shadow-/)
     expect(screen.getByText('Pure-Python calculation')).toBeInTheDocument()
     expect(screen.getByText('Synthetic fair merit')).toBeInTheDocument()
     expect(
@@ -347,16 +350,14 @@ describe('GhostTwinPanel', () => {
     expect(secondRowCells[0]).toHaveTextContent('86')
     expect(secondRowCells[1]).toHaveTextContent('98')
     expect(secondRowCells[2]).toHaveTextContent('+12')
-    // A flagged run is the one documented amber repeat: an outlined dot with a
-    // 1px amber ring, still a plain word in panel ink and still no banner box.
-    const { line: flaggedStatusLine, dot: flaggedDot } = readStatusLine(flaggedVerdict)
-    expect(flaggedDot).toHaveClass('border-graphite', 'bg-transparent')
-    expect(flaggedDot.className).toContain('var(--color-compass-amber)')
-    expect(flaggedDot).not.toHaveClass('bg-pulse')
-    expect(flaggedStatusLine).toHaveClass('text-chalk')
-    // The status line is a dot and a word, so the retired verdict capsule
-    // cannot come back wearing a different colour: no box, no fill, no radius.
-    expect(flaggedStatusLine.className).not.toMatch(/border|bg-|rounded/)
+    // A flagged run is the honest opposite of a live one, so the verdict keeps
+    // the same pill and swaps the Pulse Green dot for the Graphite outline
+    // rather than borrowing a second accent for "bad".
+    const { badge: flaggedBadge, dot: flaggedDot } = readStatusBadge(flaggedVerdict)
+    expect(flaggedBadge).toHaveClass('rounded-badge', 'border-graphite')
+    expect(flaggedDot).toHaveClass('border', 'border-graphite')
+    expect(flaggedDot).not.toHaveClass('bg-pulse-green')
+    expect(flaggedBadge.className).not.toMatch(/shadow-/)
     expect(flaggedVerdict.closest('[role="status"]')).not.toBeNull()
     expect(screen.getByText('Fairness guardrail needs attention')).toBeInTheDocument()
     expect(screen.getByText('Source=local')).toBeInTheDocument()
@@ -372,11 +373,13 @@ describe('GhostTwinPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
 
     expect(await screen.findByText('Source=live')).toBeInTheDocument()
-    // The tag follows the response rather than assuming local, and `live` is
-    // the variant that carries the filled dot.
-    const liveTag = getSourceTag(container)
-    expect(liveTag).toHaveTextContent(/·\s*live/)
-    expect(liveTag.querySelector('[data-source-indicator]')).toHaveClass('bg-current')
+    // The badge follows the response rather than assuming local, and `live` is
+    // the reading that carries the filled Pulse Green dot.
+    const [liveBadge] = getStatusBadges(container)
+    expect(liveBadge).toHaveTextContent('live')
+    expect(liveBadge.querySelector('[data-status-dot]')).toHaveClass(
+      'bg-pulse-green',
+    )
     expect(screen.queryByText('Source=local')).not.toBeInTheDocument()
   })
 

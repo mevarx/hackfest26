@@ -202,35 +202,39 @@ describe('WorkerApp', () => {
     vi.useRealTimers()
   })
 
-  it('labels verified and unverified claims with text and a dot, never colour alone', async () => {
+  it('labels verified and unverified claims with a status badge, never colour alone', async () => {
     getSessionMock.mockResolvedValue(SESSION_WITH_PASSPORT)
     renderApp({ sessionId: 'session-1' })
 
     const list = await screen.findByRole('list', { name: 'Recovered skills' })
     const [manualTesting, automation] = within(list).getAllByRole('listitem')
-    const verifiedStatus = within(manualTesting).getByText('Verified').parentElement
-    const unverifiedStatus = within(automation).getByText('Unverified').parentElement
+    // The reference sanctions exactly one status component, so a per-claim state
+    // is the full-pill Status Badge: the word *is* the badge's text and the dot
+    // is a separate decorative child.
+    const verifiedBadge = within(manualTesting).getByText('Verified')
+    const unverifiedBadge = within(automation).getByText('Unverified')
+    const verifiedDot = verifiedBadge.querySelector('[data-status-dot]')
+    const unverifiedDot = unverifiedBadge.querySelector('[data-status-dot]')
 
-    if (verifiedStatus === null || unverifiedStatus === null) {
-      throw new Error('Verification status line is missing')
-    }
+    // Full pill radius is sanctioned on the badge, so the shape is part of the
+    // contract the panel renders against.
+    expect(verifiedBadge).toHaveClass('rounded-badge')
+    expect(unverifiedBadge).toHaveClass('rounded-badge')
 
-    const verifiedDot = verifiedStatus.querySelector('[data-status-indicator]')
-    const unverifiedDot = unverifiedStatus.querySelector('[data-status-indicator]')
-
-    // The dot is decorative; the word beside it is the state.
+    // The dot is decorative; the word in the badge is the state.
     expect(verifiedDot).toHaveAttribute('aria-hidden', 'true')
     expect(unverifiedDot).toHaveAttribute('aria-hidden', 'true')
 
-    // Verified is a filled sage dot, unverified a plain Graphite outline — two
-    // different shapes, so the state survives without colour.
-    expect(verifiedDot).toHaveClass('bg-pulse')
-    expect(verifiedDot).not.toHaveClass('running-dot')
+    // Verified is the filled Pulse Green live dot, unverified a Graphite
+    // outline — two different shapes, so the state survives without colour, and
+    // Pulse Green never leaks onto a claim that is not live.
+    expect(verifiedDot).toHaveClass('bg-pulse-green')
+    expect(verifiedDot).not.toHaveClass('border-graphite')
     expect(unverifiedDot).toHaveClass('border-graphite')
-    expect(unverifiedDot).not.toHaveClass('bg-pulse')
+    expect(unverifiedDot).not.toHaveClass('bg-pulse-green')
   })
 
-  it('lists the credentials and shows a simulated source tag for the passport', async () => {
+  it('lists the credentials and badges the passport as a simulated source', async () => {
     getSessionMock.mockResolvedValue(SESSION_WITH_PASSPORT)
     renderApp({ sessionId: 'session-1' })
 
@@ -239,11 +243,18 @@ describe('WorkerApp', () => {
     })
 
     expect(within(credentials).getByText('Manual testing')).toBeInTheDocument()
-    expect(screen.getByText('simulated')).toBeInTheDocument()
+    // The source is the reference's one status badge, so the label is the badge's
+    // own text — and a simulated source takes the Graphite dot, not the live one.
+    const sourceBadge = screen.getByText('simulated')
+
+    expect(sourceBadge).toHaveClass('rounded-badge')
+    expect(sourceBadge.querySelector('[data-status-dot]')).toHaveClass(
+      'border-graphite',
+    )
     expect(screen.queryByText('live')).not.toBeInTheDocument()
   })
 
-  it('marks the passport as live when the server answers live', async () => {
+  it('badges the passport as live when the server answers live', async () => {
     getSessionMock.mockResolvedValue({
       ...SESSION_WITH_PASSPORT,
       skills_source: 'live',
@@ -251,7 +262,13 @@ describe('WorkerApp', () => {
     })
     renderApp({ sessionId: 'session-1' })
 
-    expect(await screen.findByText('live')).toBeInTheDocument()
+    const sourceBadge = await screen.findByText('live')
+
+    // `live` is the only source that earns the Pulse Green dot, so the badge has
+    // to carry it rather than the words alone.
+    expect(sourceBadge.querySelector('[data-status-dot]')).toHaveClass(
+      'bg-pulse-green',
+    )
     expect(screen.queryByText('simulated')).not.toBeInTheDocument()
   })
 
