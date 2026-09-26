@@ -1,10 +1,25 @@
 @import "tailwindcss";
 @import "./styles/tokens.css";
+/* Self-hosted Inter + JetBrains Mono, latin subsets. The @font-face rules live
+   in src/ so they go through the bundler, and point at the woff2 files in
+   public/fonts/ so the binaries are served from the origin rather than inlined
+   as base64. Imported before any rule that sets font-family. */
+@import "./styles/fonts.css";
 
 @layer base {
   /* Dark is the only theme: Obsidian is the page canvas. */
   html {
     background: var(--color-obsidian);
+    /* Anchor jumps land under a fixed header rather than under the viewport
+       edge, so a nav link does not hide the section it just opened. */
+    scroll-padding-top: 6rem;
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
 
   body {
@@ -14,9 +29,23 @@
     background: var(--color-obsidian);
     color: var(--color-chalk);
     font-family: var(--font-aeonik);
+    font-size: var(--text-body);
     font-weight: 400;
+    line-height: 1.5;
+    font-synthesis-weight: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Inter carries a tall x-height and a large em box at 63px, which at a 1.05
+     leading clips the descenders of the italic second line ("in sequence.")
+     against the line below it. A hair more leading on display type, and a
+     touch of extra tracking room, keeps the hero headline optically tight
+     without letting the glyphs touch. */
+  h1,
+  h2 {
+    text-wrap: balance;
   }
 
   button,
@@ -47,6 +76,28 @@
   ::selection {
     background: var(--color-chalk);
     color: var(--color-obsidian);
+  }
+
+  /* The reference permits exactly one scrollbar treatment and says nothing
+     about it, so this stays as quiet as the rest of the system: Graphite on
+     Obsidian, hairline-thin, no highlight until hover. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-obsidian);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-graphite);
+    border: 3px solid var(--color-obsidian);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-iron);
   }
 }
 
