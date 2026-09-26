@@ -6,8 +6,6 @@ import {
   dataLabelClass,
   metaRowClass,
   sectionHeadingClass,
-  toneHeadingClass,
-  toneTextClass,
 } from '../styles/classes.js'
 import Badge from './Badge.jsx'
 import Button from './Button.jsx'
@@ -297,12 +295,16 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
   const scoringMode = getScoringMode(simulateLegacyAts)
   const editedFields = getEditedFields(form)
   const hasPendingEdits = editedFields.length > 0
-  const verdictTone = isPass ? 'teal' : 'red'
+  // Monochrome verdict: a flagged run is marked by a black rule and black label,
+  // a passing run by a gray one. No red, no green.
+  const verdictClass = isPass
+    ? 'border-[#E4E4E4] text-[#4A4A4A]'
+    : 'border-[#0A0A0A] text-[#0A0A0A]'
 
   return (
     <Card
       as="section"
-      variant="dark"
+      variant="light"
       eyebrow="Bias audit · Kavya"
       title="Ghost Twin audit"
       titleId="ghost-twin-title"
@@ -310,32 +312,23 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
       actions={<Badge source={source ?? 'pending'} />}
       aria-labelledby="ghost-twin-title"
       aria-busy={isLoading}
-      padding="lg"
+      padding="none"
+      className="rounded-card border border-[#E4E4E4] bg-white p-6 sm:p-8"
     >
-      <Card
-        variant="dark"
-        surface="raised"
-        padding="md"
-        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-      >
+      <div className="flex flex-col gap-4 border-t border-[#E4E4E4] pt-8 sm:flex-row sm:items-baseline sm:justify-between">
         <div>
           <p className={sectionHeadingClass}>Candidate</p>
-          <p className="mt-1 font-serif text-lg text-offwhite">
+          <p className="mt-2 font-serif text-lg text-[#0A0A0A]">
             Kavya · {form.age} · {form.city}
           </p>
         </div>
         <div className="sm:text-right">
           <p className={sectionHeadingClass}>Role context</p>
-          <p className="mt-1 font-mono text-sm text-amber">{ROLE_ID}</p>
+          <p className="mt-2 font-mono text-sm text-[#0A0A0A]">{ROLE_ID}</p>
         </div>
-      </Card>
+      </div>
 
-      <Card
-        variant="dark"
-        tone="amber"
-        padding="md"
-        className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-      >
+      <div className="mt-8 flex flex-col items-start gap-4 border-t border-[#E4E4E4] pt-8 sm:flex-row sm:items-center sm:justify-between">
         <Switch
           id="simulate-legacy-ats"
           checked={simulateLegacyAts}
@@ -349,28 +342,25 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
           onClick={runAudit}
           disabled={isLoading}
           aria-busy={isLoading}
-          className="w-full sm:w-auto"
         >
           {isLoading ? 'Running audit…' : 'Run Audit'}
         </Button>
-      </Card>
+      </div>
 
-      <Card
-        as="fieldset"
-        padding="lg"
+      <fieldset
         aria-label="Edit the candidate profile"
         disabled={isLoading}
-        className="mt-4"
+        className="mt-8 border-t border-[#E4E4E4] pt-8"
       >
         <p className={sectionHeadingClass}>Edit the candidate profile</p>
         <p
           id="ghost-twin-editor-description"
-          className={`mt-2 text-xs leading-5 ${toneTextClass.neutral}`}
+          className="mt-3 max-w-[40rem] text-left text-xs leading-5 text-[#4A4A4A]"
         >
           Change any attribute and re-run. The pure-Python engine recomputes
           every twin, so a fair-merit run stays flat and a legacy run moves.
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           <Field id="ghost-twin-career-gap" label="Career gap">
             <TextInput
               id="ghost-twin-career-gap"
@@ -460,7 +450,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
           </Field>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 border-t border-rule pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-8 flex flex-col items-start gap-4 border-t border-[#E4E4E4] pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className={bodyCopyClass} data-testid="edit-summary">
             {hasPendingEdits
               ? `Edited: ${editedFields
@@ -473,137 +463,113 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
             onClick={runAudit}
             disabled={isLoading || !hasPendingEdits}
             aria-busy={isLoading}
-            className="w-full sm:w-auto"
           >
             Re-run audit
           </Button>
         </div>
-      </Card>
+      </fieldset>
 
-      <div className={`mt-4 ${metaRowClass}`} aria-live="polite">
+      <div className={`mt-8 border-t border-[#E4E4E4] pt-8 ${metaRowClass}`} aria-live="polite">
         <span>{hasAudit ? `Source=${source}` : 'Source=pending'}</span>
-          <span aria-hidden="true">·</span>
-          <span>{scoringMode}</span>
-          <span aria-hidden="true">·</span>
-          <span>Pure-Python calculation</span>
-        </div>
+        <span aria-hidden="true">·</span>
+        <span>{scoringMode}</span>
+        <span aria-hidden="true">·</span>
+        <span>Pure-Python calculation</span>
+      </div>
 
       {isLoading ? (
-        <Card
-          variant="dark"
-          tone="amber"
+        <div
+          className="px-6 py-16 text-center"
           role="status"
           aria-live="polite"
-          padding="lg"
-          className="mt-5"
         >
-          <p
-            className={`text-xs font-bold uppercase tracking-[0.16em] ${toneHeadingClass.amber}`}
-          >
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
             Loading audit…
           </p>
-          <p className="mt-2 text-sm leading-6 text-offwhite/70">
+          <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#4A4A4A]">
             Comparing {form.age}-year-old candidates in {form.city} against
             counterfactual twins.
           </p>
-        </Card>
+        </div>
       ) : error ? (
-        <Card
-          variant="dark"
-          tone="red"
+        <div
+          className="px-6 py-16 text-center"
           role="alert"
-          padding="lg"
-          className="mt-5"
         >
-          <p
-            className={`text-xs font-bold uppercase tracking-[0.16em] ${toneHeadingClass.red}`}
-          >
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#0A0A0A]">
             Audit unavailable
           </p>
-          <p className="mt-2 text-sm leading-6 text-offwhite/70">{error}</p>
-          <p className="mt-3 text-xs leading-5 text-offwhite/50">
+          <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#0A0A0A]">{error}</p>
+          <p className="mx-auto mt-3 max-w-[40rem] text-center text-xs leading-5 text-[#8A8A8A]">
             The audit could not be completed. Try the request again.
           </p>
-        </Card>
+        </div>
       ) : !hasAudit ? (
-        <Card variant="dark" emptyState padding="lg" className="mt-5">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-offwhite/50">
+        <div className="px-6 py-16 text-center">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
             Ready to audit
           </p>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-offwhite/70">
+          <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#4A4A4A]">
             Run the audit to see how each counterfactual changes the base
             score. The server decides the fairness threshold.
           </p>
-        </Card>
+        </div>
       ) : (
-        <div className="mt-5 space-y-4">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Card variant="dark" surface="raised" padding="sm">
+        <div className="mt-12 space-y-16">
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+            <div className="border-t border-[#E4E4E4] pt-4">
               <p className={dataLabelClass}>Actual score</p>
-              <p className="mt-1 font-mono text-xl text-offwhite">
+              <p className="mt-1 font-mono text-xl text-[#0A0A0A]">
                 {formatScore(audit.actual_score)}
               </p>
-            </Card>
-            <Card variant="dark" surface="raised" padding="sm">
+            </div>
+            <div className="border-t border-[#E4E4E4] pt-4">
               <p className={dataLabelClass}>Max delta</p>
-              <p className="mt-1 font-mono text-xl text-amber">
+              <p className="mt-1 font-mono text-xl text-[#0A0A0A]">
                 {formatScore(audit.max_delta)}
               </p>
-            </Card>
-            <Card variant="dark" surface="raised" padding="sm">
+            </div>
+            <div className="border-t border-[#E4E4E4] pt-4">
               <p className={dataLabelClass}>Threshold</p>
-              <p className="mt-1 font-mono text-xl text-offwhite">
+              <p className="mt-1 font-mono text-xl text-[#0A0A0A]">
                 {formatScore(audit.threshold)}
               </p>
-            </Card>
-            <Card variant="dark" surface="raised" padding="sm">
+            </div>
+            <div className="border-t border-[#E4E4E4] pt-4">
               <p className={dataLabelClass}>Source</p>
-              <p className="mt-1 font-mono text-sm text-teal">
+              <p className="mt-1 font-mono text-sm text-[#4A4A4A]">
                 {audit.source}
               </p>
-            </Card>
+            </div>
           </div>
 
-          <Card
-            padding="none"
+          <div
             role="region"
             tabIndex={0}
             aria-label="Scrollable Ghost Twin results table"
-            className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+            className="w-full overflow-x-auto border-t border-[#E4E4E4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5A623]"
           >
-            <table className="min-w-[38rem] w-full text-left text-sm">
+            <table className="w-full min-w-[38rem] text-left text-sm">
               <caption className="sr-only">
                 Ghost Twin counterfactual scores for Kavya
               </caption>
-              <thead className="bg-navy-raised text-offwhite/50">
+              <thead className="border-b border-[#E4E4E4] text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#4A4A4A]">
                 <tr>
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-[0.65rem] font-bold uppercase tracking-[0.16em]"
-                  >
+                  <th scope="col" className="py-3 pr-4">
                     Twin Variant
                   </th>
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-[0.65rem] font-bold uppercase tracking-[0.16em]"
-                  >
+                  <th scope="col" className="px-4 py-3">
                     Base Score
                   </th>
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-[0.65rem] font-bold uppercase tracking-[0.16em]"
-                  >
+                  <th scope="col" className="px-4 py-3">
                     Twin Score
                   </th>
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-[0.65rem] font-bold uppercase tracking-[0.16em]"
-                  >
+                  <th scope="col" className="py-3 pl-4">
                     Delta
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-rule">
+              <tbody className="divide-y divide-[#E4E4E4]">
                 {twins.length > 0 ? (
                   twins.map((twin, index) => {
                     const attribute = getTwinAttribute(twin)
@@ -613,33 +579,31 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
 
                     return (
                       <tr key={`${attribute}-${index}`}>
-                        <th scope="row" className="px-4 py-4 font-normal">
+                        <th scope="row" className="py-4 pr-4 font-normal">
                           <span className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold text-offwhite">
+                            <span className="font-semibold text-[#0A0A0A]">
                               {getTwinLabel(twin)}
                             </span>
                             {isEdited ? (
                               <Badge status="running" label="edited" />
                             ) : null}
                           </span>
-                          <span className="mt-1 block text-xs text-offwhite/50">
+                          <span className="mt-1 block text-xs text-[#8A8A8A]">
                             {formatCounterfactualValue(twin.original_value)} →{' '}
                             {formatCounterfactualValue(twin.counterfactual_value)}
                           </span>
                         </th>
-                        <td className="px-4 py-4 font-mono text-offwhite/70">
+                        <td className="px-4 py-4 font-mono text-[#4A4A4A]">
                           {formatScore(audit.actual_score)}
                         </td>
-                        <td className="px-4 py-4 font-mono text-offwhite">
+                        <td className="px-4 py-4 font-mono text-[#0A0A0A]">
                           {formatScore(twin.score)}
                         </td>
                         <td
-                          className={`px-4 py-4 font-mono ${
-                            twin.delta > 0
-                              ? 'text-amber'
-                              : twin.delta < 0
-                                ? toneTextClass.red
-                                : 'text-offwhite/50'
+                          className={`py-4 pl-4 font-mono ${
+                            twin.delta !== 0
+                              ? 'text-[#0A0A0A]'
+                              : 'text-[#8A8A8A]'
                           }`}
                         >
                           {formatSignedDelta(twin.delta)}
@@ -651,7 +615,7 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
                   <tr>
                     <td
                       colSpan={4}
-                      className="px-4 py-8 text-center text-offwhite/50"
+                      className="px-4 py-16 text-center text-[#8A8A8A]"
                     >
                       No counterfactual twins returned.
                     </td>
@@ -659,35 +623,32 @@ export default function GhostTwinPanel({ baseUrl = '' }) {
                 )}
               </tbody>
             </table>
-          </Card>
+          </div>
 
           {isPass || isFlagged ? (
-            <Card
-              variant="dark"
-              tone={verdictTone}
+            <div
+              className="flex flex-col gap-4 border-t border-[#E4E4E4] pt-8 sm:flex-row sm:items-start sm:justify-between"
               role="status"
               aria-live="polite"
-              padding="lg"
-              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
                 <p
-                  className={`text-xs font-bold uppercase tracking-[0.22em] ${toneHeadingClass[verdictTone]}`}
+                  className={`inline-block border px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.22em] ${verdictClass}`}
                 >
                   {isPass ? 'PASS' : 'FLAGGED'}
                 </p>
-                <p className="mt-1 font-serif text-2xl">
+                <p className="mt-3 font-serif text-2xl leading-tight text-[#0A0A0A]">
                   {isPass
                     ? 'Fairness guardrail passed'
                     : 'Fairness guardrail needs attention'}
                 </p>
               </div>
-              <p className="max-w-sm text-sm leading-6 text-offwhite/70">
+              <p className="max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
                 {isPass
                   ? 'The observed score difference stays within the server threshold.'
                   : 'A counterfactual score difference exceeds the server threshold.'}
               </p>
-            </Card>
+            </div>
           ) : null}
         </div>
       )}

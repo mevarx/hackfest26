@@ -4,7 +4,6 @@ import { isAbortError } from '../lib/guards.js'
 import {
   dataLabelClass,
   sectionHeadingClass,
-  toneHeadingClass,
 } from '../styles/classes.js'
 import Badge from '../components/Badge.jsx'
 import Button from '../components/Button.jsx'
@@ -319,7 +318,7 @@ export default function RouteMap({
   return (
     <Card
       as="section"
-      variant="dark"
+      variant="light"
       eyebrow="Stage 02 · Learning pathway"
       title="Route map"
       titleId="route-map-title"
@@ -327,13 +326,14 @@ export default function RouteMap({
       actions={<Badge source={sourceDetails.source} />}
       aria-labelledby="route-map-title"
       aria-busy={isLoading}
-      padding="lg"
+      padding="none"
+      className="rounded-card border border-[#E4E4E4] bg-white p-6 sm:p-8"
     >
-      <div className="space-y-4">
-        <Card as="form" variant="dark" padding="lg" onSubmit={handleSubmit}>
+      <div className="space-y-16">
+        <form className="border-t border-[#E4E4E4] pt-8" onSubmit={handleSubmit}>
           <p className={sectionHeadingClass}>Plan a different route</p>
 
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="mt-8 grid gap-8 sm:grid-cols-3">
             <Field id="route-from-skill" label="From skill">
               <TextInput
                 id="route-from-skill"
@@ -379,82 +379,87 @@ export default function RouteMap({
             variant="primary"
             disabled={isLoading || !canQuery}
             aria-busy={isLoading}
-            className="mt-4 w-full sm:w-auto"
+            className="mt-8"
           >
             {isLoading ? 'Mapping route…' : 'Build route'}
           </Button>
-        </Card>
+        </form>
 
         {error === '' ? null : (
-          <Card variant="dark" tone="red" role="alert" padding="lg">
-            <p className={toneHeadingClass.red}>Route unavailable</p>
-            <p className="mt-2 text-sm leading-6 text-offwhite/70">{error}</p>
-            <p className="mt-2 text-xs leading-5 text-offwhite/50">
+          <div
+            role="alert"
+            className="border-t border-[#E4E4E4] pt-8"
+          >
+            <p className={sectionHeadingClass}>Route unavailable</p>
+            <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#0A0A0A]">{error}</p>
+            <p className="mt-2 max-w-[40rem] text-left text-xs leading-5 text-[#8A8A8A]">
               {sourceDetails.detail}. Ask for the route again once the skills graph
               answers.
             </p>
-          </Card>
+          </div>
         )}
 
         {isLoading ? (
-          <Card
-            variant="dark"
-            tone="amber"
+          <div
+            className="px-6 py-16 text-center"
             role="status"
             aria-live="polite"
-            padding="lg"
           >
-            <p className={toneHeadingClass.amber}>Mapping the least-hours path…</p>
-            <p className="mt-2 text-sm leading-6 text-offwhite/70">
+            <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
+              Mapping the least-hours path…
+            </p>
+            <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#4A4A4A]">
               Walking the skills graph from {draft.fromSkill} to{' '}
               {draft.targetRole} at {draft.hoursPerWeek} hours a week.
             </p>
-          </Card>
+          </div>
         ) : route === null ? (
-          <Card variant="dark" emptyState padding="lg">
-            <p className={sectionHeadingClass}>No route yet</p>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-offwhite/70">
+          <div className="px-6 py-16 text-center">
+            <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
+              No route yet
+            </p>
+            <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#4A4A4A]">
               Build a route to see the skill-by-skill metro line, the hours on
               each hop and the paid bridge at the end.
             </p>
-          </Card>
+          </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Card variant="dark" surface="raised" padding="sm">
+            <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+              <div className="border-t border-[#E4E4E4] pt-4">
                 <p className={dataLabelClass}>Route from</p>
-                <p className="mt-1 text-sm font-semibold text-offwhite">
+                <p className="mt-2 text-sm font-semibold text-[#0A0A0A]">
                   {route.from_skill ?? '—'}
                 </p>
-              </Card>
-              <Card variant="dark" surface="raised" padding="sm">
+              </div>
+              <div className="border-t border-[#E4E4E4] pt-4">
                 <p className={dataLabelClass}>Route to</p>
-                <p className="mt-1 text-sm font-semibold text-offwhite">
+                <p className="mt-2 text-sm font-semibold text-[#0A0A0A]">
                   {route.target_role ?? '—'}
                 </p>
-              </Card>
-              <Card variant="dark" surface="raised" padding="sm">
+              </div>
+              <div className="border-t border-[#E4E4E4] pt-4">
                 <p className={dataLabelClass}>Total hours</p>
-                <p className="mt-1 font-mono text-xl text-amber">
+                <p className="mt-2 font-mono text-xl text-[#0A0A0A]">
                   {formatHours(route.total_hours)}
                 </p>
-              </Card>
-              <Card variant="dark" surface="raised" padding="sm">
+              </div>
+              <div className="border-t border-[#E4E4E4] pt-4">
                 <p className={dataLabelClass}>
                   Weeks at {formatHours(route.hours_per_week)}h per week
                 </p>
-                <p className="mt-1 font-mono text-xl text-offwhite">
+                <p className="mt-2 font-mono text-xl text-[#0A0A0A]">
                   {formatWeeks(route.weeks)}
                 </p>
-              </Card>
+              </div>
             </div>
 
-            <Card variant="dark" padding="lg">
+            <div className="border-t border-[#E4E4E4] pt-8">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
                 <p className={sectionHeadingClass}>
                   Metro line · {stations.length} stations
                 </p>
-                <p className="text-xs text-offwhite/40">{sourceDetails.detail}</p>
+                <p className="text-xs text-[#8A8A8A]">{sourceDetails.detail}</p>
               </div>
 
               <p className="sr-only">
@@ -463,7 +468,7 @@ export default function RouteMap({
 
               <ol
                 aria-label={`Route stations from ${route.from_skill ?? 'start'} to ${route.target_role ?? 'target'}`}
-                className="mt-4 flex flex-col sm:flex-row sm:items-start"
+                className="mt-8 flex flex-col sm:flex-row sm:items-start"
               >
                 {stations.map((station, index) => {
                   const isFirst = index === 0
@@ -477,7 +482,7 @@ export default function RouteMap({
                       {isFirst ? null : (
                         <span
                           aria-hidden="true"
-                          className={`absolute left-2 top-0 w-0.5 -translate-x-1/2 bg-amber/60 sm:hidden ${isLast ? 'h-2' : 'inset-y-0'}`}
+                          className={`absolute left-2 top-0 w-0.5 -translate-x-1/2 bg-[#E4E4E4] sm:hidden ${isLast ? 'h-2' : 'inset-y-0'}`}
                         />
                       )}
 
@@ -485,26 +490,24 @@ export default function RouteMap({
                         {isLast ? null : (
                           <span
                             aria-hidden="true"
-                            className="absolute left-1/2 top-1/2 hidden h-0.5 w-full -translate-y-1/2 rounded-pill bg-amber/60 sm:block"
+                            className="absolute left-1/2 top-1/2 hidden h-0.5 w-full -translate-y-1/2 rounded-pill bg-[#E4E4E4] sm:block"
                           />
                         )}
                         <span
                           aria-hidden="true"
-                          className={`relative z-10 h-4 w-4 shrink-0 rounded-pill border-2 bg-navy sm:h-5 sm:w-5 ${
-                            station.isTarget ? 'border-teal bg-teal' : 'border-amber'
+                          className={`relative z-10 h-4 w-4 shrink-0 rounded-pill border-2 bg-white sm:h-5 sm:w-5 ${
+                            station.isTarget ? 'border-[#0A0A0A] bg-[#0A0A0A]' : 'border-[#0A0A0A]'
                           }`}
                         />
                       </div>
 
-                      <div className="mt-3 min-w-0 sm:mt-0">
+                      <div className="min-w-0 sm:mt-3">
                         <p
-                          className={`text-sm font-bold uppercase tracking-[0.12em] ${
-                            station.isTarget ? 'text-teal' : 'text-offwhite'
-                          }`}
+                          className="text-sm font-bold uppercase tracking-[0.12em] text-[#0A0A0A]"
                         >
                           {station.skill}
                         </p>
-                        <p className="mt-1 font-mono text-xs text-amber">
+                        <p className="mt-1 font-mono text-xs text-[#4A4A4A]">
                           {station.isTarget
                             ? 'Target role'
                             : `${formatHours(station.hours)} hours on this hop`}
@@ -516,35 +519,35 @@ export default function RouteMap({
               </ol>
 
               {stations.length === 0 ? (
-                <p className="mt-4 text-sm leading-6 text-offwhite/50">
+                <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
                   The server returned a route with no stations to draw.
                 </p>
               ) : null}
-            </Card>
+            </div>
 
-            <Card variant="dark" tone="teal" padding="lg">
-              <p className={toneHeadingClass.teal}>Paid bridge</p>
+            <div className="border-t border-[#E4E4E4] pt-8">
+              <p className={sectionHeadingClass}>Paid bridge</p>
               {bridgeEntries.length === 0 ? (
-                <p className="mt-2 text-sm leading-6 text-offwhite/70">
+                <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
                   No paid bridge attached to this route. The server returned no
                   bridge block.
                 </p>
               ) : (
-                <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                <dl className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2">
                   {bridgeEntries.map(([label, value]) => (
                     <div
                       key={label}
-                      className="flex items-baseline justify-between gap-4 border-b border-rule pb-1.5"
+                      className="flex items-baseline justify-between gap-4 border-b border-[#E4E4E4] pb-2"
                     >
                       <dt className={dataLabelClass}>{label}</dt>
-                      <dd className="text-right font-mono text-sm text-offwhite">
+                      <dd className="text-right font-mono text-sm text-[#0A0A0A]">
                         {value}
                       </dd>
                     </div>
                   ))}
                 </dl>
               )}
-            </Card>
+            </div>
           </>
         )}
       </div>

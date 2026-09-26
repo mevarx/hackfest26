@@ -418,7 +418,7 @@ export default function WorkerApp({
   return (
     <Card
       as="section"
-      variant="dark"
+      variant="light"
       eyebrow="Stage 01 · Skills discovery"
       title="Worker intake & skill passport"
       titleId="worker-app-title"
@@ -426,61 +426,51 @@ export default function WorkerApp({
       actions={<Badge source={passportSource ?? 'pending'} />}
       aria-labelledby="worker-app-title"
       aria-busy={isBusy}
-      padding="lg"
+      padding="none"
     >
-      <div className="space-y-4">
-        <Card
-          variant="dark"
-          surface="raised"
-          padding="md"
+      <div className="space-y-16">
+        <div
+          className="border-t border-[#E4E4E4] pt-8"
           role="status"
           aria-live="polite"
           aria-atomic="true"
         >
           <p className={sectionHeadingClass}>{statusHeading}</p>
-          <p className="mt-1.5 text-sm leading-6 text-offwhite/70">
+          <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
             {statusDetail}
           </p>
           {latestEvent === null ? null : (
-            <p className="mt-2 text-xs leading-5 text-offwhite/50">
-              <span className="font-bold uppercase tracking-[0.12em] text-amber">
+            <p className="mt-2 max-w-[40rem] text-left text-xs leading-5 text-[#4A4A4A]">
+              <span className="font-bold uppercase tracking-[0.12em] text-[#0A0A0A]">
                 {latestEvent.agent}
               </span>
               {': '}
               {latestEvent.message}
             </p>
           )}
-        </Card>
+        </div>
 
         {hasSession ? null : (
-          <Card variant="dark" emptyState padding="lg" role="status">
-            <p className={sectionHeadingClass}>Idle · no session open</p>
-            <ol className="mt-3 list-none space-y-2 text-sm leading-6 text-offwhite/70">
-              <li>1. The transcript below is prefilled with the Kavya demo.</li>
-              <li>2. Press Run pipeline to open a session for Kavya.</li>
-              <li>
-                3. The orchestrator fills the skill passport in the background, so
-                the passport appears a moment later.
-              </li>
-            </ol>
-          </Card>
+          <div className="px-6 py-16 text-center" role="status">
+            <p className={`text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]`}>
+              Idle · no session open
+            </p>
+            <p className="mx-auto mt-3 max-w-[40rem] text-center text-sm leading-6 text-[#4A4A4A]">
+              The transcript below is prefilled with the Kavya demo. Press Run
+              pipeline to open a session — the orchestrator fills the skill
+              passport in the background.
+            </p>
+          </div>
         )}
 
-        <Card
-          as="form"
-          variant="dark"
-          padding="lg"
+        <form
+          className="border-t border-[#E4E4E4] pt-8"
           onSubmit={(event) => {
             event.preventDefault()
             handleRunPipeline()
           }}
         >
-          <Card
-            variant="dark"
-            surface="raised"
-            padding="lg"
-            className="border-l-2 border-l-amber"
-          >
+          <div>
             <Field id="worker-transcript" label="Session transcript">
               <p id="worker-transcript-hint" className={controlFieldHintClass}>
                 Plain speech, the way Kavya would say it. No CV formatting
@@ -488,22 +478,21 @@ export default function WorkerApp({
               </p>
               <Textarea
                 id="worker-transcript"
-                rows={8}
+                rows={6}
                 value={transcript}
                 onChange={handleTranscriptChange}
                 aria-describedby="worker-transcript-hint"
                 className="mt-3"
               />
             </Field>
-          </Card>
+          </div>
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center">
             <Button
               type="submit"
-              variant="primary"
+              variant="accent"
               disabled={isBusy || transcript.trim() === ''}
               aria-busy={isBusy}
-              className="w-full sm:w-auto"
             >
               {isBusy ? 'Starting session…' : 'Run pipeline'}
             </Button>
@@ -514,12 +503,11 @@ export default function WorkerApp({
                 variant="secondary"
                 onClick={isListening ? handleVoiceStop : handleVoiceStart}
                 aria-pressed={isListening}
-                className="w-full sm:w-auto"
               >
                 {isListening ? 'Stop voice input' : 'Start voice input'}
               </Button>
             ) : (
-              <p className="text-xs leading-5 text-offwhite/50 sm:w-full">
+              <p className="max-w-[28rem] text-xs leading-5 text-[#4A4A4A]">
                 Voice input is unavailable in this browser. Paste or type the
                 transcript instead.
               </p>
@@ -527,35 +515,35 @@ export default function WorkerApp({
           </div>
 
           {voiceError === '' ? null : (
-            <p className="mt-3 text-sm leading-6 text-red" role="alert">
+            <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#0A0A0A]" role="alert">
               {voiceError}
             </p>
           )}
 
           {sessionError === '' ? null : (
-            <p className="mt-3 text-sm leading-6 text-red" role="alert">
+            <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#0A0A0A]" role="alert">
               {sessionError}
             </p>
           )}
-        </Card>
+        </form>
 
-        <Card variant="dark" padding="lg">
+        <div className="border-t border-[#E4E4E4] pt-8">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className={sectionHeadingClass}>Skill passport</p>
-              <h3 className="mt-1 font-serif text-xl text-offwhite">
+              <h3 className="mt-2 font-serif text-xl leading-tight text-[#0A0A0A]">
                 {passport === null ? 'Passport pending' : passport.owner}
               </h3>
             </div>
             {passport === null ? null : (
-              <p className="font-mono text-xs text-offwhite/40">
+              <p className="font-mono text-xs text-[#8A8A8A]">
                 {passport.passport_id}
               </p>
             )}
           </div>
 
           {passport === null ? (
-            <p className="mt-3 text-sm leading-6 text-offwhite/50">
+            <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
               {isStreaming
                 ? 'The skills agent is still reading the transcript. The passport lands here as soon as the orchestrator writes it.'
                 : hasSession
@@ -566,16 +554,16 @@ export default function WorkerApp({
             <>
               <ul
                 aria-label="Recovered skills"
-                className="mt-4 grid gap-3 sm:grid-cols-2"
+                className="mt-8 grid gap-8 sm:grid-cols-2"
               >
                 {skills.map((skill) => {
                   const confidenceLabel = formatConfidence(skill.confidence)
 
                   return (
-                    <li key={skill.name}>
-                      <Card variant="dark" surface="raised" padding="md">
+                    <li key={skill.name} className="border-t border-[#E4E4E4] pt-4">
+                      <div>
                         <div className="flex items-start justify-between gap-3">
-                          <p className="text-sm font-bold uppercase tracking-[0.12em] text-offwhite">
+                          <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#0A0A0A]">
                             {skill.name}
                           </p>
                           <Badge
@@ -591,37 +579,37 @@ export default function WorkerApp({
                             aria-valuemax={100}
                             aria-valuenow={toPercent(skill.confidence)}
                             aria-valuetext={`Confidence ${confidenceLabel}`}
-                            className="h-1.5 flex-1 overflow-hidden rounded-pill bg-navy"
+                            className="h-1.5 flex-1 overflow-hidden rounded-pill bg-[#E4E4E4]"
                           >
                             <div
-                              className="h-full rounded-pill bg-amber"
+                              className="h-full rounded-pill bg-[#0A0A0A]"
                               style={{
                                 width: `${toPercent(skill.confidence)}%`,
                               }}
                             />
                           </div>
-                          <span className="font-mono text-xs text-offwhite/70">
+                          <span className="font-mono text-xs text-[#4A4A4A]">
                             {confidenceLabel}
                           </span>
                         </div>
                         <p className={`mt-1.5 ${dataLabelClass}`}>
                           Confidence
                         </p>
-                      </Card>
+                      </div>
                     </li>
                   )
                 })}
               </ul>
 
-              <p className={`mt-5 ${sectionHeadingClass}`}>Credentials</p>
+              <p className={`mt-12 ${sectionHeadingClass}`}>Credentials</p>
               {credentials.length === 0 ? (
-                <p className="mt-1.5 text-sm leading-6 text-offwhite/50">
+                <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
                   No credentials yet. Score a work sample below to earn one.
                 </p>
               ) : (
                 <ul
                   aria-label="Issued credentials"
-                  className="mt-2 flex flex-wrap gap-2"
+                  className="mt-3 flex flex-wrap gap-2"
                 >
                   {credentials.map((credential) => (
                     <li key={credential}>
@@ -632,34 +620,31 @@ export default function WorkerApp({
               )}
             </>
           )}
-        </Card>
+        </div>
 
-        <Card
-          as="form"
-          variant="dark"
-          tone="amber"
-          padding="lg"
+        <form
+          className="border-t border-[#E4E4E4] pt-8"
           onSubmit={handleWorkSampleSubmit}
         >
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-amber">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#8A8A8A]">
             Proof · work sample
           </p>
-          <h3 className="mt-1 font-serif text-xl">
+          <h3 className="mt-2 font-serif text-xl leading-tight text-[#0A0A0A]">
             Turn a claim into a credential
           </h3>
-          <p className="mt-2 text-sm leading-6 text-offwhite/70">
+          <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
             Pick one skill from the passport and paste the evidence. The server
             scores it and decides whether a credential is issued.
           </p>
 
           {skills.length === 0 ? (
-            <p className="mt-4 text-sm leading-6 text-offwhite/50">
+            <p className="mt-6 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
               A skill is needed before a work sample can be scored. The passport
               has not landed yet.
             </p>
           ) : (
             <>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-8 grid gap-8 sm:grid-cols-2">
                 <Field id="worker-sample-skill" label="Skill to prove">
                   <Select
                     id="worker-sample-skill"
@@ -681,7 +666,7 @@ export default function WorkerApp({
                   </p>
                   <p
                     aria-labelledby="worker-sample-score"
-                    className="mt-2 flex h-control items-center rounded-control border border-rule bg-navy-raised px-3 font-mono text-sm text-offwhite/70"
+                    className="mt-3 border-b border-[#E4E4E4] pb-2 font-mono text-sm text-[#0A0A0A]"
                   >
                     {sample === null
                       ? 'No score yet'
@@ -693,7 +678,7 @@ export default function WorkerApp({
               <Field
                 id="worker-sample-submission"
                 label="Evidence submission"
-                className="mt-4"
+                className="mt-8"
               >
                 <Textarea
                   id="worker-sample-submission"
@@ -704,13 +689,12 @@ export default function WorkerApp({
                 />
               </Field>
 
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 <Button
                   type="submit"
                   variant="primary"
                   disabled={isScoring || submission.trim() === ''}
                   aria-busy={isScoring}
-                  className="w-full sm:w-auto"
                 >
                   {isScoring ? 'Scoring sample…' : 'Score work sample'}
                 </Button>
@@ -726,7 +710,7 @@ export default function WorkerApp({
               </div>
 
               {sample === null ? null : (
-                <p className="mt-3 text-sm leading-6 text-offwhite/70">
+                <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
                   {sample.credential_issued
                     ? 'Credential issued and recorded on the passport.'
                     : 'No credential issued. The score is below the server threshold.'}
@@ -734,20 +718,20 @@ export default function WorkerApp({
               )}
 
               {workSampleError === '' ? null : (
-                <p className="mt-3 text-sm leading-6 text-red" role="alert">
+                <p className="mt-4 max-w-[40rem] text-left text-sm leading-6 text-[#0A0A0A]" role="alert">
                   {workSampleError}
                 </p>
               )}
             </>
           )}
-        </Card>
+        </form>
 
         {events.length === 0 ? null : (
-          <Card variant="dark" padding="lg">
+          <div className="border-t border-[#E4E4E4] pt-8">
             <p className={sectionHeadingClass}>Pipeline agents</p>
             <ul
               aria-label="Pipeline agent events"
-              className="mt-3 space-y-1.5"
+              className="mt-6 space-y-4"
             >
               {events.map((event, index) => {
                 const status = getEventStatusDetails(event.status)
@@ -755,21 +739,21 @@ export default function WorkerApp({
                 return (
                   <li
                     key={event.eventId ?? `${event.agent}-${index}`}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-offwhite/70"
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#E4E4E4] pb-4 text-sm text-[#4A4A4A] last:border-0 last:pb-0"
                   >
-                    <span className="font-mono text-xs text-offwhite/40">
+                    <span className="font-mono text-xs text-[#8A8A8A]">
                       {String(index + 1).padStart(2, '0')}
                     </span>
-                    <span className="font-bold uppercase tracking-[0.12em] text-offwhite">
+                    <span className="font-bold uppercase tracking-[0.12em] text-[#0A0A0A]">
                       {event.agent}
                     </span>
                     <Badge status={status.status} label={status.label} />
-                    <span className="leading-6">{event.message}</span>
+                    <span className="max-w-[40rem] leading-6">{event.message}</span>
                   </li>
                 )
               })}
             </ul>
-          </Card>
+          </div>
         )}
       </div>
     </Card>

@@ -1,18 +1,25 @@
 const VARIANT_CLASS = {
+  // Primary: solid black fill, white label. On a charcoal surface the same
+  // treatment is read as white-on-dark, so the fill always carries the action.
   primary:
-    'border border-transparent bg-amber text-navy hover:bg-amber/85 active:bg-amber/75',
+    'border border-[#0A0A0A] bg-[#0A0A0A] text-[#FAFAFA] hover:bg-[#1A1A1A] hover:border-[#1A1A1A] active:bg-[#1A1A1A]',
+  // Secondary: plain text, underline on hover only.
   secondary:
-    'border border-slate/60 bg-transparent text-offwhite hover:border-teal hover:text-teal',
+    'h-auto border-0 bg-transparent px-0 py-1 text-sm font-semibold normal-case tracking-[0.04em] text-[#0A0A0A] underline-offset-4 hover:underline hover:opacity-70',
   ghost:
-    'border border-transparent bg-transparent text-offwhite/70 hover:text-amber',
+    'h-auto border-0 bg-transparent px-0 py-1 text-sm font-semibold normal-case tracking-[0.04em] text-[#4A4A4A] underline-offset-4 hover:text-[#0A0A0A] hover:underline',
+  // The one accent allowed per screen (e.g. "Run pipeline" only). Every other
+  // action in the app is black or plain text.
+  accent:
+    'border border-[#F5A623] bg-[#F5A623] text-[#0A0A0A] hover:bg-[#e0951a] hover:border-[#e0951a] active:bg-[#d18616]',
 }
 
 const BUTTON_BASE_CLASS =
-  'inline-flex h-control items-center justify-center gap-2 rounded-control px-4 text-sm font-bold uppercase leading-none tracking-[0.12em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:pointer-events-none disabled:opacity-50'
+  'inline-flex h-control items-center justify-center gap-2 rounded-control px-5 text-sm font-bold uppercase leading-none tracking-[0.12em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5A623] disabled:pointer-events-none disabled:opacity-50'
 
 /**
  * @param {{
- *   variant?: 'primary' | 'secondary' | 'ghost',
+ *   variant?: 'primary' | 'secondary' | 'ghost' | 'accent',
  *   type?: 'button' | 'submit' | 'reset',
  *   className?: string,
  *   children?: import('react').ReactNode,

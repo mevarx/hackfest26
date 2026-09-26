@@ -236,13 +236,13 @@ describe('GhostTwinPanel', () => {
     errorSpy.mockRestore()
   })
 
-  it('renders a zero-delta table and a teal PASS result for fair mode', async () => {
+  it('renders a zero-delta table and a PASS result for fair mode', async () => {
     fetchMock.mockResolvedValue(successfulResponse(FAIR_RESULT))
     render(<GhostTwinPanel />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
 
-    await screen.findByText('PASS')
+    const passVerdict = await screen.findByText('PASS')
     const table = screen.getByRole('table')
     const rows = within(table).getAllByRole('row')
     const firstRowCells = within(rows[1]).getAllByRole('cell')
@@ -267,6 +267,9 @@ describe('GhostTwinPanel', () => {
     expect(screen.getByText('Fairness guardrail passed')).toBeInTheDocument()
     expect(screen.getByText('Source=local')).toBeInTheDocument()
     expect(screen.getByText('Local')).toBeInTheDocument()
+    // A passing run is a gray rule, never the black rule a flagged run gets.
+    expect(passVerdict).toHaveClass('border-[#E4E4E4]', 'text-[#4A4A4A]')
+    expect(passVerdict).not.toHaveClass('border-[#0A0A0A]')
     expect(screen.getByText('Pure-Python calculation')).toBeInTheDocument()
     expect(screen.getByText('Synthetic fair merit')).toBeInTheDocument()
     expect(
@@ -310,7 +313,10 @@ describe('GhostTwinPanel', () => {
     expect(secondRowCells[0]).toHaveTextContent('86')
     expect(secondRowCells[1]).toHaveTextContent('98')
     expect(secondRowCells[2]).toHaveTextContent('+12')
-    expect(flaggedBanner.closest('[role="status"]')).toHaveClass('bg-red/10')
+    // Monochrome verdict: a flagged run is marked by a black rule and a black
+    // label, not by a red banner.
+    expect(flaggedBanner.closest('[role="status"]')).not.toBeNull()
+    expect(flaggedBanner).toHaveClass('border-[#0A0A0A]', 'text-[#0A0A0A]')
     expect(screen.getByText('Fairness guardrail needs attention')).toBeInTheDocument()
     expect(screen.getByText('Source=local')).toBeInTheDocument()
     expect(screen.queryByText('PASS')).not.toBeInTheDocument()

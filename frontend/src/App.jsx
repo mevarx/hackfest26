@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
-import GhostTwinPanel from './components/GhostTwinPanel.jsx'
 import AgentLog from './components/AgentLog.jsx'
 import Badge from './components/Badge.jsx'
 import Card from './components/Card.jsx'
+import GhostTwinPanel from './components/GhostTwinPanel.jsx'
+import Reveal from './components/Reveal.jsx'
 import StageProgress from './components/StageProgress.jsx'
 import Switch from './components/Switch.jsx'
 import { useDemoMode } from './context/DemoModeContext.jsx'
@@ -27,16 +28,38 @@ const STAGE_STATUS_LABELS = {
   settled: ['complete', 'active', 'upcoming', 'upcoming'],
 }
 
-const DIVIDER_CLASS =
-  'flex items-center gap-4 border-t border-rule-light pt-6 text-[0.65rem] font-bold uppercase tracking-[0.22em] text-navy/40'
+const RULE_CLASS = 'border-[#E4E4E4]'
 
+/** One small-caps gray label and one 1px rule. No boxed treatment. */
 function SectionDivider({ children }) {
   return (
-    <div className={DIVIDER_CLASS}>
-      <span className="h-px flex-1 bg-rule-light" aria-hidden="true" />
-      <span>{children}</span>
-      <span className="h-px flex-1 bg-rule-light" aria-hidden="true" />
+    <div className="flex items-center gap-5 text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
+      <span className="shrink-0">{children}</span>
+      <span className={`h-px flex-1 ${RULE_CLASS}`} aria-hidden="true" />
     </div>
+  )
+}
+
+/**
+ * A major section: 96px of air, one hairline, 96px more. A `label` renders the
+ * small-caps divider rule; without one the hairline alone separates the block.
+ *
+ * @param {{
+ *   label?: string,
+ *   className?: string,
+ *   children?: import('react').ReactNode,
+ * }} props
+ */
+function SectionStack({ label, children, className = '' }) {
+  return (
+    <section className={`mt-24 border-t ${RULE_CLASS} pt-24 ${className}`.trim()}>
+      {label === undefined ? null : (
+        <Reveal>
+          <SectionDivider>{label}</SectionDivider>
+        </Reveal>
+      )}
+      <div className="mt-16 space-y-24">{children}</div>
+    </section>
   )
 }
 
@@ -95,22 +118,22 @@ export default function App() {
   }, [isStreaming, sessionId])
 
   return (
-    <div className="min-h-dvh bg-offwhite text-navy">
-      <header className="border-b border-rule bg-navy text-offwhite">
+    <div className="min-h-dvh bg-[#FAFAFA] font-sans text-[#0A0A0A]">
+      <header className="border-b border-white/10 bg-[#0A0A0A] text-[#FAFAFA]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8">
           <div className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-control bg-amber font-serif text-xl font-bold text-navy">
+            <span className="grid h-9 w-9 place-items-center rounded-control bg-[#FAFAFA] font-serif text-xl font-bold leading-none text-[#0A0A0A]">
               R
             </span>
             <div>
               <p className="font-serif text-xl leading-none">ReRoute</p>
-              <p className="mt-1 text-[0.65rem] font-bold uppercase tracking-[0.22em] text-offwhite/50">
+              <p className="mt-1 text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
                 Career orchestration
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <span className="hidden text-[0.65rem] font-bold uppercase tracking-[0.16em] text-offwhite/50 sm:inline">
+            <span className="hidden text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#8A8A8A] sm:inline">
               Re Route · Hackfest demo
             </span>
             <Switch
@@ -124,88 +147,121 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
-        <section aria-labelledby="demo-title">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-teal">
-            Demo stage · Kavya
-          </p>
-          <h1
-            id="demo-title"
-            className="mt-5 max-w-2xl font-serif text-5xl leading-[0.98] tracking-[-0.035em] sm:text-6xl"
-          >
-            Every agent,{' '}
-            <span className="block italic text-navy/50">in sequence.</span>
-          </h1>
-          <p className="mt-6 max-w-xl text-base leading-7 text-navy/70 sm:text-lg sm:leading-8">
-            A transparent view of the orchestration backbone as ReRoute turns a
-            career transition into a fair, evidence-led plan.
-          </p>
+      <main className="mx-auto max-w-6xl px-5 sm:px-8">
+        {/* Hero: the one focal point on first load — a large serif headline, one
+            measure of body copy, then the persona summary as the single card. */}
+        <section aria-labelledby="demo-title" className="pb-4 pt-20 sm:pt-24 lg:pt-28">
+          <Reveal>
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[#8A8A8A]">
+              Demo stage · Kavya
+            </p>
+          </Reveal>
 
-          <Card
-            variant="light"
-            padding="lg"
-            className="mt-8 max-w-xl border-l-2 border-l-amber"
-          >
-            <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-navy/40">
-              Demo persona
+          <Reveal delay={70}>
+            <h1
+              id="demo-title"
+              className="mt-6 max-w-2xl font-serif text-5xl leading-[0.98] tracking-[-0.04em] text-[#0A0A0A] sm:text-6xl lg:text-7xl"
+            >
+              Every agent,{' '}
+              <span className="block italic text-[#4A4A4A]">in sequence.</span>
+            </h1>
+          </Reveal>
+
+          <Reveal delay={140}>
+            <p className="mt-8 max-w-[40rem] text-left text-base leading-7 text-[#4A4A4A] sm:text-lg sm:leading-8">
+              A transparent view of the orchestration backbone as ReRoute turns a
+              career transition into a fair, evidence-led plan.
             </p>
-            <p className="mt-1 font-serif text-xl">Kavya · 29 · Chennai</p>
-            <p className="mt-1 text-sm text-navy/50">
-              Manual tester returning after an 18-month caregiving break
-            </p>
-          </Card>
+          </Reveal>
+
+          <Reveal delay={210}>
+            <Card
+              variant="light"
+              padding="none"
+              className="mt-16 max-w-[40rem] rounded-card border border-[#E4E4E4] bg-white p-6 sm:p-8"
+            >
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8A8A8A]">
+                Demo persona
+              </p>
+              <p className="mt-3 font-serif text-2xl leading-tight tracking-[-0.02em] text-[#0A0A0A]">
+                Kavya · 29 · Chennai
+              </p>
+              <p className="mt-3 max-w-[36rem] text-left text-sm leading-6 text-[#4A4A4A]">
+                Manual tester returning after an 18-month caregiving break
+              </p>
+            </Card>
+          </Reveal>
         </section>
 
-        <div className="mt-10 space-y-6">
-          <WorkerApp
-            baseUrl={backendBaseUrl}
-            sessionId={sessionId}
-            onSessionStart={handleSessionStart}
-            events={events}
-            isStreaming={isStreaming}
-          />
-          {startError === '' ? null : (
-            <Card variant="light" tone="red" role="alert" padding="lg">
-              <p className="text-sm text-navy/70">{startError}</p>
-            </Card>
-          )}
-        </div>
-
-        <div className="mt-12 space-y-10">
-          <SectionDivider>Stage progression</SectionDivider>
-
-          <StageProgress stages={stages} />
-
-          <RouteMap baseUrl={backendBaseUrl} />
-        </div>
-
-        <div className="mt-12 space-y-10">
-          <SectionDivider>Orchestration detail</SectionDivider>
-
-          <AgentLog
-            events={events}
-            source={streamSource}
-            status={usingLiveTransport ? stream.status : null}
-            lastEventId={usingLiveTransport ? stream.lastEventId : 0}
-            reconnectAttempts={usingLiveTransport ? stream.reconnectAttempts : 0}
-            onReconnect={usingLiveTransport ? stream.reconnectNow : undefined}
-          />
-
-          <GhostTwinPanel baseUrl={backendBaseUrl} />
-
-          <HRConsole baseUrl={backendBaseUrl} />
-
-          <div className="flex items-start gap-3 px-1 text-xs leading-5 text-navy/50">
-            <span
-              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-pill bg-teal"
-              aria-hidden="true"
+        <SectionStack label="Intake">
+          <Reveal delay={80}>
+            <WorkerApp
+              baseUrl={backendBaseUrl}
+              sessionId={sessionId}
+              onSessionStart={handleSessionStart}
+              events={events}
+              isStreaming={isStreaming}
             />
-            <p>
+          </Reveal>
+          {startError === '' ? null : (
+            <Reveal delay={60}>
+              <div role="alert" className={`border-t ${RULE_CLASS} pt-8`}>
+                <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#4A4A4A]">
+                  Session could not start
+                </p>
+                <p className="mt-3 max-w-[40rem] text-left text-sm leading-6 text-[#0A0A0A]">
+                  {startError}
+                </p>
+              </div>
+            </Reveal>
+          )}
+        </SectionStack>
+
+        <SectionStack label="Stage progression">
+          <Reveal delay={80}>
+            <StageProgress stages={stages} />
+          </Reveal>
+        </SectionStack>
+
+        <SectionStack label="Route">
+          <Reveal delay={80}>
+            <RouteMap baseUrl={backendBaseUrl} />
+          </Reveal>
+        </SectionStack>
+
+        <SectionStack label="Orchestration detail">
+          <Reveal delay={80}>
+            <AgentLog
+              events={events}
+              source={streamSource}
+              status={usingLiveTransport ? stream.status : null}
+              lastEventId={usingLiveTransport ? stream.lastEventId : 0}
+              reconnectAttempts={usingLiveTransport ? stream.reconnectAttempts : 0}
+              onReconnect={usingLiveTransport ? stream.reconnectNow : undefined}
+            />
+          </Reveal>
+        </SectionStack>
+
+        <SectionStack>
+          <Reveal>
+            <GhostTwinPanel baseUrl={backendBaseUrl} />
+          </Reveal>
+        </SectionStack>
+
+        <SectionStack>
+          <Reveal>
+            <HRConsole baseUrl={backendBaseUrl} />
+          </Reveal>
+        </SectionStack>
+
+        <footer className={`mt-24 border-t ${RULE_CLASS} py-24`}>
+          <Reveal>
+            <p className="max-w-[40rem] text-left text-sm leading-6 text-[#4A4A4A]">
               Every panel labels its own data source. Simulated results are never
               presented as SAP results.
             </p>
-          </div>
-        </div>
+          </Reveal>
+        </footer>
       </main>
     </div>
   )
