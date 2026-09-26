@@ -24,6 +24,9 @@ POST_RETURN_BOUND_SECONDS = 5.0
 ORCHESTRATION_WAIT_SECONDS = 60.0
 ORCHESTRATION_POLL_SECONDS = 0.05
 STUB_EVENT_DELAY_SECONDS = 0.2
+SLOW_SOCKET_DELAY_SECONDS = 0.5
+WAIT_SUBSCRIBER_RACE_SECONDS = 0.02
+WAIT_SUBSCRIBER_TIMEOUT_SECONDS = 5.0
 STUB_EVENTS: tuple[tuple[AgentName, AgentStatus, str], ...] = (
     ("ORCHESTRATOR", "running", "Orchestration started"),
     ("SKILLS DISCOVERY", "done", "Skill claims extracted"),
@@ -142,13 +145,18 @@ def wait_for_orchestration(client: TestClient, session_id: str) -> dict[str, Any
 
 
 def test_websocket_rejects_unknown_session_with_documented_close_code(tmp_path: Path) -> None:
+    """The handshake is accepted first so the 4404 code actually reaches the client.
+
+    Closing before ``accept()`` makes the server reject the upgrade, and the
+    client cannot then distinguish "no such session" from any other rejection.
+    """
     app = make_app(tmp_path)
     with (
         TestClient(app) as client,
+        client.websocket_connect("/session/unknown-session/stream") as websocket,
         pytest.raises(WebSocketDisconnect) as rejection,
-        client.websocket_connect("/session/unknown-session/stream"),
     ):
-        pass
+        websocket.receive_text()
 
     assert rejection.value.code == SESSION_NOT_FOUND_CLOSE_CODE
 
@@ -258,6 +266,31 @@ class FailingSocket:
         raise RuntimeError("socket is closed")
 
 
+class _OneShotStore(SessionStore):
+    """A store double that serves one already-built session."""
+
+    def __init__(self, session: SessionState) -> None:
+        self._session = session
+
+    async def initialize(self) -> None:
+        return None
+
+    async def create(self, session: SessionState) -> None:
+        raise NotImplementedError
+
+    async def update(self, session: SessionState, expected_version: int) -> SessionState:
+        raise NotImplementedError
+
+    async def upsert(self, session: SessionState, expected_version: int) -> SessionState:
+        raise NotImplementedError
+
+    async def get(self, session_id: str) -> SessionState | None:
+        return self._session if self._session.session_id == session_id else None
+
+    async def close(self) -> None:
+        return None
+
+
 def test_broadcast_drops_failed_sockets_without_raising() -> None:
     async def exercise() -> None:
         registry = ConnectionRegistry()
@@ -279,6 +312,112 @@ def test_broadcast_drops_failed_sockets_without_raising() -> None:
 
         await registry.disconnect("broadcast-session", healthy)
         assert registry.connection_count("broadcast-session") == 0
+
+    asyncio.run(exercise())
+
+
+def test_join_delivers_history_before_concurrent_live_events() -> None:
+    """A resuming client must never see a live event ahead of its own history.
+
+    The socket is registered before the store is read, so an event emitted during
+    that read is buffered rather than delivered immediately. Handing it over first
+    would push the client past the sequences it is replaying and permanently lose
+    the rest of its history.
+    """
+
+    class BlockingStore(_OneShotStore):
+        def __init__(self, session: SessionState) -> None:
+            super().__init__(session)
+            self.reading = asyncio.Event()
+            self.release = asyncio.Event()
+
+        async def get(self, session_id: str) -> SessionState | None:
+            self.reading.set()
+            await self.release.wait()
+            return await super().get(session_id)
+
+    async def exercise() -> None:
+        store = BlockingStore(make_session("join-session", event_count=3))
+        registry = ConnectionRegistry()
+        socket = RecordingSocket()
+
+        joining = asyncio.create_task(registry.join("join-session", socket, store=store))
+        await store.reading.wait()
+        live = make_event("join-session", 4, message="emitted during the replay read")
+        broadcast = asyncio.create_task(registry.broadcast("join-session", live))
+        await asyncio.sleep(0)
+        store.release.set()
+        await asyncio.gather(joining, broadcast)
+
+        delivered = [json.loads(message) for message in socket.messages]
+        assert [payload["sequence"] for payload in delivered] == [1, 2, 3, 4]
+        assert delivered[-1]["message"] == live.message
+
+    asyncio.run(exercise())
+
+
+def test_join_resumes_after_the_requested_sequence() -> None:
+    async def exercise() -> None:
+        store = _OneShotStore(make_session("resume-session", event_count=4))
+        registry = ConnectionRegistry()
+        socket = RecordingSocket()
+        await registry.join("resume-session", socket, after_sequence=2, store=store)
+        delivered = [json.loads(message) for message in socket.messages]
+        assert [payload["sequence"] for payload in delivered] == [3, 4]
+
+    asyncio.run(exercise())
+
+
+def test_broadcast_does_not_hold_the_registry_lock_across_sends() -> None:
+    """One stalled consumer must not serialise unrelated sessions behind it."""
+
+    class SlowSocket:
+        def __init__(self, delay: float) -> None:
+            self._delay = delay
+            self.started = asyncio.Event()
+
+        async def send_text(self, data: str) -> None:
+            self.started.set()
+            await asyncio.sleep(self._delay)
+
+    async def exercise() -> None:
+        registry = ConnectionRegistry()
+        slow = SlowSocket(SLOW_SOCKET_DELAY_SECONDS)
+        await registry.connect("slow-session", slow)
+
+        async def emit_to_slow_session() -> None:
+            await registry.broadcast("slow-session", make_event("slow-session", 1))
+            await registry.broadcast("slow-session", make_event("slow-session", 2))
+
+        blocker = asyncio.create_task(emit_to_slow_session())
+        await slow.started.wait()
+        healthy = RecordingSocket()
+        await registry.connect("fast-session", healthy)
+
+        started_at = time.perf_counter()
+        await registry.broadcast("fast-session", make_event("fast-session", 1))
+        elapsed = time.perf_counter() - started_at
+
+        assert elapsed < SLOW_SOCKET_DELAY_SECONDS / 2, (
+            f"broadcast to an unrelated session waited {elapsed:.3f}s on a stalled socket"
+        )
+        assert len(healthy.messages) == 1
+        await blocker
+
+    asyncio.run(exercise())
+
+
+def test_wait_for_subscriber_observes_a_connection_made_while_waiting() -> None:
+    async def exercise() -> None:
+        registry = ConnectionRegistry()
+
+        async def attach() -> None:
+            await asyncio.sleep(WAIT_SUBSCRIBER_RACE_SECONDS)
+            await registry.connect("racing-session", RecordingSocket())
+
+        racer = asyncio.create_task(attach())
+        assert await registry.wait_for_subscriber("racing-session", WAIT_SUBSCRIBER_TIMEOUT_SECONDS)
+        await racer
 
     asyncio.run(exercise())
 

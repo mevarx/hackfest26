@@ -38,9 +38,9 @@ router = APIRouter(prefix="/session", tags=["sessions"])
 
 SESSION_NOT_FOUND_CLOSE_CODE = 4404
 ORCHESTRATION_ATTACH_GRACE_SECONDS = 0.15
+ORCHESTRATION_TASKS_STATE_KEY = "orchestration_tasks"
 _ORCHESTRATION_MODULE = "app.orchestrator"
 _ORCHESTRATION_ENTRY_POINT = "run_orchestration"
-_ORCHESTRATION_TASKS_STATE_KEY = "orchestration_tasks"
 
 OrchestrationRunner = Callable[..., Awaitable[object]]
 
@@ -116,12 +116,15 @@ async def stream_session_events(
 ) -> None:
     session = await session_store.get(session_id)
     if session is None:
+        # The handshake has to be accepted before a close code can be delivered;
+        # closing first makes the server reject the upgrade and the client cannot
+        # tell "no such session" from any other rejection.
+        await websocket.accept()
         await websocket.close(code=SESSION_NOT_FOUND_CLOSE_CODE)
         return
     await websocket.accept()
-    await registry.connect(session_id, websocket)
     try:
-        await registry.replay(
+        await registry.join(
             session_id,
             websocket,
             after_sequence=_resume_sequence(websocket),
@@ -159,8 +162,9 @@ async def stream_session(
         _session_event_stream(session_id),
         media_type="text/event-stream",
         headers={
+            # `Connection` is hop-by-hop and must not be set by an application.
             "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
         },
     )
 
@@ -218,10 +222,10 @@ async def _orchestrate_session(
 
 def _track_orchestration_task(app: FastAPI, task: asyncio.Task[None]) -> None:
     state = app.state
-    tasks = getattr(state, _ORCHESTRATION_TASKS_STATE_KEY, None)
+    tasks = getattr(state, ORCHESTRATION_TASKS_STATE_KEY, None)
     if not isinstance(tasks, set):
         tasks = set[asyncio.Task[None]]()
-        setattr(state, _ORCHESTRATION_TASKS_STATE_KEY, tasks)
+        setattr(state, ORCHESTRATION_TASKS_STATE_KEY, tasks)
     tracked: set[asyncio.Task[None]] = tasks
     tracked.add(task)
     task.add_done_callback(tracked.discard)

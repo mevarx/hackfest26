@@ -183,7 +183,10 @@ def test_session_stream_emits_ordered_sse_events_and_headers(
     assert unknown_response.status_code == 404
     assert response.headers["content-type"].startswith("text/event-stream")
     assert response.headers["cache-control"] == "no-cache"
-    assert response.headers["connection"] == "keep-alive"
+    # `Connection` is hop-by-hop: an application must not set it, and it is
+    # illegal under HTTP/2. Proxy buffering is disabled instead.
+    assert "connection" not in response.headers
+    assert response.headers["x-accel-buffering"] == "no"
     assert delays == [1, 1, 1, 1, 1, 1]
     assert len(frames) == 4
     assert len(events) == 4
