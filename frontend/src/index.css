@@ -3,14 +3,15 @@
 
 @layer base {
   html {
-    background: var(--offwhite);
+    background: var(--white);
   }
 
   body {
     min-width: 320px;
     min-height: 100vh;
     margin: 0;
-    background: var(--offwhite);
+    background: var(--white);
+    color: var(--black);
     font-family: var(--font-sans);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -36,12 +37,63 @@
   }
 
   select option {
-    background: var(--navy);
-    color: var(--offwhite);
+    background: var(--black);
+    color: var(--white);
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--amber) 55%, transparent);
-    color: var(--navy);
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+    color: var(--black);
+  }
+}
+
+/* Scroll-reveal: markup hook is `.reveal`, visibility is `.is-visible`.
+   Stagger via inline `--reveal-delay` (e.g. 0ms, 60ms, 120ms). */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 450ms ease-out,
+    transform 450ms ease-out;
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Subtle status pulse for "running" dots. */
+@keyframes running-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.running-dot {
+  animation: running-dot-pulse 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .running-dot {
+    animation: none !important;
   }
 }
