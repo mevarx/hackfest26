@@ -53,6 +53,7 @@ from pydantic import JsonValue, TypeAdapter
 
 from app.config import Settings, session_source
 from app.domain.ghost_twin import GhostTwinOutcome, run_ghost_twin_audit
+from app.domain.passport import merge_skill_passport
 from app.mocks.employer_fixtures import employer_readiness_brief
 from app.mocks.hana_fixtures import SKILL_NODES
 from app.mocks.market_fixtures import DEFAULT_CITY, market_brief
@@ -71,7 +72,6 @@ from app.models import (
     Route,
     SessionState,
     SessionStatus,
-    SkillClaim,
     SkillExtractionResponse,
     SkillPassport,
 )
@@ -659,43 +659,46 @@ async def _two_key_wait(state: OrchestrationState) -> OrchestrationState:
     store = state["store"]
     session_id = state["session_id"]
     source = session_source(settings)
-    await emitter.emit(
-        agent="ORCHESTRATOR",
-        status="waiting_consent",
-        message="Confirm the two keys: evidence disclosure and the re-routed plan",
-        data={
-            "phase": "two_key_wait",
-            "keys": ["evidence_disclosure", "plan_acceptance"],
-            "blocking": False,
-        },
-        source=source,
-    )
-    await _update_session(
-        store,
-        session_id,
-        fields={"status": "completed"},
-        state_entry=(
-            "consent",
-            {
+    try:
+        await emitter.emit(
+            agent="ORCHESTRATOR",
+            status="waiting_consent",
+            message="Confirm the two keys: evidence disclosure and the re-routed plan",
+            data={
                 "phase": "two_key_wait",
                 "keys": ["evidence_disclosure", "plan_acceptance"],
-                "state": "auto_accepted_for_demo",
                 "blocking": False,
             },
-        ),
-    )
-    await emitter.emit(
-        agent="ORCHESTRATOR",
-        status="done",
-        message="Demo sign-off recorded · the re-routed plan is ready for review",
-        data={
-            "phase": "two_key_wait",
-            "keys": ["evidence_disclosure", "plan_acceptance"],
-            "terminal": True,
-            "session_status": "completed",
-        },
-        source=source,
-    )
+            source=source,
+        )
+        await _update_session(
+            store,
+            session_id,
+            fields={"status": "completed"},
+            state_entry=(
+                "consent",
+                {
+                    "phase": "two_key_wait",
+                    "keys": ["evidence_disclosure", "plan_acceptance"],
+                    "state": "auto_accepted_for_demo",
+                    "blocking": False,
+                },
+            ),
+        )
+        await emitter.emit(
+            agent="ORCHESTRATOR",
+            status="done",
+            message="Demo sign-off recorded · the re-routed plan is ready for review",
+            data={
+                "phase": "two_key_wait",
+                "keys": ["evidence_disclosure", "plan_acceptance"],
+                "terminal": True,
+                "session_status": "completed",
+            },
+            source=source,
+        )
+    except Exception as error:
+        return await _record_failure(state, "ORCHESTRATOR", error)
     return state
 
 
@@ -762,6 +765,12 @@ async def _run_sequential(state: OrchestrationState) -> OrchestrationState:
 
 
 async def _close_failed_run(state: OrchestrationState) -> None:
+    """Close out a run whose graph raised, so the session does not look successful.
+
+    This is only ever reached from the graph's failure handler, so the session is
+    marked ``failed``. Reporting ``completed`` here made a crashed run render as a
+    success for any client polling ``GET /session/{id}``.
+    """
     emitter = state["emitter"]
     await emitter.emit(
         agent="ORCHESTRATOR",
@@ -773,7 +782,7 @@ async def _close_failed_run(state: OrchestrationState) -> None:
     await _update_session(
         state["store"],
         state["session_id"],
-        fields={"status": "completed"},
+        fields={"status": "failed"},
         state_entry=("orchestration", {"graph_aborted": True, "terminal": True}),
     )
 
@@ -781,11 +790,8 @@ async def _close_failed_run(state: OrchestrationState) -> None:
 def _load_state_graph() -> tuple[type["StateGraph[OrchestrationState]"], str, str] | None:
     try:
         from langgraph.graph import END, START, StateGraph
-    except Exception:
-        logger.warning(
-            "langgraph is not importable; using the built-in sequential node runner",
-            exc_info=True,
-        )
+    except ImportError:
+        logger.warning("langgraph is not importable; using the built-in sequential node runner")
         return None
     return StateGraph, START, END
 
@@ -849,24 +855,7 @@ def _build_passport(
     session: SessionState,
     response: SkillExtractionResponse,
 ) -> SkillPassport:
-    existing_session = session.passport
-    claims = {
-        skill.name: SkillClaim(
-            name=skill.name,
-            confidence=skill.confidence,
-            verified=skill.name not in set(response.needs_proof),
-        )
-        for skill in response.skills
-    }
-    if existing_session is not None:
-        claims.update({claim.name: claim for claim in existing_session.skills})
-    return SkillPassport(
-        passport_id=f"passport-{session.session_id}",
-        owner=session.persona,
-        skills=sorted(claims.values(), key=lambda claim: (-claim.confidence, claim.name)),
-        credentials=list(existing_session.credentials) if existing_session is not None else [],
-        source=response.source,
-    )
+    return merge_skill_passport(session, response)
 
 
 def _route_start_skill(passport: SkillPassport | None) -> str:

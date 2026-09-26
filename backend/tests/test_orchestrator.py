@@ -16,7 +16,9 @@ from app.orchestrator import (
     AGENT_BY_NODE,
     MAX_UPDATE_ATTEMPTS,
     NODE_ORDER,
+    EventEmitter,
     OrchestrationResult,
+    OrchestrationState,
     run_orchestration,
 )
 from app.storage.session_store import (
@@ -160,6 +162,15 @@ async def _run_pipeline(
         session = make_session(session_id)
         await store.create(session)
     return await drive(settings, store, session)
+
+
+async def build_emitter(store: SessionStore, session_id: str) -> EventEmitter:
+    async def on_event(_event: AgentEvent) -> None:
+        return None
+
+    emitter = EventEmitter(session_id=session_id, store=store, on_event=on_event)
+    await emitter.hydrate()
+    return emitter
 
 
 def agent_order(events: list[AgentEvent]) -> list[AgentName]:
@@ -391,6 +402,90 @@ def test_stale_version_is_retried_instead_of_raising(tmp_path: Path) -> None:
     assert [event.model_dump() for event in outcome.session.events] == [
         event.model_dump() for event in outcome.emitted
     ]
+
+
+def test_an_aborted_graph_marks_the_session_failed(tmp_path: Path) -> None:
+    """A crashed graph must not be persisted as a successful run.
+
+    ``_close_failed_run`` is only reached from the graph's failure handler, so
+    reporting ``completed`` there made a failed run render as a success for any
+    client polling ``GET /session/{id}``.
+    """
+    _settings, store = build_store(tmp_path)
+    session = make_session("session-aborted")
+
+    class ExplodingGraph:
+        async def ainvoke(self, state: object) -> object:
+            raise RuntimeError("a node blew up")
+
+    async def scenario() -> SessionState:
+        await store.create(session)
+        emitted = await build_emitter(store, session.session_id)
+        state = cast(
+            "orchestrator.OrchestrationState",
+            {"store": store, "session_id": session.session_id, "emitter": emitted},
+        )
+        await orchestrator._run_graph(ExplodingGraph(), state, session.session_id)
+        stored = await store.get(session.session_id)
+        assert stored is not None
+        assert data_field(emitted.emitted[-1], "failed") is True
+        assert data_field(emitted.emitted[-1], "terminal") is True
+        return stored
+
+    stored = asyncio.run(scenario())
+
+    assert stored.status == "failed"
+    assert stored.state["orchestration"] == {"graph_aborted": True, "terminal": True}
+
+
+def test_the_terminal_node_also_survives_a_failing_transport(tmp_path: Path) -> None:
+    """``_two_key_wait`` is the one node that lacked its siblings' isolation.
+
+    An exception escaping it used to abort the whole graph instead of being
+    reported as a node failure, contradicting the module docstring.
+    """
+    _settings, store = build_store(tmp_path)
+    session = make_session("session-terminal")
+
+    class ExplodingStore:
+        def __init__(self, inner: SessionStore) -> None:
+            self._inner = inner
+
+        async def initialize(self) -> None:
+            await self._inner.initialize()
+
+        async def create(self, value: SessionState) -> None:
+            await self._inner.create(value)
+
+        async def update(self, value: SessionState, expected_version: int) -> SessionState:
+            raise RuntimeError("the session store is unavailable")
+
+        async def upsert(self, value: SessionState, expected_version: int) -> SessionState:
+            return await self._inner.upsert(value, expected_version)
+
+        async def get(self, session_id: str) -> SessionState | None:
+            return await self._inner.get(session_id)
+
+        async def close(self) -> None:
+            await self._inner.close()
+
+    async def scenario() -> OrchestrationState:
+        await store.create(session)
+        emitted = await build_emitter(store, session.session_id)
+        state = cast(
+            "orchestrator.OrchestrationState",
+            {
+                "settings": _settings,
+                "store": ExplodingStore(store),
+                "session_id": session.session_id,
+                "emitter": emitted,
+            },
+        )
+        return await orchestrator._two_key_wait(state)
+
+    state = asyncio.run(scenario())
+
+    assert "ORCHESTRATOR" in state["failures"]
 
 
 def test_run_completes_without_langgraph(
