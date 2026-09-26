@@ -83,6 +83,20 @@ def reset_connection() -> None:
     set_connection(None)
 
 
+def close_connection() -> None:
+    """Close and forget the cached connection, e.g. on application shutdown."""
+    global _CONNECTION
+    with _CONNECTION_LOCK:
+        connection = _CONNECTION
+        _CONNECTION = None
+    if connection is None:
+        return
+    try:
+        connection.close()
+    except Exception:
+        logger.warning("the SAP HANA connection did not close cleanly", exc_info=True)
+
+
 def run_query(
     settings: Settings,
     sql: str,
@@ -117,12 +131,18 @@ async def keep_alive_loop(
     settings: Settings,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
 ) -> None:
+    """Ping HANA on an interval so the trial instance is not reaped while idle.
+
+    ``run_query`` is a blocking driver call, so it is pushed onto a worker thread:
+    awaiting it inline would stall the whole event loop -- every request and every
+    WebSocket in the process -- for up to ``hana_query_timeout_seconds``.
+    """
     while True:
         await sleep(settings.hana_keep_alive_seconds)
         if not is_available(settings):
             continue
         try:
-            run_query(settings, KEEP_ALIVE_SQL)
+            await asyncio.to_thread(run_query, settings, KEEP_ALIVE_SQL)
         except HanaUnavailableError:
             logger.warning("SAP HANA keep-alive query failed; the connection is reopened on demand")
         except Exception:
@@ -134,7 +154,7 @@ def _open_connection(settings: Settings) -> "Connection":
     connect = getattr(module, "connect", None) if module is not None else None
     if connect is None:
         raise HanaUnavailableError(
-            "hdbcli is not installed; install hana-hdbcli or keep USE_MOCK_HANA=true"
+            "hdbcli is not installed; install the hdbcli package or keep USE_MOCK_HANA=true"
         )
     try:
         return cast("Connection", connect(**_connect_kwargs(settings)))
